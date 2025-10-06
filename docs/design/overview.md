@@ -346,3 +346,38 @@ function generateTypes(axesMeta, normalizedScores, config):
 - 英単語 1〜2 語を基本とし、ネガティブな含意を避ける。
 - 大文字小文字を無視した重複チェックと語幹比較を行う。
 - 14 文字を超える名称は禁止。衝突時は再生成を優先し、サフィックスによる場当たり的な調整は避ける。
+
+## 7. 実装計画
+### 7.1 バックエンド構成
+- フレームワーク: FastAPI (Python 3.12)。uv を依存管理に使用し、`uv run --extra dev` 系コマンドでテストを実行する。
+- ディレクトリ構成案:
+  - `backend/app/main.py`: FastAPI エントリポイント
+  - `backend/app/api/bootstrap.py`, `keyword.py`: API ルーター
+  - `backend/app/services/axis_generator.py`, `scene_builder.py`, `seed_processor.py`: ドメインロジック
+  - `backend/app/clients/llm_client.py`: LLM 呼び出し（MVP ではモック実装）
+  - `backend/app/config/seed_words.yaml`: seed word → 軸タグマッピング
+  - `backend/tests/api/test_bootstrap.py`, `test_keyword.py`: pytest + httpx による API テスト
+- 起動方法: `uvicorn app.main:app --reload`。CI では `uv run --extra dev pytest` を呼び出す。
+
+### 7.2 フロントエンド構成
+- フレームワーク: Next.js 14 + TypeScript。スタイルは Tailwind CSS を採用し、テーマトークンを CSS カスタムプロパティで管理する。
+- ディレクトリ構成案:
+  - `frontend/app/(play)/page.tsx`: 初回プロンプトとシーン進行 UI
+  - `frontend/app/services/session.ts`: bootstrap/keyword API クライアント
+  - `frontend/app/theme/ThemeProvider.tsx`: `themeId` を Context で配信
+  - `frontend/app/theme/tokens/{themeId}.ts`: テーマ別トークン
+  - `frontend/tests/`: Jest + Testing Library
+  - `frontend/e2e/`: Playwright シナリオ（テーマ切替確認）
+- 起動方法: `pnpm dev`。CI では `pnpm lint`, `pnpm test`, `pnpm exec playwright test` を順次実行する。
+
+### 7.3 テストと CI
+- バックエンド: pytest (httpx + respx) で通常系・フォールバック系を検証。GitHub Actions の Python ジョブに `uv pip install` 手順を追加する。
+- フロントエンド: Jest で単体テスト、Playwright で e2e。CI では Node 18 を使用し、キャッシュ後にテストを実行する。
+- 共通: 生成した `themeId` と `seedScores` をテストフィクスチャで管理し、将来的な LLM 実装差し替えに備える。
+
+### 7.4 今後のマイルストーン
+1. バックエンド雛形作成（FastAPI, uv 設定, pytest テンプレート）
+2. フロントエンド雛形作成（Next.js, Tailwind, ThemeProvider）
+3. bootstrap/keyword API 実装 & 単体テスト
+4. 初期プロンプト UI 実装 & Playwright e2e
+5. 連携テスト・ドキュメント更新後に PR 作成

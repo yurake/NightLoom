@@ -27,8 +27,8 @@
   - メモ: origin/docs/todo-initial-setup へ push 完了
 - [ ] PR 作成
   - メモ: main ブランチが未整備のためドラフト PR を作成できず、準備完了後に実施
-- [ ] 実装設計ドキュメント化
-  - メモ: FastAPI/Next.js 構成案を docs に追記してから着手する
+- [x] 実装設計ドキュメント化
+  - メモ: docs/design/overview.md §7 に Backend/Frontend/CI の計画を追加済み
 - [ ] バックエンド実装準備
   - メモ: FastAPI プロジェクト雛形と uv 設定を整える
 - [ ] フロントエンド実装準備
