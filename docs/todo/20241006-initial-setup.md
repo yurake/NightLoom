@@ -33,8 +33,8 @@
   - メモ: docs/design/overview.md §7.0 にモノレポ構成を整理
 - [x] バックエンド実装準備
   - メモ: backend/ 配下に FastAPI 雛形と pytest テンプレートを追加
-- [ ] フロントエンド実装準備
-  - メモ: Next.js + Tailwind 初期化と ThemeProvider の土台を作る
+- [x] フロントエンド実装準備
+  - メモ: frontend/ 配下に Next.js/Tailwind 雛形と ThemeProvider を追加
 
 ## メモ
 - 初期コミットに含めるファイルの網羅性を確認する
