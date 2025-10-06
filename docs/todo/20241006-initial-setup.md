@@ -27,6 +27,12 @@
   - メモ: origin/docs/todo-initial-setup へ push 完了
 - [ ] PR 作成
   - メモ: main ブランチが未整備のためドラフト PR を作成できず、準備完了後に実施
+- [ ] 実装設計ドキュメント化
+  - メモ: FastAPI/Next.js 構成案を docs に追記してから着手する
+- [ ] バックエンド実装準備
+  - メモ: FastAPI プロジェクト雛形と uv 設定を整える
+- [ ] フロントエンド実装準備
+  - メモ: Next.js + Tailwind 初期化と ThemeProvider の土台を作る
 
 ## メモ
 - 初期コミットに含めるファイルの網羅性を確認する
