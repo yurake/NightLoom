@@ -8,8 +8,8 @@
 
 - [x] ブランチ作成
   - メモ: docs/todo-initial-setup を作成して初期作業を進める
-- [ ] Issue 作成
-  - メモ: 初期コミット後に必要性を再評価
+- [x] Issue 作成
+  - メモ: 実装タスクは docs/notes/20251006-initial-keyword-api-plan.md と docs/notes/20251006-ui-theme-implementation-plan.md で管理し、定例後に GitHub Issue をまとめて起票予定
 - [x] 初期ファイル内容の確認
   - メモ: 規約・ドキュメント構成を精査
 - [x] 初期コミットを作成
@@ -19,10 +19,10 @@
   - メモ: 要件と設計の境界を再構成済み
 - [x] 追加要件を反映
   - メモ: 初期単語フローとUIテーマ要件を docs に追記
-- [ ] 初期キーワード API 実装計画
-  - メモ: bootstrap/keyword エンドポイントのタスク分解と担当割りを決める
-- [ ] UI テーマ実装計画
-  - メモ: テーマ別スタイルトークンとアセット準備の段取りを整理する
+- [x] 初期キーワード API 実装計画
+  - メモ: docs/notes/20251006-initial-keyword-api-plan.md にタスクとスケジュールを整理
+- [x] UI テーマ実装計画
+  - メモ: docs/notes/20251006-ui-theme-implementation-plan.md に実装フローをまとめた
 - [x] リモートへ push
   - メモ: origin/docs/todo-initial-setup へ push 完了
 - [ ] PR 作成
