@@ -15,8 +15,8 @@
 - [x] 初期コミットを作成
   - メモ: commit 4639631 (chore(repo): 初期セットアップ)
   - メモ: 必要ファイルをステージングして Conventional Commits 形式で実施
-- [ ] リモートへ push
-  - メモ: 保護されていない作業ブランチに push
+- [x] リモートへ push
+  - メモ: origin/docs/todo-initial-setup へ push 完了
 - [ ] PR 作成
   - メモ: ブランチ作業完了後にドラフト PR を作成する
 
