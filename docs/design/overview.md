@@ -395,3 +395,8 @@ function generateTypes(axesMeta, normalizedScores, config):
 3. bootstrap/keyword API 実装 & 単体テスト
 4. 初期プロンプト UI 実装 & Playwright e2e
 5. 連携テスト・ドキュメント更新後に PR 作成
+
+### 7.5 テスト実行手順
+- **バックエンド**: `cd backend && uv run --extra dev pytest`
+- **フロントエンド**: `cd frontend && pnpm test`
+- **E2E (Playwright)**: `cd frontend && pnpm exec playwright test`（バックエンド API をモックまたは起動した上で実行）
