@@ -1,0 +1,21 @@
+[project]
+name = "nightloom-backend"
+version = "0.1.0"
+description = "NightLoom FastAPI backend"
+readme = "../README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "httpx[http2]>=0.27.0",
+    "respx>=0.21.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["app"]
+asyncio_mode = "auto"
