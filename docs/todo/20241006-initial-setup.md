@@ -29,6 +29,8 @@
   - メモ: main ブランチが未整備のためドラフト PR を作成できず、準備完了後に実施
 - [x] 実装設計ドキュメント化
   - メモ: docs/design/overview.md §7 に Backend/Frontend/CI の計画を追加済み
+- [x] プロジェクト構造設計
+  - メモ: docs/design/overview.md §7.0 にモノレポ構成を整理
 - [ ] バックエンド実装準備
   - メモ: FastAPI プロジェクト雛形と uv 設定を整える
 - [ ] フロントエンド実装準備

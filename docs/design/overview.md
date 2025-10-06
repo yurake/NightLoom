@@ -348,6 +348,20 @@ function generateTypes(axesMeta, normalizedScores, config):
 - 14 文字を超える名称は禁止。衝突時は再生成を優先し、サフィックスによる場当たり的な調整は避ける。
 
 ## 7. 実装計画
+### 7.0 ルートディレクトリ構成
+| ディレクトリ | 役割 | 備考 |
+|--------------|------|------|
+| `backend/` | FastAPI アプリケーション。`app/`, `tests/`, `pyproject.toml` を配置 | uv による依存管理。`uv.lock` と `uv run` を使用 |
+| `frontend/` | Next.js SPA。`app/`, `tests/`, `e2e/`, `package.json` を配置 | パッケージマネージャは `pnpm`。`pnpm-workspace.yaml` で管理 |
+| `shared/` | 共通定義（OpenAPI スキーマ、型、デザインリソースなど） | 初期は空。将来的に Python/TypeScript 共有モジュールを配置 |
+| `scripts/` | 補助スクリプト（データシード、ローカル起動補助） | Python/Node の mixed スクリプトを想定 |
+| `infra/` | CI/CD 設定、IaC、Docker 周辺ファイル | GitHub Actions のワークフローや将来の Terraform を配置 |
+| `docs/` | ドキュメント一式（現行） | 既存構造を維持 |
+| `Makefile` / `taskfile.yaml` | 共通タスクランナー | `make backend-dev`, `make frontend-dev` などを想定 |
+
+- バックエンド・フロントエンドを同一リポジトリで管理し、トップレベルの `.env.example` を用意して各サブプロジェクトで参照する。
+- ルートに `CONTRIBUTING.md` と `README.md` を維持し、セットアップ手順を backend/frontend 双方のリンク付きで記載する予定。
+
 ### 7.1 バックエンド構成
 - フレームワーク: FastAPI (Python 3.12)。uv を依存管理に使用し、`uv run --extra dev` 系コマンドでテストを実行する。
 - ディレクトリ構成案:
