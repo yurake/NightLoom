@@ -31,6 +31,56 @@ STATE_INIT → STATE_PLAY(n=1..4) → STATE_RESULT → STATE_TERMINATED
 3. レスポンスで候補単語リストと任意入力許可フラグ、セッション ID を返却する。
 4. クライアントは候補選択または任意入力を送信 (`POST /session/{id}/keyword`) し、サーバーは選択語を初期スコア記録に反映した上でシーン1を生成して返す。
 
+### 2.4 API 契約詳細
+#### GET /session/bootstrap
+- **目的**: 初期アクセス時に候補単語と評価軸メタ情報を取得する。
+- **リクエスト**: ボディなし。language パラメータは将来拡張のためクエリ受け付け可。
+- **レスポンス例**:
+```json
+{
+  "sessionId": "sess_123",
+  "axes": [
+    {"id": "axis_explore", "name": "Exploration", "direction": "HigherIsPositive"},
+    {"id": "axis_focus", "name": "Focus", "direction": "HigherIsPositive"}
+  ],
+  "suggestions": [
+    {"word": "冒険", "taggedAxes": ["axis_explore"], "confidence": 0.62},
+    {"word": "冒険家", "taggedAxes": ["axis_explore"], "confidence": 0.55},
+    {"word": "冒険譚", "taggedAxes": ["axis_explore","axis_focus"], "confidence": 0.41},
+    {"word": "冒険計画", "taggedAxes": ["axis_focus"], "confidence": 0.37}
+  ],
+  "allowFreeInput": true
+}
+```
+- **エラー**: LLM 失敗時は 503 とともに `fallbackTheme` と固定候補を返却。
+
+#### POST /session/{id}/keyword
+- **目的**: ユーザーが選択 or 入力した単語を確定し、初期スコアを更新してシーン1を取得する。
+- **リクエスト例**:
+```json
+{
+  "word": "冒険",
+  "source": "suggestion"
+}
+```
+- **レスポンス例**:
+```json
+{
+  "seedWord": "冒険",
+  "seedScores": {"axis_explore": 12, "axis_focus": 4},
+  "themeId": "adventure",
+  "firstScene": {
+    "sceneIndex": 1,
+    "themeId": "adventure",
+    "narrative": "冒険の誘いがあなたを待っている…",
+    "choices": [...]
+  }
+}
+```
+- **バリデーション**: word が 1〜14 文字、禁止語リスト外。`source` は `suggestion` または `manual`。
+- **エラー**: 単語が閾値外の場合 422 を返却し、再入力を促す。
+
+
 ## 3. 生成アルゴリズム設計
 ### 3.1 シナリオ生成
 - シーン数: 4 固定。
@@ -150,11 +200,25 @@ function generateTypes(axesMeta, normalizedScores, config):
 - 平均と分散を算出し、タイプ分類ロジックの閾値計算に利用する。
 - generationMeta へ variance と threshold 情報を記録する。
 
-### 3.5 UI テーマ制御 (次回開発)
-- シナリオ生成で決定したテーマや主要モチーフを UI テーマ ID として返却する。
-- フロントエンドはテーマ ID に基づいて配色・背景イラスト・フォントクラスを切り替える。
-- 結果画面およびシーン画面双方でテーマ反映を支援するスタイルトークンを定義する。
-- ログには適用したテーマ ID を記録し、デザイン効果検証に活用する。
+### 3.5 UI テーマ制御 (FR-026, 次回開発)
+#### 3.5.1 テーマ定義
+| Theme ID | 対応モチーフ | 推奨配色 (例) | レイアウト調整 | 想定トリガ |
+|----------|--------------|--------------|----------------|-------------|
+| `serene` | 落ち着き・調和 | #2F4858 / #F5F7FA / #6BB5C4 | 余白広め、角の丸み大 | Harmony 系軸が高い、落ち着いた単語 |
+| `adventure` | 探索・挑戦 | #1B2A4B / #F7B733 / #FC4A1A | ヒーローヘッダーに背景イラスト | Exploration / Risk 系が高い、動的な単語 |
+| `focus` | 計画・分析 | #1E1E24 / #E0E0E0 / #3C91E6 | グリッド表示、図表強調 | Convergence / Analysis 系が高い |
+| `fallback` | 共通 | #202124 / #FFFFFF / #8AB4F8 | 最小構成 | テーマ解析に失敗した場合 |
+
+テーマ ID はシナリオ生成モジュールから `scene.themeId` として返却し、各シーンおよび結果画面で共通に使用する。
+
+#### 3.5.2 クライアント適用ルール
+- SPA は `themeId` を受け取り、CSS カスタムプロパティ (`--surface-bg`, `--accent`, `--font-family`) と背景アセットを切り替える。
+- シーン画面ではカード、進捗バー、CTA ボタンのスタイルをテーマごとに差し替える。結果画面ではチャート配色とタイプカードのトーンを同期させる。
+- テーマに紐づくイメージアセットは `assets/themes/<themeId>/` に配置し、遅延読み込みでパフォーマンスを維持する。
+
+#### 3.5.3 ログ／モニタリング
+- `ui_theme_applied` イベントに `themeId`, `sessionId`, `axisSummary` を含めて送信し、適用比率や UX 指標と紐づける。
+- フォールバック発生時は `themeId=fallback` と `fallbackReason` を記録し、シナリオ生成側の改善に活用する。
 
 ## 4. フォールバック設計
 ### 4.1 失敗検知と再試行
