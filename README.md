@@ -74,7 +74,7 @@ pnpm --filter nightloom-frontend test:e2e
 Codex CLI などのサンドボックス環境では、以下のように Node.js 環境を読み込んでから実行する必要があります。
 ```bash
 source ~/.nvm/nvm.sh
-nvm use 20.17.0
+nvm use 24.9.0
 pnpm --filter nightloom-frontend test:e2e
 ```
 ※ `pnpm --filter nightloom-frontend dev` を使用した場合は `Ctrl+C` で明示的に終了してください。
