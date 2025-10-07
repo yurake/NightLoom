@@ -25,8 +25,11 @@
   - メモ: docs/notes/20251006-ui-theme-implementation-plan.md に実装フローをまとめた
 - [x] リモートへ push
   - メモ: origin/docs/todo-initial-setup へ push 完了
+- [x] main ブランチ整備
+  - メモ: origin/main を作成しベースブランチの事前準備を整えた
 - [ ] PR 作成
-  - メモ: main ブランチが未整備のためドラフト PR を作成できず、準備完了後に実施
+  - メモ: GitHub API でのドラフト PR 作成がエラー終了したため、権限設定やベースブランチ構成を確認してから再実施
+  - メモ: MCP クライアント `github` が `No such file or directory` で起動せず、Codex CLI でドラフト PR 作成フローを実行できない。`gh` バイナリ導入または CLI 設定修正の要否を確認する
 - [x] 実装設計ドキュメント化
   - メモ: docs/design/overview.md §7 に Backend/Frontend/CI の計画を追加済み
 - [x] プロジェクト構造設計
