@@ -35,12 +35,14 @@ NightLoom は、分岐型の短編シナリオ体験を通じてユーザーの�
 ### 前提ツール
 - Python 3.12 系
 - Node.js 20 系
+- nvm (任意・Node.js のバージョン管理に使用)
 - uv（https://github.com/astral-sh/uv）
 - pnpm 9 以降
 
 追加ツールや運用ルールは `CONTRIBUTING.md` を参照してください。
 
-### バックエンド
+## 起動手順
+### バックエンド開発サーバー
 ```bash
 cd backend
 uv sync
@@ -52,21 +54,30 @@ uv run uvicorn app.main:app --reload
 uv run --extra dev pytest
 ```
 
-### フロントエンド
+### フロントエンド開発サーバー
+リポジトリルートで実行する。nvm 利用時は適切なバージョンを選択してからコマンドを実行する。
 ```bash
-pnpm install
-pnpm --filter frontend dev
+nvm use 20.17.0    # nvm 利用時
+pnpm install --filter nightloom-frontend
+pnpm --filter nightloom-frontend dev
 ```
 
 ユニットテスト:
 ```bash
-pnpm --filter frontend test
+pnpm --filter nightloom-frontend test
 ```
 
 E2E テスト:
 ```bash
-pnpm --filter frontend test:e2e
+pnpm --filter nightloom-frontend test:e2e
 ```
+Codex CLI などのサンドボックス環境では、以下のように Node.js 環境を読み込んでから実行する必要があります。
+```bash
+source ~/.nvm/nvm.sh
+nvm use 20.17.0
+pnpm --filter nightloom-frontend test:e2e
+```
+※ `pnpm --filter nightloom-frontend dev` を使用した場合は `Ctrl+C` で明示的に終了してください。
 
 ## ドキュメントと開発フロー
 - プロジェクト運用ルール: `CONTRIBUTING.md`
