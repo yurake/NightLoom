@@ -40,9 +40,11 @@
 - LibreOffice 等の外部ツールバージョンは `docs/adr/` や README に明記する。
 
 ## 7. テスト方針
-- 単体テスト: `python/tests/` 配下に配置し、 `pytest` を使用。JSON 入力 → PPTX 出力の検証を行う。
-  - 実行コマンドは `uv run --extra dev pytest` を使用する。ローカルに `pytest` を直接インストールしていないため、`uv` 経由で実行すること。
-- 結合テスト: `tests/integration/` にサンプル JSON を用意し、パイプライン全体 (JSON→PPTX→PDF) を検証する。
+- **TDD を原則**とし、テスト作成 → 失敗確認 → 実装 → パスの順で進める。
+- テストを先にコミットし、実装中はテストを変更しない。
+- **単体テスト**: `backend/tests/` 配下に配置し `uv run --extra dev pytest` で実行（バックエンド）、`pnpm --filter nightloom-frontend test` でユニットテスト実行（フロントエンド）。
+- **E2E テスト**: `frontend/e2e/` 配下に配置し `pnpm --filter nightloom-frontend test:e2e` で実行。
+- **結合テスト**: `tests/integration/` にサンプルを用意し、エンドツーエンドのパイプラインを検証。
 
 ## 8. CI/CD
 - GitHub Actions で以下を実行すること。
