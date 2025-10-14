@@ -1,0 +1,360 @@
+openapi: 3.0.3
+info:
+  title: NightLoom 結果画面API
+  description: 診断結果取得・表示機能のAPI仕様
+  version: 1.0.0
+  contact:
+    name: NightLoom Development Team
+servers:
+  - url: http://localhost:8000/api
+    description: ローカル開発環境
+  - url: https://api.nightloom.app
+    description: 本番環境
+
+paths:
+  /sessions/{sessionId}/result:
+    get:
+      summary: 診断結果取得
+      description: |
+        指定されたセッションIDの診断結果（軸スコア・タイプ分類）を取得する。
+        セッション状態が`RESULT`である必要がある。
+      operationId: getSessionResult
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+            pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+          description: セッション識別子（UUID v4）
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '200':
+          description: 診断結果正常取得
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultData'
+              examples:
+                basic_result:
+                  summary: 基本的な2軸結果
+                  value:
+                    sessionId: "550e8400-e29b-41d4-a716-446655440000"
+                    keyword: "アート"
+                    axes:
+                      - id: "axis_1"
+                        name: "論理性"
+                        description: "論理的思考と感情的判断のバランス"
+                        direction: "論理的 ⟷ 感情的"
+                        score: 75.5
+                        rawScore: 2.1
+                      - id: "axis_2"
+                        name: "社交性"
+                        description: "集団行動と個人行動の指向性"
+                        direction: "社交的 ⟷ 内省的"
+                        score: 42.3
+                        rawScore: -0.8
+                    type:
+                      name: "Logical Thinker"
+                      description: "論理的思考を重視し、個人での内省を好む傾向があります。"
+                      dominantAxes: ["axis_1", "axis_2"]
+                      polarity: "Hi-Lo"
+                    completedAt: "2025-10-14T13:15:00Z"
+                six_axes_result:
+                  summary: 6軸での複雑な結果
+                  value:
+                    sessionId: "550e8400-e29b-41d4-a716-446655440001"
+                    keyword: "冒険"
+                    axes:
+                      - id: "axis_1"
+                        name: "探索性"
+                        description: "新しい経験への開放性"
+                        direction: "探索的 ⟷ 慎重的"
+                        score: 85.2
+                        rawScore: 3.5
+                      - id: "axis_2"
+                        name: "計画性"
+                        description: "行動の計画と準備"
+                        direction: "計画的 ⟷ 直感的"
+                        score: 35.7
+                        rawScore: -1.4
+                      - id: "axis_3"
+                        name: "協調性"
+                        description: "チームワークと協力"
+                        direction: "協調的 ⟷ 独立的"
+                        score: 62.1
+                        rawScore: 1.2
+                      - id: "axis_4"
+                        name: "分析性"
+                        description: "情報の分析と検証"
+                        direction: "分析的 ⟷ 直感的"
+                        score: 48.9
+                        rawScore: -0.1
+                      - id: "axis_5"
+                        name: "表現性"
+                        description: "自己表現と創造性"
+                        direction: "表現的 ⟷ 内省的"
+                        score: 71.4
+                        rawScore: 1.9
+                      - id: "axis_6"
+                        name: "安定性"
+                        description: "リスク回避と安定志向"
+                        direction: "安定的 ⟷ 冒険的"
+                        score: 28.3
+                        rawScore: -2.2
+                    type:
+                      name: "Creative Explorer"
+                      description: "創造性と探索心を兼ね備え、新しい挑戦を好む傾向があります。"
+                      dominantAxes: ["axis_1", "axis_6"]
+                      polarity: "Hi-Lo"
+                    completedAt: "2025-10-14T13:16:00Z"
+        '400':
+          description: バッドリクエスト
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                session_not_completed:
+                  summary: 診断未完了
+                  value:
+                    error:
+                      code: "SESSION_NOT_COMPLETED"
+                      message: "診断が完了していません。4つのシーンをすべて完了してください。"
+                      details:
+                        currentScene: 2
+                        totalScenes: 4
+                    sessionId: "550e8400-e29b-41d4-a716-446655440000"
+                invalid_session_state:
+                  summary: セッション状態不正
+                  value:
+                    error:
+                      code: "INVALID_SESSION_STATE"
+                      message: "セッションの状態が不正です。"
+                      details:
+                        currentState: "INIT"
+                        expectedState: "RESULT"
+                    sessionId: "550e8400-e29b-41d4-a716-446655440000"
+        '404':
+          description: セッション未存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                session_not_found:
+                  summary: セッション未存在
+                  value:
+                    error:
+                      code: "SESSION_NOT_FOUND"
+                      message: "指定されたセッションが見つかりません。"
+                    sessionId: "550e8400-e29b-41d4-a716-446655440000"
+        '500':
+          description: サーバー内部エラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                type_generation_failed:
+                  summary: タイプ生成失敗
+                  value:
+                    error:
+                      code: "TYPE_GEN_FAILED"
+                      message: "タイプ生成に失敗しました。プリセットタイプを使用します。"
+                      details:
+                        fallbackUsed: true
+                        llmError: "TIMEOUT"
+                    sessionId: "550e8400-e29b-41d4-a716-446655440000"
+
+components:
+  schemas:
+    ResultData:
+      type: object
+      required:
+        - sessionId
+        - keyword
+        - axes
+        - type
+        - completedAt
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+          description: セッション識別子
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        keyword:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: 初期選択キーワード
+          example: "アート"
+        axes:
+          type: array
+          minItems: 2
+          maxItems: 6
+          items:
+            $ref: '#/components/schemas/AxisScore'
+          description: 評価軸スコア配列
+        type:
+          $ref: '#/components/schemas/TypeResult'
+        completedAt:
+          type: string
+          format: date-time
+          description: 診断完了時刻（ISO 8601）
+          example: "2025-10-14T13:15:00Z"
+        themeId:
+          type: string
+          enum: ["serene", "adventure", "focus", "fallback"]
+          description: UIテーマ識別子（将来拡張）
+          example: "adventure"
+
+    AxisScore:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - direction
+        - score
+        - rawScore
+      properties:
+        id:
+          type: string
+          pattern: '^axis_\d+$'
+          description: 軸識別子
+          example: "axis_1"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: 軸名称（日本語）
+          example: "論理性"
+        description:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: 軸の詳細説明
+          example: "論理的思考と感情的判断のバランス"
+        direction:
+          type: string
+          pattern: '.+ ⟷ .+'
+          description: 方向性表示（両極を⟷で結合）
+          example: "論理的 ⟷ 感情的"
+        score:
+          type: number
+          minimum: 0
+          maximum: 100
+          multipleOf: 0.1
+          description: 正規化後スコア（0-100、小数第1位まで）
+          example: 75.5
+        rawScore:
+          type: number
+          minimum: -5.0
+          maximum: 5.0
+          description: 正規化前スコア（理論範囲-5.0〜5.0）
+          example: 2.1
+
+    TypeResult:
+      type: object
+      required:
+        - name
+        - description
+        - dominantAxes
+        - polarity
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 14
+          pattern: '^[A-Z][a-z]+( [A-Z][a-z]+)?$'
+          description: タイプ名（英語1-2語、最大14文字）
+          example: "Logical Thinker"
+        description:
+          type: string
+          minLength: 1
+          maxLength: 50
+          description: タイプ説明（50文字以内）
+          example: "論理的思考を重視し、個人での内省を好む傾向があります。"
+        dominantAxes:
+          type: array
+          items:
+            type: string
+            pattern: '^axis_\d+$'
+          minItems: 2
+          maxItems: 2
+          description: 主軸ID配列（2要素固定）
+          example: ["axis_1", "axis_2"]
+        polarity:
+          type: string
+          enum: ["Hi-Hi", "Hi-Lo", "Lo-Hi", "Lo-Lo", "Hi-Mid", "Lo-Mid", "Mid-Hi", "Mid-Lo", "Mid-Mid"]
+          description: 極性パターン（主軸2つの高低組み合わせ）
+          example: "Hi-Lo"
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              enum:
+                - "SESSION_NOT_FOUND"
+                - "SESSION_NOT_COMPLETED"
+                - "TYPE_GEN_FAILED"
+                - "INVALID_SESSION_STATE"
+              description: エラーコード
+            message:
+              type: string
+              description: エラーメッセージ（日本語）
+            details:
+              type: object
+              description: エラー詳細情報
+              additionalProperties: true
+        sessionId:
+          type: string
+          format: uuid
+          description: 関連セッションID（参照用）
+
+  parameters:
+    SessionIdParam:
+      name: sessionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: セッション識別子
+
+  responses:
+    BadRequest:
+      description: バッドリクエスト
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    
+    NotFound:
+      description: リソース未存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    
+    InternalServerError:
+      description: サーバー内部エラー
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+tags:
+  - name: Results
+    description: 診断結果関連API
