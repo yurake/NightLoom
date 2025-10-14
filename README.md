@@ -9,17 +9,12 @@ NightLoom は、分岐型の短編シナリオ体験を通じてユーザーの�
 - LLM 応答失敗時のプリセットシナリオ・タイプによるフェイルオーバー
 - ブラウザ（PC/モバイル）対応のシングルページアプリケーション
 
-詳細要件は `docs/requirements/overview.md` を参照してください。
-
 ## リポジトリ構成
 ```text
 .
 ├── backend/            # FastAPI バックエンド（uv/uvicorn ベース）
 ├── frontend/           # Next.js 14 + Tailwind CSS のフロントエンド
-├── docs/               # 要件・設計・運用ドキュメント
-├── CONTRIBUTING.md     # 開発フローとコーディング規約
-├── AGENTS.md           # エージェント向けガイドライン
-├── pnpm-workspace.yaml # フロントエンドのワークスペース設定
+├── specs/               # 要件・設計・運用ドキュメント
 └── README.md
 ```
 
@@ -80,9 +75,3 @@ pnpm --filter nightloom-frontend test:e2e
 ※ `pnpm --filter nightloom-frontend dev` を使用した場合は `Ctrl+C` で明示的に終了してください。
 
 ## ドキュメントと開発フロー
-- プロジェクト運用ルール: `CONTRIBUTING.md`
-- ドキュメントガイド: `docs/README.md`
-- 要件と設計: `docs/requirements/overview.md`, `docs/design/overview.md`
-- ロードマップとタスク管理: `docs/roadmap/overview.md`, `docs/todo/`
-
-作業内容や検討事項は `docs/` 配下に追記し、ToDo 進行状況は `docs/todo/` の運用ルールに従って更新してください。
