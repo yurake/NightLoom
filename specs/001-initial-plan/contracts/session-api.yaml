@@ -1,0 +1,308 @@
+openapi: 3.1.0
+info:
+  title: NightLoom Session API (MVP)
+  version: 0.1.0
+  description: >
+    APIs to bootstrap a NightLoom diagnosis session, progress through scenes,
+    and retrieve the generated result. All responses are JSON encoded. Sessions
+    are ephemeral and expire immediately after result retrieval.
+servers:
+  - url: https://api.nightloom.example.com
+paths:
+  /api/sessions/start:
+    post:
+      summary: Bootstrap a new diagnosis session
+      tags: [Session]
+      requestBody:
+        required: false
+      responses:
+        "200":
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BootstrapResponse"
+        "503":
+          description: LLM failure fallback
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BootstrapResponse"
+  /api/sessions/{sessionId}/keyword:
+    post:
+      summary: Confirm selected keyword and fetch scene 1
+      tags: [Session]
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [keyword, source]
+              properties:
+                keyword:
+                  type: string
+                  minLength: 1
+                  maxLength: 20
+                source:
+                  type: string
+                  enum: [suggestion, manual]
+      responses:
+        "200":
+          description: Keyword accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SceneResponse"
+        "400":
+          description: Invalid keyword
+        "404":
+          description: Session not found
+  /api/sessions/{sessionId}/scenes/{sceneIndex}:
+    get:
+      summary: Retrieve the requested scene (1-4)
+      tags: [Scene]
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+        - $ref: "#/components/parameters/SceneIndex"
+      responses:
+        "200":
+          description: Scene returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SceneResponse"
+        "400":
+          description: Invalid state or scene index
+        "404":
+          description: Session not found
+  /api/sessions/{sessionId}/scenes/{sceneIndex}/choice:
+    post:
+      summary: Submit user choice for the given scene
+      tags: [Scene]
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+        - $ref: "#/components/parameters/SceneIndex"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [choiceId]
+              properties:
+                choiceId:
+                  type: string
+      responses:
+        "200":
+          description: Choice recorded, next scene info (or null) returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChoiceResponse"
+        "400":
+          description: Invalid state/choice
+        "404":
+          description: Session not found
+  /api/sessions/{sessionId}/result:
+    post:
+      summary: Finalize the session and retrieve result
+      tags: [Result]
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      responses:
+        "200":
+          description: Result payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResultResponse"
+        "400":
+          description: Session not completed
+        "404":
+          description: Session not found
+components:
+  parameters:
+    SessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    SceneIndex:
+      name: sceneIndex
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 4
+  schemas:
+    Axis:
+      type: object
+      required: [id, name, description, direction]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        direction:
+          type: string
+    AxisScore:
+      type: object
+      required: [axisId, score, rawScore]
+      properties:
+        axisId:
+          type: string
+        score:
+          type: number
+          minimum: 0
+          maximum: 100
+        rawScore:
+          type: number
+          minimum: -5
+          maximum: 5
+    Choice:
+      type: object
+      required: [id, text, weights]
+      properties:
+        id:
+          type: string
+        text:
+          type: string
+        weights:
+          type: object
+          additionalProperties:
+            type: number
+    Scene:
+      type: object
+      required: [sceneIndex, narrative, choices, themeId]
+      properties:
+        sceneIndex:
+          type: integer
+          minimum: 1
+          maximum: 4
+        narrative:
+          type: string
+        choices:
+          type: array
+          minItems: 4
+          maxItems: 4
+          items:
+            $ref: "#/components/schemas/Choice"
+        themeId:
+          type: string
+    TypeProfile:
+      type: object
+      required: [name, description, dominantAxes, polarity]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        keywords:
+          type: array
+          items:
+            type: string
+        dominantAxes:
+          type: array
+          minItems: 2
+          maxItems: 2
+          items:
+            type: string
+        polarity:
+          type: string
+    BootstrapResponse:
+      type: object
+      required: [sessionId, axes, keywordCandidates, initialCharacter, themeId]
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        axes:
+          type: array
+          minItems: 2
+          maxItems: 6
+          items:
+            $ref: "#/components/schemas/Axis"
+        keywordCandidates:
+          type: array
+          minItems: 4
+          maxItems: 4
+          items:
+            type: string
+        initialCharacter:
+          type: string
+        themeId:
+          type: string
+        fallbackUsed:
+          type: boolean
+    SceneResponse:
+      type: object
+      required: [sessionId, scene]
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        scene:
+          $ref: "#/components/schemas/Scene"
+        fallbackUsed:
+          type: boolean
+    ChoiceResponse:
+      type: object
+      required: [sessionId]
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        nextScene:
+          anyOf:
+            - $ref: "#/components/schemas/Scene"
+            - type: "null"
+        sceneCompleted:
+          type: boolean
+    ResultResponse:
+      type: object
+      required: [sessionId, keyword, axes, type, completedAt]
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        keyword:
+          type: string
+        axes:
+          type: array
+          minItems: 2
+          maxItems: 6
+          items:
+            $ref: "#/components/schemas/AxisScore"
+        type:
+          type: object
+          required: [profiles]
+          properties:
+            dominantAxes:
+              type: array
+              minItems: 2
+              maxItems: 2
+              items:
+                type: string
+            profiles:
+              type: array
+              minItems: 4
+              maxItems: 6
+              items:
+                $ref: "#/components/schemas/TypeProfile"
+            fallbackUsed:
+              type: boolean
+        completedAt:
+          type: string
+          format: date-time
+        fallbackFlags:
+          type: array
+          items:
+            type: string
