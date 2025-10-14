@@ -4,14 +4,14 @@
  * セッションAPIとの通信を管理するクライアント
  */
 
-import type { ResultData } from '@/app/types/result';
-import { validateResultData } from '@/app/utils/validators';
+import type { ResultData } from '@/types/result';
+import { validateResultData } from '@/utils/validators';
 import {
   ApiError,
   parseErrorResponse,
   handleNetworkError,
   createTimeoutError,
-} from '@/app/utils/error-handler';
+} from '@/utils/error-handler';
 
 /**
  * APIクライアント設定オプション

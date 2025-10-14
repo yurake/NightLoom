@@ -4,7 +4,7 @@
  * テストで使用するモックデータを提供します。
  */
 
-import type { ResultData } from '@/app/types/result';
+import type { ResultData } from '@/types/result';
 
 /**
  * 基本的な2軸結果のモックデータ

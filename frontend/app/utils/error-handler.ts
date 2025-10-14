@@ -4,7 +4,7 @@
  * API エラーレスポンスの処理とフォールバックロジック
  */
 
-import type { ErrorResponse, ErrorCode, ClientErrorCode } from '@/app/types/result';
+import type { ErrorResponse, ErrorCode, ClientErrorCode } from '@/types/result';
 
 /**
  * API エラーを表すクラス

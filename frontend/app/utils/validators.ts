@@ -4,13 +4,13 @@
  * API レスポンスの型ガードと検証ロジック
  */
 
-import type { ResultData, AxisScore, TypeResult, ErrorResponse } from '@/app/types/result';
+import type { ResultData, AxisScore, TypeResult, ErrorResponse } from '@/types/result';
 import {
   isResultData,
   isAxisScore,
   isTypeResult,
   isErrorResponse,
-} from '@/app/types/result';
+} from '@/types/result';
 
 /**
  * ResultData の完全な検証（型ガード + ビジネスルール）

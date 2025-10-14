@@ -4,7 +4,7 @@
  * TDD: テスト先行で作成、実装前に失敗を確認
  */
 
-import { SessionApiClient } from '@/app/services/session-api';
+import { SessionApiClient } from '@/services/session-api';
 import { mockResult2Axes, mockErrorNotFound } from '../mocks/result-data';
 
 describe('SessionApiClient', () => {
