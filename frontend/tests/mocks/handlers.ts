@@ -42,7 +42,7 @@ export const handlers = [
   }),
 
   // デフォルトハンドラー: 任意のセッションID
-  http.get(`${BASE_URL}/api/sessions/:sessionId/result`, ({ params }) => {
+  http.get(`${BASE_URL}/api/sessions/:sessionId/result`, ({ params }: { params: { sessionId: string } }) => {
     const { sessionId } = params;
 
     // テストセッションIDの場合は2軸データを返す
