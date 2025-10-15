@@ -5,7 +5,8 @@
  */
 
 import { render, screen } from '@testing-library/react';
-import { TypeCard, type TypeResult } from '@/components/TypeCard';
+import { TypeCard } from '../../../app/(play)/components/TypeCard';
+import { type TypeResult } from '../../../app/types/result';
 
 describe('TypeCard コンポーネント', () => {
   const mockTypeResult: TypeResult = {

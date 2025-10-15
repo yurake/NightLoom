@@ -14,8 +14,8 @@ app = FastAPI(title="NightLoom Backend", version="0.1.0")
 
 # Routers are namespaced for clarity; actual handlers currently return
 # placeholder data until the implementation tasks are completed.
-app.include_router(bootstrap.router, prefix="/session", tags=["session"])
-app.include_router(keyword.router, prefix="/session", tags=["session"])
+app.include_router(bootstrap.router, prefix="/api/sessions", tags=["session"])
+app.include_router(keyword.router, prefix="/api/sessions", tags=["session"])
 
 
 @app.get("/health", tags=["health"])

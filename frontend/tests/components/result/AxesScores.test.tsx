@@ -5,8 +5,8 @@
  */
 
 import { render, screen } from '@testing-library/react';
-import { AxesScores } from '@/components/AxesScores';
-import type { AxisScore } from '@/components/AxisScoreItem';
+import { AxesScores } from '../../../app/(play)/components/AxesScores';
+import type { AxisScore } from '../../../app/types/result';
 
 describe('AxesScores コンポーネント', () => {
   const mockAxesScores2Axes: AxisScore[] = [

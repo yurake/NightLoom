@@ -5,7 +5,8 @@
  */
 
 import { render, screen, waitFor } from '@testing-library/react';
-import { AxisScoreItem, type AxisScore } from '@/components/AxisScoreItem';
+import { AxisScoreItem } from '../../../app/(play)/components/AxisScoreItem';
+import { type AxisScore } from '../../../app/types/result';
 
 describe('AxisScoreItem コンポーネント', () => {
   const mockAxisScore: AxisScore = {

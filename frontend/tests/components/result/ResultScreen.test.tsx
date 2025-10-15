@@ -5,8 +5,8 @@
  */
 
 import { render, screen, waitFor } from '@testing-library/react';
-import { ResultScreen } from '@/components/ResultScreen';
-import type { ResultData, AxisScore, TypeResult } from '@/types/result';
+import { ResultScreen } from '../../../app/(play)/components/ResultScreen';
+import type { ResultData, AxisScore, TypeResult } from '../../../app/types/result';
 
 // モックデータ
 const mockResultData: ResultData = {
@@ -45,13 +45,13 @@ const mockApiClient = {
 };
 
 // モックされたコンポーネント
-jest.mock('@/components/TypeCard', () => ({
+jest.mock('../../../app/(play)/components/TypeCard', () => ({
   TypeCard: ({ typeResult }: { typeResult: TypeResult }) => (
     <div data-testid="type-card">{typeResult.name}</div>
   )
 }));
 
-jest.mock('@/components/AxesScores', () => ({
+jest.mock('../../../app/(play)/components/AxesScores', () => ({
   AxesScores: ({ axesScores }: { axesScores: AxisScore[] }) => (
     <div data-testid="axes-scores">軸数: {axesScores.length}</div>
   )
