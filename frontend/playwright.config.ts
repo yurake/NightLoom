@@ -10,6 +10,7 @@ export default defineConfig({
   testDir: "./e2e",
   use: {
     baseURL: "http://localhost:3000",
+    headless: false, // ブラウザを表示
   },
   reporter: [["list"], ["html", { open: "never" }]],
 });
