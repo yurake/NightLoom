@@ -22,6 +22,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BootstrapResponse"
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "503":
           description: LLM failure fallback
           content:
@@ -57,9 +69,35 @@ paths:
               schema:
                 $ref: "#/components/schemas/SceneResponse"
         "400":
-          description: Invalid keyword
+          description: Bad Request - Invalid keyword or request format
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Validation Error - Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: LLM Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/sessions/{sessionId}/scenes/{sceneIndex}:
     get:
       summary: Retrieve the requested scene (1-4)
@@ -75,9 +113,29 @@ paths:
               schema:
                 $ref: "#/components/schemas/SceneResponse"
         "400":
-          description: Invalid state or scene index
+          description: Bad Request - Invalid state or scene index
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: LLM Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/sessions/{sessionId}/scenes/{sceneIndex}/choice:
     post:
       summary: Submit user choice for the given scene
@@ -103,9 +161,35 @@ paths:
               schema:
                 $ref: "#/components/schemas/ChoiceResponse"
         "400":
-          description: Invalid state/choice
+          description: Bad Request - Invalid state or choice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Validation Error - Invalid choice data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: LLM Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/sessions/{sessionId}/result:
     post:
       summary: Finalize the session and retrieve result
@@ -120,9 +204,29 @@ paths:
               schema:
                 $ref: "#/components/schemas/ResultResponse"
         "400":
-          description: Session not completed
+          description: Bad Request - Session not completed or invalid state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: LLM Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   parameters:
     SessionId:
@@ -306,3 +410,52 @@ components:
           type: array
           items:
             type: string
+    ErrorResponse:
+      type: object
+      required: [error_code, message]
+      properties:
+        error_code:
+          type: string
+          enum:
+            - BAD_REQUEST
+            - VALIDATION_ERROR
+            - SESSION_NOT_FOUND
+            - SESSION_NOT_COMPLETED
+            - INVALID_SCENE_INDEX
+            - INVALID_CHOICE
+            - INTERNAL_ERROR
+            - LLM_SERVICE_UNAVAILABLE
+          description: Machine-readable error code for client error handling
+        message:
+          type: string
+          description: Human-readable error message in English
+        details:
+          type: object
+          description: Additional error context and debugging information
+          additionalProperties: true
+          properties:
+            field:
+              type: string
+              description: The field that caused validation error (for 422 responses)
+            expected:
+              type: string
+              description: Expected value or format
+            provided:
+              type: string
+              description: The actual value provided
+            session_id:
+              type: string
+              description: Session ID for context (when applicable)
+            timestamp:
+              type: string
+              format: date-time
+              description: Error occurrence timestamp
+      example:
+        error_code: "VALIDATION_ERROR"
+        message: "Invalid keyword length. Must be between 1 and 20 characters."
+        details:
+          field: "keyword"
+          expected: "string (1-20 characters)"
+          provided: ""
+          session_id: "550e8400-e29b-41d4-a716-446655440000"
+          timestamp: "2024-01-15T10:30:00Z"

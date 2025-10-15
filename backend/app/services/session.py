@@ -112,14 +112,10 @@ class SessionService:
         if not keyword or len(keyword) > 20:
             raise SessionServiceError("Invalid keyword length")
         
-        # Generate scenes using LLM service
+        # Generate scenes using LLM service with existing axes
         try:
-            # We need axes for scene generation, but they're not stored yet
-            # For now, regenerate or use fallback axes
-            axes, _, _, _ = await self.llm_service.generate_bootstrap_data(session.initialCharacter)
-            
             scenes, fallback_used = await self.llm_service.generate_scenes(
-                axes, keyword, session.themeId
+                session.axes, keyword, session.themeId
             )
         except Exception as e:
             raise SessionServiceError(f"Failed to generate scenes: {str(e)}")
@@ -228,12 +224,9 @@ class SessionService:
             raw_scores = await self.scoring_service.calculate_scores(session)
             normalized_scores = await self.scoring_service.normalize_scores(raw_scores)
             
-            # Generate type profiles
-            # We need axes again - this is a design issue we'll address later
-            axes, _, _, _ = await self.llm_service.generate_bootstrap_data(session.initialCharacter)
-            
+            # Generate type profiles using existing axes
             type_profiles, fallback_used = await self.llm_service.generate_type_profiles(
-                axes, raw_scores, session.selectedKeyword
+                session.axes, raw_scores, session.selectedKeyword
             )
             
             # Update session with results

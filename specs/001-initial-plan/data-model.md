@@ -73,12 +73,33 @@ NightLoom MVP は単一セッション診断を前提とし、4シーンの選�
 | `meta` | object | 補助情報（cell, isNeutral等） | 任意 |
 
 ### ThemeDescriptor
-| Field | Type | Description |
-|-------|------|-------------|
-| `themeId` | string | テーマ識別子 |
-| `palette` | object | カラーパレット |
-| `typography` | object | フォント設定 |
-| `assets` | array<string> | 使用する背景/イラスト |
+| Field | Type | Description | Validation / Notes |
+|-------|------|-------------|--------------------|
+| `themeId` | string | テーマ識別子 | `serene`, `adventure`, `focus`, `fallback` |
+| `palette` | ThemeTokens | カラーパレット | CSS変数とTailwindクラスの組み合わせ |
+| `typography` | object | フォント設定 | フォントファミリー、サイズ、weight定義 |
+| `assets` | array<string> | 使用する背景/イラスト | 背景画像パス配列 |
+
+### ThemeTokens
+| Field | Type | Description | Validation / Notes |
+|-------|------|-------------|--------------------|
+| `primary` | string | メインカラー | HEX形式（例: `#3B82F6`） |
+| `secondary` | string | セカンダリカラー | HEX形式 |
+| `background` | string | 背景色 | HEX形式 |
+| `surface` | string | サーフェス色 | カードや入力フィールド背景 |
+| `text` | object | テキスト色定義 | `primary`, `secondary`, `muted`を含む |
+| `accent` | string | アクセントカラー | ボタンやハイライト用 |
+| `border` | string | ボーダー色 | コンポーネント境界線 |
+| `cssVariables` | map<string, string> | CSS変数マッピング | `--color-primary: ${primary}` 形式 |
+| `tailwindClasses` | map<string, string> | Tailwindクラスマッピング | セマンティック名からクラス名への変換 |
+
+### ThemeState
+| Field | Type | Description | Validation / Notes |
+|-------|------|-------------|--------------------|
+| `currentThemeId` | string | 現在適用中のテーマ | デフォルト: `serene` |
+| `availableThemes` | array<string> | 選択可能テーマ一覧 | 4種類固定 |
+| `isLoading` | bool | テーマ切替処理中フラグ | 切替アニメーション制御用 |
+| `persistenceEnabled` | bool | ローカル保存の有効性 | ブラウザサポート状況に依存 |
 
 ---
 
@@ -88,7 +109,9 @@ NightLoom MVP は単一セッション診断を前提とし、4シーンの選�
 - **Scene 1 - 4 Choice**: 各シーンに4つの選択肢が紐づく。
 - **Session 1 - n AxisScore**: state=RESULT 時に評価軸の結果を保持。Axis に対するスコア。
 - **Session 1 - n TypeProfile**: 結果画面で提示するタイプ集合。dominantAxes が Axis に紐づく。
-- **ThemeDescriptor**: セッション開始時に選択されるテーマに関する補助データ（静的資材）。
+- **ThemeDescriptor 1 - 1 ThemeTokens**: 各テーマは専用のカラーパレットを持つ。
+- **ThemeState 1 - 1 Session**: セッション開始時にテーマが選択され、全画面で一貫適用される。
+- **ThemeTokens 1 - n cssVariables**: 各テーマトークンは複数のCSS変数として展開される。
 
 ---
 
@@ -119,6 +142,87 @@ INIT --(keyword確定)--> PLAY --(各シーン選択)--> RESULT
 - `result_generation_ms`, `animation_duration_ms`（クライアント側測定予定）
 
 ---
+
+---
+
+## テーマ切替実装方式
+
+### 技術アーキテクチャ
+
+#### 1. テーマデータ管理
+```typescript
+// frontend/app/theme/tokens/[themeId].ts
+interface ThemeTokens {
+  primary: string;
+  secondary: string;
+  background: string;
+  surface: string;
+  text: {
+    primary: string;
+    secondary: string;
+    muted: string;
+  };
+  accent: string;
+  border: string;
+  cssVariables: Record<string, string>;
+  tailwindClasses: Record<string, string>;
+}
+```
+
+#### 2. テーマ切替メカニズム
+- **Context API**: `ThemeProvider` でアプリ全体のテーマ状態を管理
+- **ローカルストレージ連携**: `localStorage.setItem('nightloom-theme', themeId)` で永続化
+- **セッション復元**: ページリロード時に保存されたテーマを自動復元
+- **フォールバック**: ストレージ無効時は `serene` テーマを既定で適用
+
+#### 3. 動的スタイル適用方式
+```typescript
+// CSS変数の動的更新
+const applyTheme = (theme: ThemeTokens) => {
+  Object.entries(theme.cssVariables).forEach(([key, value]) => {
+    document.documentElement.style.setProperty(key, value);
+  });
+};
+
+// Tailwindクラスの動的切替
+const getThemeClasses = (semantic: string) => {
+  return currentTheme.tailwindClasses[semantic] || 'bg-gray-100';
+};
+```
+
+#### 4. パフォーマンス最適化
+- **遅延読み込み**: テーマトークンは初回選択時に動的インポート
+- **メモ化**: React.useMemo でテーマ計算結果をキャッシュ
+- **CSS変数**: 再レンダリング最小化のため Tailwind より CSS変数を優先
+- **アニメーション制御**: `prefers-reduced-motion` 考慮でテーマ切替時間を調整
+
+#### 5. 実装コンポーネント
+```typescript
+// frontend/app/theme/ThemeProvider.tsx
+interface ThemeContextValue {
+  currentTheme: ThemeTokens;
+  themeId: string;
+  setTheme: (themeId: string) => Promise<void>;
+  availableThemes: string[];
+  isLoading: boolean;
+}
+
+// frontend/app/theme/ThemeSwitcher.tsx
+const ThemeSwitcher: React.FC = () => {
+  const { setTheme, availableThemes, currentTheme } = useTheme();
+  // テーマ選択UI実装
+};
+```
+
+### セッション統合
+- **セッション開始時**: 選択されたテーマIDを `Session.themeId` に記録
+- **シーン表示**: `Scene.themeId` と統一してビジュアル一貫性を保持
+- **結果画面**: 診断中と同一テーマで結果を表示
+
+### エラーハンドリング
+- **テーマ読み込み失敗**: `fallback` テーマに自動切り替え
+- **ローカルストレージエラー**: セッション中はメモリ保持、次回は既定テーマ
+- **CSS適用失敗**: システムの既定スタイルで表示継続
 
 ## Open Questions
 現時点でデータ構造に関する未解決事項はない。将来、履歴保存や共有機能を実装する際に永続スキーマを再設計する。

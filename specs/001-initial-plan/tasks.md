@@ -115,7 +115,7 @@
 
 **Goal**: ユーザーが集計結果（評価軸・タイプ・キーワード）を理解し、再診断などの行動を選択できる
 
-**Independent Test**: 4シーン完了後に結果画面へ遷移し、タイプ説明と軸スコアが表示され、「もう一度診断する」が機能すれば価値が成立する
+**Independent Test**: 4シーン完了後に結果画面へ遷移し、タイプ説明と評価軸スコアが表示され、「もう一度診断する」が機能すれば価値が成立する
 
 ### Tests for User Story 3 (必須: Fail First) ⚠️
 
@@ -138,14 +138,73 @@
 
 ---
 
+**Checkpoint**: All user stories should now be independently functional
+
+---
+
+## Phase 3.5: Accessibility Implementation (FR-010 対応)
+
+**Purpose**: アクセシビリティ基準の満足 (FR-010)
+
+**Target**: WCAG 2.1 AA準拠の実装でスクリーンリーダー利用者が主要情報を把握可能に
+
+### Tests for Accessibility (必須: Fail First) ⚠️
+
+- [ ] T065 [P] Create axe-core automated accessibility tests in `frontend/tests/accessibility/axe.test.tsx`
+- [ ] T066 [P] Create keyboard navigation E2E tests in `frontend/e2e/accessibility-keyboard.spec.ts`
+- [ ] T067 [P] Create screen reader compatibility tests for result display
+- [ ] T068 [P] Create color contrast validation tests for all theme variants
+
+### Implementation for Accessibility
+
+- [ ] T069 [P] **アクセシビリティ基盤実装**: WAI-ARIA属性の実装
+  - 結果画面でのaria-label、role、aria-describedby の適用
+  - ランドマークrole（main, navigation, complementary）の定義
+  - 見出し構造（h1-h6）の階層化
+  - タイプカードとスコア表示への適切なaria属性の付与
+
+- [ ] T070 [P] **キーボードナビゲーション対応**
+  - Tab順序の論理的な定義（診断開始 → 選択肢 → 結果表示 → 再診断）
+  - Enterキー、Spaceキーでの選択肢操作
+  - Escapeキーでのダイアログ・モーダル終了
+  - フォーカストラップの実装（必要に応じて）
+
+- [ ] T071 [P] **フォーカス管理の実装**
+  - 可視フォーカス表示の確保（:focus-visible 対応）
+  - ページ遷移時のフォーカス位置管理
+  - スキップリンクの実装（「メインコンテンツへスキップ」）
+  - フォーカス状態のアニメーション（prefers-reduced-motion 対応）
+
+- [ ] T072 [P] **スクリーンリーダー対応**
+  - 結果画面でのスコア読み上げ対応（「冒険性：75点、100点中」等）
+  - 進行状況の音声通知（「4問中2問目」等）
+  - エラーメッセージのaria-live対応
+  - 動的コンテンツ更新時のスクリーンリーダー通知
+
+### Accessibility Testing & Validation
+
+- [ ] T073 [P] **自動アクセシビリティテスト**
+  - axe-coreを使用したWCAG 2.1 AA準拠テスト
+  - 色彩コントラスト比検証（4.5:1以上の確保）
+  - HTMLセマンティクス検証
+
+- [ ] T074 [P] **手動アクセシビリティテスト**
+  - NVDA/JAWSでの画面読み上げテスト
+  - キーボードオンリー操作テスト
+  - ハイコントラストモードでの表示確認
+
+**Dependencies**: Phase 3 (User Story 1-3) 完了後に実装開始
+**FR-010 Coverage**: 結果画面でのARIA ラベル、キーボードフォーカス順、スクリーンリーダー対応を完全実装
+
+---
+
 ## Phase 6: Polish & Cross-Cutting Concerns
 
 **Purpose**: Improvements that affect multiple user stories
 
 - [ ] T053 [P] Add comprehensive logging and metrics collection across all endpoints
-- [ ] T054 [P] Implement accessibility features (ARIA labels, keyboard navigation) across UI components
-- [ ] T055 [P] Add responsive design and mobile optimization for 360px+ viewports
-- [ ] T056 [P] Implement `prefers-reduced-motion` support across animations
+- [ ] T054 [P] Implement responsive design and mobile optimization for 360px+ viewports
+- [ ] T055 [P] Implement `prefers-reduced-motion` support across animations
 - [ ] T057 [P] Add performance monitoring and latency tracking
 - [ ] T058 [P] Expand unit test coverage to 90%+ in `backend/tests/` and `frontend/tests/`
 - [ ] T059 [P] Add fallback scenario testing and LLM failure simulation

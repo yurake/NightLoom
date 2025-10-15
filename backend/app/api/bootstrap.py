@@ -34,7 +34,7 @@ async def start_session(request: Optional[BootstrapRequest] = None) -> dict[str,
         session = await default_session_service.start_session(initial_character)
         
         # Log session start for observability (after session creation)
-        observability.log_session_start(str(session.id), session.initialCharacter, session.themeId)
+        observability.log_session_start(session.id, session.initialCharacter, session.themeId)
         
         # Return bootstrap data in expected format
         return {
