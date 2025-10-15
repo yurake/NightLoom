@@ -31,7 +31,7 @@ const mockResultData: ResultData = {
     }
   ],
   type: {
-    name: 'Logical Thinker',
+    name: 'Logic Thinker',
     description: '論理的思考を重視し、個人での内省を好む傾向があります。',
     dominantAxes: ['axis_1', 'axis_2'] as [string, string],
     polarity: 'Hi-Lo'
@@ -90,7 +90,7 @@ describe('ResultScreen コンポーネント', () => {
       expect(screen.getByTestId('axes-scores')).toBeInTheDocument();
     });
     
-    expect(screen.getByText('Logical Thinker')).toBeInTheDocument();
+    expect(screen.getByText('Logic Thinker')).toBeInTheDocument();
     expect(screen.getByText('軸数: 2')).toBeInTheDocument();
   });
 

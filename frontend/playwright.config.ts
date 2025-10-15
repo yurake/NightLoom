@@ -8,5 +8,8 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
   },
   testDir: "./e2e",
+  use: {
+    baseURL: "http://localhost:3000",
+  },
   reporter: [["list"], ["html", { open: "never" }]],
 });

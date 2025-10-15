@@ -59,14 +59,17 @@ class SessionService:
         if initial_character is None:
             initial_character = "あ"  # Default fallback
         
+        fallback_used = False
         try:
             axes, keywords, theme_id, fallback_used = await self.llm_service.generate_bootstrap_data(
                 initial_character
             )
         except Exception as e:
             # Use fallback when LLM service fails
-            from app.services.fallback_assets import get_fallback_bootstrap_data
-            axes, keywords, theme_id = get_fallback_bootstrap_data(initial_character)
+            from app.services.fallback_assets import get_fallback_axes, get_fallback_keywords
+            axes = get_fallback_axes()
+            keywords = get_fallback_keywords(initial_character)
+            theme_id = "fallback"
             fallback_used = True
         
         # Create new session

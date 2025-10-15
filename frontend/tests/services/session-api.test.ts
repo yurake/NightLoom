@@ -8,7 +8,8 @@ import { SessionApiClient } from '../../app/services/session-api';
 import { mockResult2Axes } from '../mocks/result-data';
 
 // Mock fetch globally
-const mockFetch = global.fetch as jest.MockedFunction<typeof fetch>;
+const mockFetch = jest.fn() as jest.MockedFunction<typeof fetch>;
+global.fetch = mockFetch;
 
 describe('SessionApiClient', () => {
   const baseUrl = 'http://localhost:8000';
@@ -31,7 +32,7 @@ describe('SessionApiClient', () => {
       expect(result).toEqual(mockResult2Axes);
       expect(result.sessionId).toBe('550e8400-e29b-41d4-a716-446655440000');
       expect(result.axes).toHaveLength(2);
-      expect(result.type.name).toBe('Logical Thinker');
+      expect(result.type.name).toBe('Logic Thinker');
     });
 
     it('セッションが見つからない場合はエラーをスローする', async () => {
@@ -49,7 +50,7 @@ describe('SessionApiClient', () => {
 
       await expect(
         client.getResult('invalid-session-id')
-      ).rejects.toThrow('SESSION_NOT_FOUND');
+      ).rejects.toThrow('セッションが見つかりません');
     });
 
     it('診断が未完了の場合はエラーをスローする', async () => {
@@ -67,7 +68,7 @@ describe('SessionApiClient', () => {
 
       await expect(
         client.getResult('550e8400-e29b-41d4-a716-446655440002')
-      ).rejects.toThrow('SESSION_NOT_COMPLETED');
+      ).rejects.toThrow('診断が完了していません');
     });
 
     it('タイプ生成に失敗した場合はエラーをスローする', async () => {
@@ -85,7 +86,7 @@ describe('SessionApiClient', () => {
 
       await expect(
         client.getResult('550e8400-e29b-41d4-a716-446655440003')
-      ).rejects.toThrow('TYPE_GEN_FAILED');
+      ).rejects.toThrow('タイプ生成に失敗しました');
     });
 
     it('タイムアウト設定が有効である', async () => {

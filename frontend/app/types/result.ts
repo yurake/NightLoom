@@ -196,19 +196,30 @@ export const isResultData = (obj: unknown): obj is ResultData => {
   
   const result = obj as ResultData;
   
+  const checks = {
+    sessionId: typeof result.sessionId === 'string',
+    sessionIdPattern: typeof result.sessionId === 'string' && SESSION_ID_PATTERN.test(result.sessionId),
+    keyword: typeof result.keyword === 'string',
+    keywordLength: typeof result.keyword === 'string' && result.keyword.length >= 1 && result.keyword.length <= 20,
+    axesArray: Array.isArray(result.axes),
+    axesLength: Array.isArray(result.axes) && result.axes.length >= 2 && result.axes.length <= 6,
+    axesEvery: Array.isArray(result.axes) && result.axes.every(isAxisScore),
+    typeResult: isTypeResult(result.type),
+    completedAt: typeof result.completedAt === 'string',
+    isoDate: typeof result.completedAt === 'string' && isValidISODate(result.completedAt)
+  };
+  
   return (
-    typeof result.sessionId === 'string' &&
-    SESSION_ID_PATTERN.test(result.sessionId) &&
-    typeof result.keyword === 'string' &&
-    result.keyword.length >= 1 &&
-    result.keyword.length <= 20 &&
-    Array.isArray(result.axes) &&
-    result.axes.length >= 2 &&
-    result.axes.length <= 6 &&
-    result.axes.every(isAxisScore) &&
-    isTypeResult(result.type) &&
-    typeof result.completedAt === 'string' &&
-    isValidISODate(result.completedAt)
+    checks.sessionId &&
+    checks.sessionIdPattern &&
+    checks.keyword &&
+    checks.keywordLength &&
+    checks.axesArray &&
+    checks.axesLength &&
+    checks.axesEvery &&
+    checks.typeResult &&
+    checks.completedAt &&
+    checks.isoDate
   );
 };
 
@@ -248,18 +259,28 @@ export const isTypeResult = (obj: unknown): obj is TypeResult => {
   
   const type = obj as TypeResult;
   
+  const checks = {
+    name: typeof type.name === 'string',
+    nameLength: typeof type.name === 'string' && type.name.length >= 1 && type.name.length <= 14,
+    namePattern: typeof type.name === 'string' && TYPE_NAME_PATTERN.test(type.name),
+    description: typeof type.description === 'string',
+    descLength: typeof type.description === 'string' && type.description.length >= 1 && type.description.length <= 50,
+    dominantAxesArray: Array.isArray(type.dominantAxes),
+    dominantAxesLength: Array.isArray(type.dominantAxes) && type.dominantAxes.length === 2,
+    dominantAxesEvery: Array.isArray(type.dominantAxes) && type.dominantAxes.every(id => typeof id === 'string' && AXIS_ID_PATTERN.test(id)),
+    polarity: isPolarityPattern(type.polarity)
+  };
+  
   return (
-    typeof type.name === 'string' &&
-    type.name.length >= 1 &&
-    type.name.length <= 14 &&
-    TYPE_NAME_PATTERN.test(type.name) &&
-    typeof type.description === 'string' &&
-    type.description.length >= 1 &&
-    type.description.length <= 50 &&
-    Array.isArray(type.dominantAxes) &&
-    type.dominantAxes.length === 2 &&
-    type.dominantAxes.every(id => typeof id === 'string' && AXIS_ID_PATTERN.test(id)) &&
-    isPolarityPattern(type.polarity)
+    checks.name &&
+    checks.nameLength &&
+    checks.namePattern &&
+    checks.description &&
+    checks.descLength &&
+    checks.dominantAxesArray &&
+    checks.dominantAxesLength &&
+    checks.dominantAxesEvery &&
+    checks.polarity
   );
 };
 
@@ -363,12 +384,12 @@ export const mockResult2Axes: ResultData = {
     }
   ],
   type: {
-    name: 'Logical Thinker',
+    name: 'Logic Thinker',
     description: '論理的思考を重視し、個人での内省を好む傾向があります。',
-    dominantAxes: ['axis_1', 'axis_2'],
+    dominantAxes: ['axis_1', 'axis_2'] as [string, string],
     polarity: 'Hi-Lo'
   },
-  completedAt: '2025-10-14T13:15:00Z'
+  completedAt: '2025-10-14T13:15:00.000Z'
 };
 
 /**
@@ -428,10 +449,10 @@ export const mockResult6Axes: ResultData = {
     }
   ],
   type: {
-    name: 'Creative Explorer',
+    name: 'Explorer',
     description: '創造性と探索心を兼ね備え、新しい挑戦を好む傾向があります。',
-    dominantAxes: ['axis_1', 'axis_6'],
+    dominantAxes: ['axis_1', 'axis_6'] as [string, string],
     polarity: 'Hi-Lo'
   },
-  completedAt: '2025-10-14T13:16:00Z'
+  completedAt: '2025-10-14T13:16:00.000Z'
 };
