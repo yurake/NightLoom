@@ -130,7 +130,6 @@ export default function PlayPage() {
     const trimmed = customKeyword.trim();
     // Use Array.from to properly count Unicode characters
     const charCount = Array.from(trimmed).length;
-    console.log('Validation debug:', { trimmed, charCount, valid: charCount > 0 && charCount <= 20 });
     return charCount > 0 && charCount <= 20;
   };
 
