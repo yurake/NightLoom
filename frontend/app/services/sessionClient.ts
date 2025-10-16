@@ -6,6 +6,7 @@
  */
 
 import { Session, Scene, AxisScore, TypeProfile } from '../types/session';
+import { performanceService } from './performance';
 
 export interface BootstrapResponse {
   sessionId: string;
@@ -68,6 +69,8 @@ export class SessionClient {
    * Start a new diagnosis session
    */
   async bootstrap(): Promise<BootstrapResponse> {
+    const startTime = performance.now();
+    
     try {
       const response = await fetch(`${this.baseUrl}/sessions/start`, {
         method: 'POST',
@@ -76,6 +79,13 @@ export class SessionClient {
         },
       });
 
+      const metrics = performanceService.trackApiCall(
+        '/sessions/start',
+        'POST',
+        startTime,
+        response.status
+      );
+
       if (!response.ok) {
         throw new SessionAPIError(
           `Bootstrap failed: ${response.statusText}`,
@@ -83,8 +93,23 @@ export class SessionClient {
         );
       }
 
-      return await response.json();
+      const result = await response.json();
+      
+      // Record successful bootstrap timing
+      performanceService.recordMetric('bootstrap', metrics.duration, true, {
+        sessionId: result.sessionId,
+        fallbackUsed: result.fallbackUsed
+      });
+
+      return result;
     } catch (error) {
+      performanceService.trackApiCall(
+        '/sessions/start',
+        'POST',
+        startTime,
+        0
+      );
+      
       if (error instanceof SessionAPIError) {
         throw error;
       }
@@ -102,6 +127,8 @@ export class SessionClient {
     keyword: string,
     source: 'suggestion' | 'manual'
   ): Promise<SceneResponse> {
+    const startTime = performance.now();
+    
     try {
       const response = await fetch(`${this.baseUrl}/sessions/${sessionId}/keyword`, {
         method: 'POST',
@@ -110,6 +137,13 @@ export class SessionClient {
         },
         body: JSON.stringify({ keyword, source }),
       });
+
+      performanceService.trackApiCall(
+        `/sessions/${sessionId}/keyword`,
+        'POST',
+        startTime,
+        response.status
+      );
 
       if (!response.ok) {
         if (response.status === 404) {
@@ -126,6 +160,13 @@ export class SessionClient {
 
       return await response.json();
     } catch (error) {
+      performanceService.trackApiCall(
+        `/sessions/${sessionId}/keyword`,
+        'POST',
+        startTime,
+        0
+      );
+      
       if (error instanceof SessionAPIError) {
         throw error;
       }
@@ -222,6 +263,8 @@ export class SessionClient {
    * Get final result after completing all scenes
    */
   async getResult(sessionId: string): Promise<ResultResponse> {
+    const startTime = performance.now();
+    
     try {
       const response = await fetch(`${this.baseUrl}/sessions/${sessionId}/result`, {
         method: 'POST',
@@ -229,6 +272,13 @@ export class SessionClient {
           'Content-Type': 'application/json',
         },
       });
+
+      const metrics = performanceService.trackApiCall(
+        `/sessions/${sessionId}/result`,
+        'POST',
+        startTime,
+        response.status
+      );
 
       if (!response.ok) {
         if (response.status === 404) {
@@ -243,8 +293,25 @@ export class SessionClient {
         );
       }
 
-      return await response.json();
+      const result = await response.json();
+      
+      // Record result generation performance
+      performanceService.recordMetric('result_calculation', metrics.duration, true, {
+        sessionId,
+        axisCount: result.axes?.length || 0,
+        profileCount: result.type?.profiles?.length || 0,
+        fallbackUsed: result.fallbackFlags?.length > 0
+      });
+
+      return result;
     } catch (error) {
+      performanceService.trackApiCall(
+        `/sessions/${sessionId}/result`,
+        'POST',
+        startTime,
+        0
+      );
+      
       if (error instanceof SessionAPIError) {
         throw error;
       }

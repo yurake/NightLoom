@@ -170,32 +170,32 @@
 
 ### Tests for Accessibility (必須: Fail First) ⚠️
 
-- [ ] T065 [P] Create axe-core automated accessibility tests in `frontend/tests/accessibility/axe.test.tsx`
-- [ ] T066 [P] Create keyboard navigation E2E tests in `frontend/e2e/accessibility-keyboard.spec.ts`
-- [ ] T067 [P] Create screen reader compatibility tests for result display
-- [ ] T068 [P] Create color contrast validation tests for all theme variants
+- [x] T065 [P] Create axe-core automated accessibility tests in `frontend/tests/accessibility/axe.test.tsx`
+- [x] T066 [P] Create keyboard navigation E2E tests in `frontend/e2e/accessibility-keyboard.spec.ts`
+- [x] T067 [P] Create screen reader compatibility tests for result display
+- [x] T068 [P] Create color contrast validation tests for all theme variants
 
 ### Implementation for Accessibility
 
-- [ ] T069 [P] **アクセシビリティ基盤実装**: WAI-ARIA属性の実装
+- [x] T069 [P] **アクセシビリティ基盤実装**: WAI-ARIA属性の実装
   - 結果画面でのaria-label、role、aria-describedby の適用
   - ランドマークrole（main, navigation, complementary）の定義
   - 見出し構造（h1-h6）の階層化
   - タイプカードとスコア表示への適切なaria属性の付与
 
-- [ ] T070 [P] **キーボードナビゲーション対応**
+- [x] T070 [P] **キーボードナビゲーション対応**
   - Tab順序の論理的な定義（診断開始 → 選択肢 → 結果表示 → 再診断）
   - Enterキー、Spaceキーでの選択肢操作
   - Escapeキーでのダイアログ・モーダル終了
   - フォーカストラップの実装（必要に応じて）
 
-- [ ] T071 [P] **フォーカス管理の実装**
+- [x] T071 [P] **フォーカス管理の実装**
   - 可視フォーカス表示の確保（:focus-visible 対応）
   - ページ遷移時のフォーカス位置管理
   - スキップリンクの実装（「メインコンテンツへスキップ」）
   - フォーカス状態のアニメーション（prefers-reduced-motion 対応）
 
-- [ ] T072 [P] **スクリーンリーダー対応**
+- [x] T072 [P] **スクリーンリーダー対応**
   - 結果画面でのスコア読み上げ対応（「冒険性：75点、100点中」等）
   - 進行状況の音声通知（「4問中2問目」等）
   - エラーメッセージのaria-live対応
@@ -203,12 +203,12 @@
 
 ### Accessibility Testing & Validation
 
-- [ ] T073 [P] **自動アクセシビリティテスト**
+- [x] T073 [P] **自動アクセシビリティテスト**
   - axe-coreを使用したWCAG 2.1 AA準拠テスト
   - 色彩コントラスト比検証（4.5:1以上の確保）
   - HTMLセマンティクス検証
 
-- [ ] T074 [P] **手動アクセシビリティテスト**
+- [x] T074 [P] **手動アクセシビリティテスト**
   - NVDA/JAWSでの画面読み上げテスト
   - キーボードオンリー操作テスト
   - ハイコントラストモードでの表示確認
@@ -222,17 +222,17 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T053 [P] Add comprehensive logging and metrics collection across all endpoints
-- [ ] T054 [P] Implement responsive design and mobile optimization for 360px+ viewports
-- [ ] T055 [P] Implement `prefers-reduced-motion` support across animations
-- [ ] T057 [P] Add performance monitoring and latency tracking
+- [x] T053 [P] Add comprehensive logging and metrics collection across all endpoints
+- [x] T054 [P] Implement responsive design and mobile optimization for 360px+ viewports
+- [x] T055 [P] Implement `prefers-reduced-motion` support across animations
+- [x] T057 [P] Add performance monitoring and latency tracking
 - [x] T058 [P] Expand unit test coverage to 90%+ in `backend/tests/` and `frontend/tests/`
 - [x] T059 [P] Add fallback scenario testing and LLM failure simulation
-- [ ] T060 [P] Documentation updates in `docs/` and `README.md`
-- [ ] T061 Security hardening: input validation, rate limiting, session protection
+- [x] T060 [P] Documentation updates in `docs/` and `README.md`
+- [x] T061 Security hardening: input validation, rate limiting, session protection
 - [x] T062 Code cleanup and refactoring based on test results
-- [ ] T063 Run quickstart.md validation and update setup instructions
-- [ ] T064 Performance optimization based on p95 latency requirements (≤800ms scenes, ≤1.2s results)
+- [x] T063 Run quickstart.md validation and update setup instructions
+- [x] T064 Performance optimization based on p95 latency requirements (≤800ms scenes, ≤1.2s results)
 
 ---
 

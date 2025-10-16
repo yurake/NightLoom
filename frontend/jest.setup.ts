@@ -388,3 +388,7 @@ if (typeof global.DOMException === 'undefined') {
     }
   };
 }
+
+// jest-axe setup for accessibility testing
+import { toHaveNoViolations } from 'jest-axe';
+expect.extend(toHaveNoViolations);

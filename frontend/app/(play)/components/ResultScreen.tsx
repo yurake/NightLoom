@@ -28,12 +28,16 @@ export interface ResultScreenProps {
  * LoadingIndicator コンポーネント
  */
 const LoadingIndicator: React.FC = () => (
-  <div 
+  <div
     className="flex flex-col items-center justify-center py-12"
     data-testid="loading-indicator"
   >
-    <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+    <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full motion-safe:animate-spin mb-4"></div>
     <p className="text-gray-600">読み込み中...</p>
+    {/* Alternative static indicator for reduced motion users */}
+    <div className="sr-only" aria-live="polite">
+      診断結果を読み込んでいます
+    </div>
   </div>
 );
 
@@ -114,28 +118,105 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({ sessionId, apiClient
 
   return (
     <main
-      className="min-h-screen bg-gray-50 py-8"
+      className="min-h-screen min-h-dvh bg-gray-50 py-4 xs:py-6 sm:py-8 pb-safe"
       role="main"
       aria-label="診断結果画面"
     >
-      <div className="max-w-4xl mx-auto px-4">
+      <div className="max-w-4xl mx-auto container-mobile">
+        {/* Screen reader announcement for result completion */}
+        <div
+          className="sr-only"
+          role="status"
+          aria-live="polite"
+          data-testid="result-announcement"
+        >
+          {result && !isLoading && !error && "診断が完了しました。結果をご確認ください。"}
+        </div>
+
         {isLoading && <LoadingIndicator />}
         
         {error && <ErrorMessage error={error} />}
         
         {result && !isLoading && !error && (
-          <div className="space-y-8">
+          <div className="spacing-mobile">
+            {/* Page heading */}
+            <header className="text-center mb-6 xs:mb-8">
+              <h1 className="text-xl xs:text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+                あなたの診断結果
+              </h1>
+              <p className="text-mobile-body text-gray-600">
+                パーソナリティ分析が完了しました
+              </p>
+            </header>
+
             {/* タイプカード */}
-            <TypeCard typeResult={result.type} />
+            <section
+              aria-labelledby="type-section-heading"
+              role="region"
+            >
+              <h2
+                id="type-section-heading"
+                className="sr-only"
+              >
+                パーソナリティタイプ
+              </h2>
+              <TypeCard typeResult={result.type} />
+            </section>
             
             {/* 軸スコア一覧 */}
-            <AxesScores axesScores={result.axes} />
+            <section
+              aria-labelledby="scores-section-heading"
+              role="region"
+            >
+              <h2
+                id="scores-section-heading"
+                className="sr-only"
+              >
+                詳細スコア
+              </h2>
+              <AxesScores axesScores={result.axes} />
+            </section>
             
             {/* 診断情報 */}
-            <div className="text-center text-sm text-gray-500">
-              <p>診断キーワード: {result.keyword}</p>
-              <p>完了日時: {new Date(result.completedAt).toLocaleString('ja-JP')}</p>
-            </div>
+            <section
+              className="text-center text-xs xs:text-sm text-gray-500 px-2"
+              aria-labelledby="session-info-heading"
+              role="complementary"
+            >
+              <h2
+                id="session-info-heading"
+                className="sr-only"
+              >
+                診断セッション情報
+              </h2>
+              <dl className="space-y-1">
+                <div>
+                  <dt className="sr-only">診断キーワード</dt>
+                  <dd className="break-words">診断キーワード: {result.keyword}</dd>
+                </div>
+                <div>
+                  <dt className="sr-only">完了日時</dt>
+                  <dd className="break-words">完了日時: {new Date(result.completedAt).toLocaleString('ja-JP')}</dd>
+                </div>
+              </dl>
+            </section>
+
+            {/* 再診断ボタン */}
+            <section className="text-center mt-8 xs:mt-10 sm:mt-12 pb-4">
+              <button
+                onClick={() => window.location.href = '/'}
+                className="w-full xs:w-auto bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-medium py-3 px-6 xs:px-8 rounded-lg motion-safe:transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 min-h-[44px]"
+                aria-describedby="restart-help"
+              >
+                もう一度診断する
+              </button>
+              <div
+                id="restart-help"
+                className="sr-only"
+              >
+                新しい診断セッションを開始します
+              </div>
+            </section>
           </div>
         )}
       </div>

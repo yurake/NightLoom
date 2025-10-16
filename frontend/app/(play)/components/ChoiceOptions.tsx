@@ -39,14 +39,61 @@ export const ChoiceOptions: React.FC<ChoiceOptionsProps> = ({
     onChoiceSelect(choiceId);
   }, [disabled, onChoiceSelect]);
 
-  const handleKeyDown = useCallback((event: React.KeyboardEvent, choiceId: string) => {
+  const handleKeyDown = useCallback((event: React.KeyboardEvent, choiceId: string, index: number) => {
     if (disabled) return;
     
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      onChoiceSelect(choiceId);
+    const currentTarget = event.currentTarget as HTMLElement;
+    
+    switch (event.key) {
+      case 'Enter':
+      case ' ':
+        event.preventDefault();
+        onChoiceSelect(choiceId);
+        break;
+        
+      case 'ArrowDown':
+        event.preventDefault();
+        const nextIndex = (index + 1) % choices.length;
+        const nextButton = document.querySelector(`[data-testid="choice-${sceneIndex}-${nextIndex + 1}"]`) as HTMLElement;
+        nextButton?.focus();
+        break;
+        
+      case 'ArrowUp':
+        event.preventDefault();
+        const prevIndex = index === 0 ? choices.length - 1 : index - 1;
+        const prevButton = document.querySelector(`[data-testid="choice-${sceneIndex}-${prevIndex + 1}"]`) as HTMLElement;
+        prevButton?.focus();
+        break;
+        
+      case 'Home':
+        event.preventDefault();
+        const firstButton = document.querySelector(`[data-testid="choice-${sceneIndex}-1"]`) as HTMLElement;
+        firstButton?.focus();
+        break;
+        
+      case 'End':
+        event.preventDefault();
+        const lastButton = document.querySelector(`[data-testid="choice-${sceneIndex}-${choices.length}"]`) as HTMLElement;
+        lastButton?.focus();
+        break;
+        
+      case 'Escape':
+        event.preventDefault();
+        // フォーカスを親要素に移動（またはページの他の要素に）
+        currentTarget.blur();
+        break;
+        
+      default:
+        // 数字キー（1-4）による選択
+        const numKey = parseInt(event.key);
+        if (numKey >= 1 && numKey <= choices.length) {
+          event.preventDefault();
+          const targetChoice = choices[numKey - 1];
+          onChoiceSelect(targetChoice.id);
+        }
+        break;
     }
-  }, [disabled, onChoiceSelect]);
+  }, [disabled, onChoiceSelect, choices, sceneIndex]);
 
   const getChoiceTestId = (choice: Choice, index: number) => {
     return `choice-${sceneIndex}-${index + 1}`;
@@ -115,7 +162,7 @@ export const ChoiceOptions: React.FC<ChoiceOptionsProps> = ({
             >
               <button
                 onClick={() => handleChoiceClick(choice.id)}
-                onKeyDown={(e) => handleKeyDown(e, choice.id)}
+                onKeyDown={(e) => handleKeyDown(e, choice.id, index)}
                 onMouseEnter={() => !disabled && setHoveredChoice(choice.id)}
                 onMouseLeave={() => setHoveredChoice(null)}
                 onFocus={() => !disabled && setHoveredChoice(choice.id)}

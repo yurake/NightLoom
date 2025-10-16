@@ -1,11 +1,16 @@
 """Keyword confirmation endpoint implementation."""
 
 from typing import Optional
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
 from ..services.session import default_session_service
 from ..services.observability import observability
+from ..middleware.security import (
+    get_rate_limiter,
+    SecureKeywordRequest,
+    validate_session_id
+)
 
 router = APIRouter()
 
@@ -16,16 +21,27 @@ class KeywordRequest(BaseModel):
 
 
 @router.post("/{session_id}/keyword")
-async def post_session_keyword(session_id: str, request: KeywordRequest) -> dict[str, object]:
+async def post_session_keyword(
+    session_id: str,
+    request: SecureKeywordRequest,
+    client_id: str = Depends(get_rate_limiter)
+) -> dict[str, object]:
     """Accept a keyword and return first scene data."""
+    # Import observability service for enhanced metrics
+    from ..services.observability import observability_service
+    
+    # Validate session ID format
+    validated_session_id = validate_session_id(session_id)
+    
+    # Start performance tracking
+    start_time = observability_service.start_timer("keyword_confirmation")
+    
     try:
         import time
         from uuid import UUID
         
-        start_time = time.time()
-        
         # Convert string session_id to UUID
-        session_uuid = UUID(session_id)
+        session_uuid = UUID(validated_session_id)
         
         # Use session service to confirm keyword and get first scene
         first_scene = await default_session_service.confirm_keyword(
@@ -33,17 +49,25 @@ async def post_session_keyword(session_id: str, request: KeywordRequest) -> dict
         )
         
         # Calculate latency for observability
-        latency_ms = (time.time() - start_time) * 1000
+        latency_ms = observability_service.get_elapsed_time(start_time)
         
-        # Log keyword confirmation for observability
+        # Track success metrics
+        observability_service.increment_counter("keyword_confirmation_success")
+        observability_service.record_latency("keyword_confirmation", start_time)
+        
+        # Log keyword confirmation for observability (with sanitized keyword)
         observability.log_keyword_confirmation(
             session_uuid, request.keyword, request.source, latency_ms
         )
         
+        # Get session to check fallback flags
+        session = default_session_service.session_store.get_session(session_uuid)
+        fallback_used = bool(session and session.fallbackFlags)
+        
         return {
-            "sessionId": session_id,
+            "sessionId": validated_session_id,
             "scene": first_scene.model_dump() if first_scene else None,
-            "fallbackUsed": False  # TODO: Get from session service
+            "fallbackUsed": fallback_used
         }
         
     except ValueError as e:
@@ -78,8 +102,12 @@ async def post_session_keyword(session_id: str, request: KeywordRequest) -> dict
         # Check if keyword validation failed
         if isinstance(e, SessionServiceError) and "Invalid keyword length" in str(e):
             raise HTTPException(
-                status_code=500,
-                detail=f"Invalid keyword: {str(e)}"
+                status_code=422,
+                detail={
+                    "error_code": "VALIDATION_ERROR",
+                    "message": "Invalid keyword format or length",
+                    "details": {"field": "keyword"}
+                }
             )
         
         # Check for session state errors (no longer INIT) - including ValueError from SessionGuard
@@ -89,11 +117,19 @@ async def post_session_keyword(session_id: str, request: KeywordRequest) -> dict
             "required" in str(e).lower() or
             "state" in str(e).lower()):
             raise HTTPException(
-                status_code=500,
-                detail=f"Session state error: {str(e)}"
+                status_code=400,
+                detail={
+                    "error_code": "BAD_REQUEST",
+                    "message": "Session is not in valid state for keyword confirmation",
+                    "details": {"session_id": validated_session_id}
+                }
             )
         
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to confirm keyword: {str(e)}"
+            detail={
+                "error_code": "INTERNAL_ERROR",
+                "message": "Failed to confirm keyword",
+                "details": {"timestamp": observability_service.get_current_timestamp()}
+            }
         )
