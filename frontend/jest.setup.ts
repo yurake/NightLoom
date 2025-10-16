@@ -21,6 +21,9 @@ configure({
 
 // Suppress React Testing Library warnings for better test output
 const originalConsoleError = console.error;
+const originalConsoleWarn = console.warn;
+const originalConsoleLog = console.log;
+
 console.error = (...args: any[]) => {
   // Suppress specific warnings that don't affect test functionality
   if (typeof args[0] === 'string') {
@@ -38,16 +41,58 @@ console.error = (...args: any[]) => {
       return;
     }
     
-    // Allow other console.error messages (like intentional test errors)
+    // Suppress expected test errors and logs during integration tests
     if (message.includes('結果取得エラー:') ||
         message.includes('キーワード取得エラー:') ||
-        message.includes('テーマ更新エラー:')) {
-      originalConsoleError(...args);
+        message.includes('テーマ更新エラー:') ||
+        message.includes('Bootstrap failed:') ||
+        message.includes('Keyword confirmation failed:') ||
+        message.includes('Invalid theme ID') ||
+        message.includes('falling back to fallback theme')) {
+      return; // Suppress these during tests
+    }
+  }
+
+  // Suppress console.log retrying messages during tests
+  if (typeof args[0] === 'string' && args[0].includes('Retrying bootstrap in')) {
+    return;
+  }
+
+  // Suppress console.warn for theme fallbacks during tests
+  if (typeof args[0] === 'string' && args[0].includes('Invalid theme ID')) {
+    return;
+  }
+  
+  originalConsoleError(...args);
+};
+
+// Suppress console.warn for test environment
+console.warn = (...args: any[]) => {
+  if (typeof args[0] === 'string') {
+    const message = args[0];
+    
+    // Suppress theme fallback warnings during tests
+    if (message.includes('Invalid theme ID') ||
+        message.includes('falling back to fallback theme')) {
       return;
     }
   }
   
-  originalConsoleError(...args);
+  originalConsoleWarn(...args);
+};
+
+// Suppress console.log for test environment
+console.log = (...args: any[]) => {
+  if (typeof args[0] === 'string') {
+    const message = args[0];
+    
+    // Suppress retry logs during tests
+    if (message.includes('Retrying bootstrap in')) {
+      return;
+    }
+  }
+  
+  originalConsoleLog(...args);
 };
 
 // Set React 18 environment flags for better compatibility
@@ -55,6 +100,47 @@ console.error = (...args: any[]) => {
 (globalThis as any).jest = true;
 
 // Essential polyfills for MSW in Jest environment
+
+// MSW v2 ClientRequest interceptor support
+if (typeof global.setImmediate === 'undefined') {
+  global.setImmediate = (callback: (...args: any[]) => void, ...args: any[]) =>
+    setTimeout(callback, 0, ...args);
+}
+
+// Process polyfill for MSW interceptors
+if (typeof global.process === 'undefined') {
+  (global as any).process = {
+    env: { NODE_ENV: 'test' },
+    nextTick: (callback: () => void) => setTimeout(callback, 0),
+    version: 'v18.0.0',
+    versions: { node: '18.0.0' }
+  };
+}
+
+// WebSocket polyfill for MSW v2
+if (typeof global.WebSocket === 'undefined') {
+  (global as any).WebSocket = class MockWebSocket extends EventTarget {
+    constructor(url: string, protocols?: string | string[]) {
+      super();
+      (this as any).url = url;
+      (this as any).protocols = protocols;
+      (this as any).readyState = 1; // OPEN
+    }
+    
+    send(data: string | ArrayBuffer) {
+      // Mock implementation
+    }
+    
+    close(code?: number, reason?: string) {
+      (this as any).readyState = 3; // CLOSED
+    }
+    
+    static CONNECTING = 0;
+    static OPEN = 1;
+    static CLOSING = 2;
+    static CLOSED = 3;
+  };
+}
 
 // TextEncoder/TextDecoder - required for MSW
 if (typeof global.TextEncoder === 'undefined') {

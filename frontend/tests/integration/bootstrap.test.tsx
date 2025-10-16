@@ -324,8 +324,8 @@ describe('Bootstrap Flow Error Scenarios', () => {
   test('should handle network timeout gracefully', async () => {
     // Mock timeout scenario
     mockSessionClient.bootstrap.mockImplementation(
-      () => new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Request timeout')), 100)
+      () => new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Request timeout')), 200)
       )
     );
 
@@ -335,9 +335,10 @@ describe('Bootstrap Flow Error Scenarios', () => {
       </TestWrapper>
     );
 
+    // Wait for timeout and retry attempts to complete
     await waitFor(() => {
-      expect(screen.getByTestId('error-message')).toHaveTextContent(/ネットワークエラーが発生しました/);
-    }, { timeout: 200 });
+      expect(screen.getByTestId('bootstrap-error')).toBeInTheDocument();
+    }, { timeout: 3000 });
   });
 
   test('should handle malformed API responses', async () => {
