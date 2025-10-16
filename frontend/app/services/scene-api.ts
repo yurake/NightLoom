@@ -3,7 +3,30 @@
  * Handles communication with scene-related endpoints
  */
 
-import { SessionApiError, handleApiError } from './session-api';
+import { SessionAPIError } from './sessionClient';
+
+/**
+ * APIエラーレスポンスを処理するユーティリティ関数
+ */
+async function handleApiError(response: Response): Promise<SessionAPIError> {
+  try {
+    const errorData = await response.json();
+    if (errorData.error && errorData.error.code) {
+      return new SessionAPIError(
+        errorData.error.message,
+        response.status,
+        errorData.error.code
+      );
+    }
+  } catch {
+    // JSON解析エラーの場合はHTTPステータスから判断
+  }
+  
+  return new SessionAPIError(
+    `HTTP Error: ${response.status} ${response.statusText}`,
+    response.status
+  );
+}
 
 export interface Choice {
   id: string;
@@ -80,13 +103,11 @@ export class SceneApiService {
       const data = await response.json();
       return data;
     } catch (error) {
-      if (error instanceof SessionApiError) {
+      if (error instanceof SessionAPIError) {
         throw error;
       }
-      throw new SessionApiError(
-        'NETWORK_ERROR',
-        'Failed to retrieve scene data',
-        { sessionId, sceneIndex, originalError: error }
+      throw new SessionAPIError(
+        'Failed to retrieve scene data'
       );
     }
   }
@@ -115,13 +136,11 @@ export class SceneApiService {
       const data = await response.json();
       return data;
     } catch (error) {
-      if (error instanceof SessionApiError) {
+      if (error instanceof SessionAPIError) {
         throw error;
       }
-      throw new SessionApiError(
-        'NETWORK_ERROR',
-        'Failed to submit choice',
-        { sessionId, sceneIndex, choiceId, originalError: error }
+      throw new SessionAPIError(
+        'Failed to submit choice'
       );
     }
   }
@@ -145,13 +164,11 @@ export class SceneApiService {
       const data = await response.json();
       return data;
     } catch (error) {
-      if (error instanceof SessionApiError) {
+      if (error instanceof SessionAPIError) {
         throw error;
       }
-      throw new SessionApiError(
-        'NETWORK_ERROR',
-        'Failed to retrieve progress',
-        { sessionId, originalError: error }
+      throw new SessionAPIError(
+        'Failed to retrieve progress'
       );
     }
   }
@@ -175,13 +192,11 @@ export class SceneApiService {
       const data = await response.json();
       return data;
     } catch (error) {
-      if (error instanceof SessionApiError) {
+      if (error instanceof SessionAPIError) {
         throw error;
       }
-      throw new SessionApiError(
-        'NETWORK_ERROR',
-        'Failed to validate scene access',
-        { sessionId, sceneIndex, originalError: error }
+      throw new SessionAPIError(
+        'Failed to validate scene access'
       );
     }
   }
@@ -214,13 +229,11 @@ export class SceneApiService {
         choiceExists: data.choiceExists,
       };
     } catch (error) {
-      if (error instanceof SessionApiError) {
+      if (error instanceof SessionAPIError) {
         throw error;
       }
-      throw new SessionApiError(
-        'NETWORK_ERROR',
-        'Failed to validate choice',
-        { sessionId, sceneIndex, choiceId, originalError: error }
+      throw new SessionAPIError(
+        'Failed to validate choice'
       );
     }
   }
@@ -309,22 +322,22 @@ export function formatProgressText(completedScenes: number, totalScenes: number 
 // Error handling utilities specific to scene operations
 
 export function isSceneNotFoundError(error: unknown): boolean {
-  return error instanceof SessionApiError && 
+  return error instanceof SessionAPIError && 
          (error.code === 'SESSION_NOT_FOUND' || error.message.includes('Scene') && error.message.includes('not found'));
 }
 
 export function isInvalidSceneError(error: unknown): boolean {
-  return error instanceof SessionApiError && 
+  return error instanceof SessionAPIError && 
          (error.code === 'INVALID_SCENE_INDEX' || error.code === 'BAD_REQUEST');
 }
 
 export function isChoiceValidationError(error: unknown): boolean {
-  return error instanceof SessionApiError && 
+  return error instanceof SessionAPIError && 
          error.code === 'VALIDATION_ERROR';
 }
 
 export function isServiceUnavailableError(error: unknown): boolean {
-  return error instanceof SessionApiError && 
+  return error instanceof SessionAPIError && 
          error.code === 'LLM_SERVICE_UNAVAILABLE';
 }
 
@@ -348,7 +361,7 @@ export function getSceneErrorMessage(error: unknown): string {
     return 'サービスが一時的に利用できません。しばらく待ってから再試行してください。';
   }
   
-  if (error instanceof SessionApiError) {
+  if (error instanceof SessionAPIError) {
     return error.message;
   }
   

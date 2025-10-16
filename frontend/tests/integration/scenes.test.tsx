@@ -7,7 +7,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { rest } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { SessionProvider } from '@/app/state/SessionContext';
 import { ThemeProvider } from '@/app/theme/ThemeProvider';
@@ -115,52 +115,52 @@ const mockChoiceResponses = {
 // MSW server setup
 const server = setupServer(
   // Scene retrieval endpoints
-  rest.get('/api/sessions/:sessionId/scenes/:sceneIndex', (req, res, ctx) => {
-    const { sceneIndex } = req.params;
+  http.get('/api/sessions/:sessionId/scenes/:sceneIndex', ({ params }: any) => {
+    const { sceneIndex } = params;
     const sceneNum = parseInt(sceneIndex as string);
     
-    if (sceneNum >= 1 && sceneNum <= 4 && mockScenes[sceneNum]) {
-      return res(ctx.json(mockScenes[sceneNum]));
+    if (sceneNum >= 1 && sceneNum <= 4 && (mockScenes as any)[sceneNum]) {
+      return HttpResponse.json((mockScenes as any)[sceneNum]);
     }
     
-    return res(
-      ctx.status(400),
-      ctx.json({
+    return HttpResponse.json(
+      {
         error_code: 'INVALID_SCENE_INDEX',
         message: 'Invalid scene index',
         details: { scene_index: sceneIndex }
-      })
+      },
+      { status: 400 }
     );
   }),
 
   // Choice submission endpoints
-  rest.post('/api/sessions/:sessionId/scenes/:sceneIndex/choice', async (req, res, ctx) => {
-    const { sceneIndex } = req.params;
+  http.post('/api/sessions/:sessionId/scenes/:sceneIndex/choice', async ({ request, params }: any) => {
+    const { sceneIndex } = params;
     const sceneNum = parseInt(sceneIndex as string);
-    const body = await req.json();
+    const body = await request.json();
     
     if (!body.choiceId) {
-      return res(
-        ctx.status(422),
-        ctx.json({
+      return HttpResponse.json(
+        {
           error_code: 'VALIDATION_ERROR',
           message: 'Missing choiceId',
           details: { field: 'choiceId' }
-        })
+        },
+        { status: 422 }
       );
     }
     
-    if (sceneNum >= 1 && sceneNum <= 4 && mockChoiceResponses[sceneNum]) {
-      return res(ctx.json(mockChoiceResponses[sceneNum]));
+    if (sceneNum >= 1 && sceneNum <= 4 && (mockChoiceResponses as any)[sceneNum]) {
+      return HttpResponse.json((mockChoiceResponses as any)[sceneNum]);
     }
     
-    return res(
-      ctx.status(400),
-      ctx.json({
+    return HttpResponse.json(
+      {
         error_code: 'INVALID_SCENE_INDEX',
         message: 'Invalid scene index',
         details: { scene_index: sceneIndex }
-      })
+      },
+      { status: 400 }
     );
   })
 );
@@ -206,14 +206,14 @@ describe('Scene Progression Integration Tests', () => {
     it('should handle scene retrieval errors gracefully', async () => {
       // Override server to return error
       server.use(
-        rest.get('/api/sessions/:sessionId/scenes/:sceneIndex', (req, res, ctx) => {
-          return res(
-            ctx.status(404),
-            ctx.json({
+        http.get('/api/sessions/:sessionId/scenes/:sceneIndex', ({ params }: any) => {
+          return HttpResponse.json(
+            {
               error_code: 'SESSION_NOT_FOUND',
               message: 'Session not found',
-              details: { session_id: req.params.sessionId }
-            })
+              details: { session_id: params.sessionId }
+            },
+            { status: 404 }
           );
         })
       );
@@ -232,14 +232,14 @@ describe('Scene Progression Integration Tests', () => {
     it('should enforce scene sequence restrictions', async () => {
       // Test accessing scene 3 before completing previous scenes
       server.use(
-        rest.get('/api/sessions/:sessionId/scenes/3', (req, res, ctx) => {
-          return res(
-            ctx.status(400),
-            ctx.json({
+        http.get('/api/sessions/:sessionId/scenes/3', ({ params }: any) => {
+          return HttpResponse.json(
+            {
               error_code: 'BAD_REQUEST',
               message: 'Previous scenes must be completed first',
               details: { required_scene: 1 }
-            })
+            },
+            { status: 400 }
           );
         })
       );
@@ -280,14 +280,14 @@ describe('Scene Progression Integration Tests', () => {
       
       // Override to return validation error
       server.use(
-        rest.post('/api/sessions/:sessionId/scenes/:sceneIndex/choice', (req, res, ctx) => {
-          return res(
-            ctx.status(422),
-            ctx.json({
+        http.post('/api/sessions/:sessionId/scenes/:sceneIndex/choice', ({ params }: any) => {
+          return HttpResponse.json(
+            {
               error_code: 'VALIDATION_ERROR',
               message: 'Invalid choice ID format',
               details: { field: 'choiceId', expected: 'choice_X_Y' }
-            })
+            },
+            { status: 422 }
           );
         })
       );
@@ -363,8 +363,8 @@ describe('Scene Progression Integration Tests', () => {
   describe('Error Handling & Resilience', () => {
     it('should handle network errors during scene retrieval', async () => {
       server.use(
-        rest.get('/api/sessions/:sessionId/scenes/:sceneIndex', (req, res, ctx) => {
-          return res.networkError('Network error');
+        http.get('/api/sessions/:sessionId/scenes/:sceneIndex', ({ params }: any) => {
+          return HttpResponse.error();
         })
       );
 
@@ -382,8 +382,8 @@ describe('Scene Progression Integration Tests', () => {
       const user = userEvent.setup();
       
       server.use(
-        rest.post('/api/sessions/:sessionId/scenes/:sceneIndex/choice', (req, res, ctx) => {
-          return res.networkError('Network error during choice submission');
+        http.post('/api/sessions/:sessionId/scenes/:sceneIndex/choice', ({ params }: any) => {
+          return HttpResponse.error();
         })
       );
 
@@ -403,18 +403,15 @@ describe('Scene Progression Integration Tests', () => {
 
     it('should provide fallback content when LLM service fails', async () => {
       server.use(
-        rest.get('/api/sessions/:sessionId/scenes/:sceneIndex', (req, res, ctx) => {
-          return res(
-            ctx.status(200),
-            ctx.json({
-              ...mockScenes[1],
-              fallbackUsed: true,
-              scene: {
-                ...mockScenes[1].scene,
-                narrative: 'フォールバック用のシンプルなシナリオです。'
-              }
-            })
-          );
+        http.get('/api/sessions/:sessionId/scenes/:sceneIndex', ({ params }: any) => {
+          return HttpResponse.json({
+            ...(mockScenes as any)[1],
+            fallbackUsed: true,
+            scene: {
+              ...(mockScenes as any)[1].scene,
+              narrative: 'フォールバック用のシンプルなシナリオです。'
+            }
+          });
         })
       );
 

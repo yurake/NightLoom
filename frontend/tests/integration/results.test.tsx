@@ -7,7 +7,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { rest } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { SessionProvider } from '@/app/state/SessionContext';
 import { ThemeProvider } from '@/app/theme/ThemeProvider';
@@ -147,51 +147,42 @@ const mockFallbackResultData = {
 // MSW server setup
 const server = setupServer(
   // Result retrieval endpoint
-  rest.post('/api/sessions/:sessionId/result', async (req, res, ctx) => {
-    const { sessionId } = req.params;
+  http.post('/api/sessions/:sessionId/result', async ({ request, params }: any) => {
+    const { sessionId } = params;
     
     if (sessionId === mockResultData.sessionId) {
-      return res(ctx.json(mockResultData));
+      return HttpResponse.json(mockResultData);
     }
     
     if (sessionId === mockFallbackResultData.sessionId) {
-      return res(ctx.json(mockFallbackResultData));
+      return HttpResponse.json(mockFallbackResultData);
     }
     
     if (sessionId === 'session-not-completed') {
-      return res(
-        ctx.status(400),
-        ctx.json({
-          error_code: 'SESSION_NOT_COMPLETED',
-          message: 'Session has not completed all 4 scenes',
-          details: { scenes_completed: 2, scenes_required: 4 }
-        })
-      );
+      return HttpResponse.json({
+        error_code: 'SESSION_NOT_COMPLETED',
+        message: 'Session has not completed all 4 scenes',
+        details: { scenes_completed: 2, scenes_required: 4 }
+      }, { status: 400 });
     }
     
     if (sessionId === 'session-not-found') {
-      return res(
-        ctx.status(404),
-        ctx.json({
-          error_code: 'SESSION_NOT_FOUND',
-          message: 'Session not found',
-          details: { session_id: sessionId }
-        })
-      );
+      return HttpResponse.json({
+        error_code: 'SESSION_NOT_FOUND',
+        message: 'Session not found',
+        details: { session_id: sessionId }
+      }, { status: 404 });
     }
     
     if (sessionId === 'llm-failure') {
-      return res(
-        ctx.status(503),
-        ctx.json({
-          error_code: 'LLM_SERVICE_UNAVAILABLE',
-          message: 'LLM service is currently unavailable',
-          details: { retry_after: 30 }
-        })
-      );
+      return HttpResponse.json({
+        error_code: 'LLM_SERVICE_UNAVAILABLE',
+        message: 'LLM service is currently unavailable',
+        details: { retry_after: 30 }
+      }, { status: 503 });
     }
     
-    return res(ctx.json(mockResultData));
+    return HttpResponse.json(mockResultData);
   })
 );
 
@@ -354,9 +345,9 @@ describe('Result Integration Tests', () => {
     it('should display loading state during result generation', async () => {
       // Delay the API response to test loading state
       server.use(
-        rest.post('/api/sessions/:sessionId/result', async (req, res, ctx) => {
+        http.post('/api/sessions/:sessionId/result', async ({ request, params }: any) => {
           await new Promise(resolve => setTimeout(resolve, 1000));
-          return res(ctx.json(mockResultData));
+          return HttpResponse.json(mockResultData);
         })
       );
 
@@ -407,8 +398,8 @@ describe('Result Integration Tests', () => {
       };
 
       server.use(
-        rest.post('/api/sessions/:sessionId/result', (req, res, ctx) => {
-          return res(ctx.json(extremeResultData));
+        http.post('/api/sessions/:sessionId/result', ({ request, params }: any) => {
+          return HttpResponse.json(extremeResultData);
         })
       );
 
@@ -439,8 +430,8 @@ describe('Result Integration Tests', () => {
       };
 
       server.use(
-        rest.post('/api/sessions/:sessionId/result', (req, res, ctx) => {
-          return res(ctx.json(malformedResultData));
+        http.post('/api/sessions/:sessionId/result', ({ request, params }: any) => {
+          return HttpResponse.json(malformedResultData);
         })
       );
 
@@ -458,10 +449,10 @@ describe('Result Integration Tests', () => {
 
     it('should handle network timeouts during result fetch', async () => {
       server.use(
-        rest.post('/api/sessions/:sessionId/result', async (req, res, ctx) => {
+        http.post('/api/sessions/:sessionId/result', async ({ request, params }: any) => {
           // Simulate timeout
           await new Promise(resolve => setTimeout(resolve, 10000));
-          return res(ctx.json(mockResultData));
+          return HttpResponse.json(mockResultData);
         })
       );
 
@@ -582,15 +573,12 @@ describe('Result Integration Tests', () => {
 
     it('should handle session expiration during result display', async () => {
       server.use(
-        rest.post('/api/sessions/:sessionId/result', (req, res, ctx) => {
-          return res(
-            ctx.status(404),
-            ctx.json({
-              error_code: 'SESSION_NOT_FOUND',
-              message: 'Session has expired',
-              details: { session_id: req.params.sessionId }
-            })
-          );
+        http.post('/api/sessions/:sessionId/result', ({ request, params }: any) => {
+          return HttpResponse.json({
+            error_code: 'SESSION_NOT_FOUND',
+            message: 'Session has expired',
+            details: { session_id: params.sessionId }
+          }, { status: 404 });
         })
       );
 

@@ -39,7 +39,10 @@ export default function PlayPage() {
     startBootstrap();
   }, []);
 
-  const startBootstrap = async () => {
+  const startBootstrap = async (retryCount = 0) => {
+    const maxRetries = 3;
+    const baseDelay = 100; // Reduced to 100ms for faster test execution
+
     try {
       setIsBootstrapping(true);
       setBootstrapError(null);
@@ -71,19 +74,38 @@ export default function PlayPage() {
       if (response.themeId !== themeId) {
         setThemeId(response.themeId as any);
       }
+
+      // Clear loading state on success
+      setIsBootstrapping(false);
+      dispatch(sessionActions.setLoading(false));
       
     } catch (error) {
       console.error('Bootstrap failed:', error);
-      const errorMessage = error instanceof SessionAPIError 
-        ? error.message 
+      
+      if (retryCount < maxRetries) {
+        // Exponential backoff: baseDelay * 2^retryCount
+        const delay = baseDelay * Math.pow(2, retryCount);
+        console.log(`Retrying bootstrap in ${delay}ms (attempt ${retryCount + 1}/${maxRetries + 1})`);
+        
+        setTimeout(() => {
+          startBootstrap(retryCount + 1);
+        }, delay);
+        return;
+      }
+      
+      const errorMessage = (error as any)?.name === 'SessionAPIError'
+        ? (error as SessionAPIError).message
         : 'ネットワークエラーが発生しました';
       
       setBootstrapError(errorMessage);
       dispatch(sessionActions.setError(errorMessage));
-    } finally {
       setIsBootstrapping(false);
       dispatch(sessionActions.setLoading(false));
     }
+  };
+
+  const handleRetryBootstrap = () => {
+    startBootstrap();
   };
 
   const handleKeywordSelection = async (keyword: string, source: 'suggestion' | 'manual') => {
@@ -104,8 +126,8 @@ export default function PlayPage() {
       
     } catch (error) {
       console.error('Keyword confirmation failed:', error);
-      const errorMessage = error instanceof SessionAPIError 
-        ? error.message 
+      const errorMessage = (error as any)?.name === 'SessionAPIError'
+        ? (error as SessionAPIError).message
         : 'キーワードの確定に失敗しました';
       
       setKeywordError(errorMessage);
@@ -165,7 +187,7 @@ export default function PlayPage() {
             {bootstrapError}
           </p>
           <button
-            onClick={startBootstrap}
+            onClick={handleRetryBootstrap}
             className="rounded-full bg-accent px-6 py-3 text-surface font-medium hover:bg-accent/90 transition-colors"
             data-testid="retry-button"
           >
@@ -382,7 +404,7 @@ export default function PlayPage() {
         <h1 className="text-2xl font-semibold mb-4">NightLoom</h1>
         <p className="text-white/70 mb-6">診断を準備しています...</p>
         <button
-          onClick={startBootstrap}
+          onClick={handleRetryBootstrap}
           className="rounded-full bg-accent px-6 py-3 text-surface font-medium hover:bg-accent/90 transition-colors"
           data-testid="bootstrap-start-button"
         >

@@ -1,0 +1,247 @@
+
+> nightloom-frontend@0.1.0 test /Users/yurak/git/NightLoom/frontend
+> jest tests/integration
+
+FAIL tests/integration/scenes.test.tsx
+  ● Test suite failed to run
+
+    Cannot find module 'msw/node' from 'tests/integration/scenes.test.tsx'
+
+      11 | import { setupServer } from 'msw/node';
+      12 | import { SessionProvider } from '@/app/state/SessionContext';
+    > 13 | import { ThemeProvider } from '@/app/theme/ThemeProvider';
+         |               ^
+      14 |
+      15 | // Mock components that will be created in implementation
+      16 | const MockSceneComponent = ({ sessionId, sceneIndex }: { sessionId: string; sceneIndex: number }) => (
+
+      at Resolver._throwModNotFoundError (../node_modules/.pnpm/jest-resolve@29.7.0/node_modules/jest-resolve/build/resolver.js:427:11)
+      at Object.<anonymous> (tests/integration/scenes.test.tsx:13:15)
+
+FAIL tests/integration/results.test.tsx
+  ● Test suite failed to run
+
+    Cannot find module 'msw/node' from 'tests/integration/results.test.tsx'
+
+      11 | import { setupServer } from 'msw/node';
+      12 | import { SessionProvider } from '@/app/state/SessionContext';
+    > 13 | import { ThemeProvider } from '@/app/theme/ThemeProvider';
+         |               ^
+      14 |
+      15 | // Mock result screen component (will be created in implementation)
+      16 | const MockResultScreen = ({ sessionId }: { sessionId: string }) => (
+
+      at Resolver._throwModNotFoundError (../node_modules/.pnpm/jest-resolve@29.7.0/node_modules/jest-resolve/build/resolver.js:427:11)
+      at Object.<anonymous> (tests/integration/results.test.tsx:13:15)
+
+FAIL tests/integration/bootstrap.test.tsx
+  ● Console
+
+    console.error
+      Bootstrap failed: Error: Network error
+          at Object.<anonymous> (/Users/yurak/git/NightLoom/frontend/tests/integration/bootstrap.test.tsx:143:51)
+          at Promise.then.completed (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-circus@29.7.0/node_modules/jest-circus/build/utils.js:298:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-circus@29.7.0/node_modules/jest-circus/build/utils.js:231:10)
+          at _callCircusTest (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-circus@29.7.0/node_modules/jest-circus/build/run.js:316:40)
+          at _runTest (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-circus@29.7.0/node_modules/jest-circus/build/run.js:252:3)
+          at _runTestsForDescribeBlock (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-circus@29.7.0/node_modules/jest-circus/build/run.js:126:9)
+          at _runTestsForDescribeBlock (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-circus@29.7.0/node_modules/jest-circus/build/run.js:121:9)
+          at run (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-circus@29.7.0/node_modules/jest-circus/build/run.js:71:3)
+          at runAndTransformResultsToJestFormat (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-circus@29.7.0/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+          at jestAdapter (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-circus@29.7.0/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+          at runTestInternal (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-runner@29.7.0/node_modules/jest-runner/build/runTest.js:367:16)
+          at runTest (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-runner@29.7.0/node_modules/jest-runner/build/runTest.js:444:34)
+          at Object.worker (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-runner@29.7.0/node_modules/jest-runner/build/testWorker.js:106:12)
+
+      48 |   }
+      49 |   
+    > 50 |   originalConsoleError(...args);
+         |   ^
+      51 | };
+      52 |
+      53 | // Set React 18 environment flags for better compatibility
+
+      at console.originalConsoleError [as error] (jest.setup.ts:50:3)
+      at error (/Users/yurak/git/NightLoom/frontend/app/(play)../../../../../page.tsx:76:15)
+
+    console.error
+      Bootstrap failed: Error: Network error
+          at Object.<anonymous> (/Users/yurak/git/NightLoom/frontend/tests/integration/bootstrap.test.tsx:143:51)
+          at Promise.then.completed (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-circus@29.7.0/node_modules/jest-circus/build/utils.js:298:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-circus@29.7.0/node_modules/jest-circus/build/utils.js:231:10)
+          at _callCircusTest (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-circus@29.7.0/node_modules/jest-circus/build/run.js:316:40)
+          at _runTest (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-circus@29.7.0/node_modules/jest-circus/build/run.js:252:3)
+          at _runTestsForDescribeBlock (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-circus@29.7.0/node_modules/jest-circus/build/run.js:126:9)
+          at _runTestsForDescribeBlock (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-circus@29.7.0/node_modules/jest-circus/build/run.js:121:9)
+          at run (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-circus@29.7.0/node_modules/jest-circus/build/run.js:71:3)
+          at runAndTransformResultsToJestFormat (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-circus@29.7.0/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+          at jestAdapter (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-circus@29.7.0/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+          at runTestInternal (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-runner@29.7.0/node_modules/jest-runner/build/runTest.js:367:16)
+          at runTest (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-runner@29.7.0/node_modules/jest-runner/build/runTest.js:444:34)
+          at Object.worker (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-runner@29.7.0/node_modules/jest-runner/build/testWorker.js:106:12)
+
+      48 |   }
+      49 |   
+    > 50 |   originalConsoleError(...args);
+         |   ^
+      51 | };
+      52 |
+      53 | // Set React 18 environment flags for better compatibility
+
+      at console.originalConsoleError [as error] (jest.setup.ts:50:3)
+      at error (/Users/yurak/git/NightLoom/frontend/app/(play)../../../../../page.tsx:76:15)
+
+    console.error
+      Keyword confirmation failed: Error: Keyword confirmation failed
+          at Object.<anonymous> (/Users/yurak/git/NightLoom/frontend/tests/integration/bootstrap.test.tsx:175:56)
+
+      48 |   }
+      49 |   
+    > 50 |   originalConsoleError(...args);
+         |   ^
+      51 | };
+      52 |
+      53 | // Set React 18 environment flags for better compatibility
+
+      at console.originalConsoleError [as error] (jest.setup.ts:50:3)
+      at error (/Users/yurak/git/NightLoom/frontend/app/(play)../../../../../page.tsx:106:15)
+
+    console.error
+      Bootstrap failed: Error: Request timeout
+          at /Users/yurak/git/NightLoom/frontend/tests/integration/bootstrap.test.tsx:328:33
+          at Timeout.task [as _onTimeout] (/Users/yurak/git/NightLoom/node_modules/.pnpm/jsdom@26.1.0/node_modules/jsdom/lib/jsdom/browser/Window.js:579:19)
+          at listOnTimeout (node:internal/timers:608:17)
+          at processTimers (node:internal/timers:543:7)
+
+      48 |   }
+      49 |   
+    > 50 |   originalConsoleError(...args);
+         |   ^
+      51 | };
+      52 |
+      53 | // Set React 18 environment flags for better compatibility
+
+      at console.originalConsoleError [as error] (jest.setup.ts:50:3)
+      at error (/Users/yurak/git/NightLoom/frontend/app/(play)../../../../../page.tsx:76:15)
+
+    console.error
+      Bootstrap failed: Error: Request timeout
+          at /Users/yurak/git/NightLoom/frontend/tests/integration/bootstrap.test.tsx:328:33
+          at Timeout.task [as _onTimeout] (/Users/yurak/git/NightLoom/node_modules/.pnpm/jsdom@26.1.0/node_modules/jsdom/lib/jsdom/browser/Window.js:579:19)
+          at listOnTimeout (node:internal/timers:608:17)
+          at processTimers (node:internal/timers:543:7)
+
+      48 |   }
+      49 |   
+    > 50 |   originalConsoleError(...args);
+         |   ^
+      51 | };
+      52 |
+      53 | // Set React 18 environment flags for better compatibility
+
+      at console.originalConsoleError [as error] (jest.setup.ts:50:3)
+      at error (/Users/yurak/git/NightLoom/frontend/app/(play)../../../../../page.tsx:76:15)
+
+    console.warn
+      Invalid theme ID "", falling back to fallback theme
+
+      72 |       setThemeIdInternal(value);
+      73 |     } else {
+    > 74 |       console.warn(`Invalid theme ID "${value}", falling back to fallback theme`);
+         |               ^
+      75 |       setThemeIdInternal("fallback");
+      76 |     }
+      77 |   };
+
+      at warn (app/theme/ThemeProvider.tsx:74:15)
+      at setThemeId (/Users/yurak/git/NightLoom/frontend/app/(play)../../../../../page.tsx:72:9)
+
+    console.warn
+      Invalid theme ID "", falling back to fallback theme
+
+      72 |       setThemeIdInternal(value);
+      73 |     } else {
+    > 74 |       console.warn(`Invalid theme ID "${value}", falling back to fallback theme`);
+         |               ^
+      75 |       setThemeIdInternal("fallback");
+      76 |     }
+      77 |   };
+
+      at warn (app/theme/ThemeProvider.tsx:74:15)
+      at setThemeId (/Users/yurak/git/NightLoom/frontend/app/(play)../../../../../page.tsx:72:9)
+
+    console.error
+      Bootstrap failed: Error: Network error
+          at Object.<anonymous> (/Users/yurak/git/NightLoom/frontend/tests/integration/bootstrap.test.tsx:369:31)
+          at /Users/yurak/git/NightLoom/node_modules/.pnpm/jest-mock@30.2.0/node_modules/jest-mock/build/index.js:305:39
+          at Object.<anonymous> (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-mock@30.2.0/node_modules/jest-mock/build/index.js:312:13)
+          at Object.mockConstructor [as bootstrap] (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-mock@30.2.0/node_modules/jest-mock/build/index.js:102:19)
+          at bootstrap (/Users/yurak/git/NightLoom/frontend/app/(play)/page.tsx:48:44)
+          at startBootstrap (/Users/yurak/git/NightLoom/frontend/app/(play)/page.tsx:39:5)
+          at commitHookEffectListMount (/Users/yurak/git/NightLoom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:23189:26)
+          at commitPassiveMountOnFiber (/Users/yurak/git/NightLoom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:24970:11)
+          at commitPassiveMountEffects_complete (/Users/yurak/git/NightLoom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:24930:9)
+          at commitPassiveMountEffects_begin (/Users/yurak/git/NightLoom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:24917:7)
+          at commitPassiveMountEffects (/Users/yurak/git/NightLoom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:24905:3)
+          at flushPassiveEffectsImpl (/Users/yurak/git/NightLoom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:27078:3)
+          at flushPassiveEffects (/Users/yurak/git/NightLoom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:27023:14)
+          at /Users/yurak/git/NightLoom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom.development.js:26808:9
+          at flushActQueue (/Users/yurak/git/NightLoom/node_modules/.pnpm/react@18.3.1/node_modules/react/cjs/react.development.js:2667:24)
+          at act (/Users/yurak/git/NightLoom/node_modules/.pnpm/react@18.3.1/node_modules/react/cjs/react.development.js:2582:11)
+          at actWithWarning (/Users/yurak/git/NightLoom/node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom/cjs/react-dom-test-utils.development.js:1740:10)
+          at /Users/yurak/git/NightLoom/node_modules/.pnpm/@testing-library+react@14.2.1_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/@testing-library/react/dist/act-compat.js:46:25
+          at renderRoot (/Users/yurak/git/NightLoom/node_modules/.pnpm/@testing-library+react@14.2.1_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/@testing-library/react/dist/pure.js:180:26)
+          at render (/Users/yurak/git/NightLoom/node_modules/.pnpm/@testing-library+react@14.2.1_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/@testing-library/react/dist/pure.js:266:10)
+          at Object.<anonymous> (/Users/yurak/git/NightLoom/frontend/tests/integration/bootstrap.test.tsx:381:11)
+          at Promise.then.completed (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-circus@29.7.0/node_modules/jest-circus/build/utils.js:298:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-circus@29.7.0/node_modules/jest-circus/build/utils.js:231:10)
+          at _callCircusTest (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-circus@29.7.0/node_modules/jest-circus/build/run.js:316:40)
+          at _runTest (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-circus@29.7.0/node_modules/jest-circus/build/run.js:252:3)
+          at _runTestsForDescribeBlock (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-circus@29.7.0/node_modules/jest-circus/build/run.js:126:9)
+          at _runTestsForDescribeBlock (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-circus@29.7.0/node_modules/jest-circus/build/run.js:121:9)
+          at run (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-circus@29.7.0/node_modules/jest-circus/build/run.js:71:3)
+          at runAndTransformResultsToJestFormat (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-circus@29.7.0/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+          at jestAdapter (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-circus@29.7.0/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+          at runTestInternal (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-runner@29.7.0/node_modules/jest-runner/build/runTest.js:367:16)
+          at runTest (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-runner@29.7.0/node_modules/jest-runner/build/runTest.js:444:34)
+          at Object.worker (/Users/yurak/git/NightLoom/node_modules/.pnpm/jest-runner@29.7.0/node_modules/jest-runner/build/testWorker.js:106:12)
+
+      48 |   }
+      49 |   
+    > 50 |   originalConsoleError(...args);
+         |   ^
+      51 | };
+      52 |
+      53 | // Set React 18 environment flags for better compatibility
+
+      at console.originalConsoleError [as error] (jest.setup.ts:50:3)
+      at error (/Users/yurak/git/NightLoom/frontend/app/(play)../../../../../page.tsx:76:15)
+
+  ● Bootstrap Flow Error Scenarios › should retry failed requests with exponential backoff
+
+    Unable to find an element with the text: 愛. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+    Ignored nodes: comments, script, style
+
+    <div><main class="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center p-8"><div class="text-center max-w-md" data-testid="bootstrap-error" aria-live="assertive"><div class="mb-4 text-red-400 text-4xl">⚠️</div><h2 class="text-xl font-medium mb-4 text-white">エラーが発生しました</h2><p class="text-white/70 mb-6" data-testid="error-message">ネットワークエラーが発生しました</p><button class="rounded-full bg-accent px-6 py-3 text-surface font-medium hover:bg-accent/90 transition-colors" data-testid="retry-button">再試行</button></div></main></div>
+
+      386 |
+      387 |     // Should eventually succeed after retries
+    > 388 |     await waitFor(() => {
+          |                  ^
+      389 |       expect(screen.getByText('愛')).toBeInTheDocument();
+      390 |     }, { timeout: 3000 });
+      391 |
+
+      at waitForWrapper (../node_modules/.pnpm/@testing-library+dom@9.3.4/node_modules/@testing-library/dom/dist/wait-for.js:163:27)
+      at Object.<anonymous> (tests/integration/bootstrap.test.tsx:388:18)
+
+Test Suites: 3 failed, 3 total
+Tests:       1 failed, 10 passed, 11 total
+Snapshots:   0 total
+Time:        4.725 s
+Ran all test suites matching /tests\/integration/i.
+ ELIFECYCLE  Test failed. See above for more details.
