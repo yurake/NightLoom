@@ -22,11 +22,11 @@
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Verify project structure matches plan.md specifications (backend/, frontend/, docs/, specs/)
-- [ ] T002 [P] Initialize backend Python 3.12 environment with uv and FastAPI dependencies
-- [ ] T003 [P] Initialize frontend Next.js 14 project with TypeScript, Tailwind CSS, pnpm dependencies
-- [ ] T004 [P] Configure linting, formatting, and pre-commit hooks for both backend and frontend
-- [ ] T005 [P] Setup test frameworks: pytest + respx for backend, Jest + Testing Library + Playwright for frontend
+- [x] T001 Verify project structure matches plan.md specifications (backend/, frontend/, docs/, specs/)
+- [x] T002 [P] Initialize backend Python 3.12 environment with uv and FastAPI dependencies
+- [x] T003 [P] Initialize frontend Next.js 14 project with TypeScript, Tailwind CSS, pnpm dependencies
+- [x] T004 [P] Configure linting, formatting, and pre-commit hooks for both backend and frontend
+- [x] T005 [P] Setup test frameworks: pytest + respx for backend, Jest + Testing Library + Playwright for frontend
 
 ---
 
@@ -36,17 +36,17 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T006 Create FastAPI application structure in `backend/app/main.py` with CORS and basic routing
-- [ ] T007 [P] Implement session storage service in `backend/app/services/session_store.py` (in-memory, ephemeral)
-- [ ] T008 [P] Create base data models in `backend/app/models/session.py` (Session, Scene, Choice, Axis, TypeProfile)
-- [ ] T009 [P] Setup LLM client abstraction in `backend/app/clients/llm.py` with retry and fallback logic
-- [ ] T010 [P] Implement fallback assets service in `backend/app/services/fallback_assets.py`
-- [ ] T011 [P] Create observability service in `backend/app/services/observability.py` for metrics and logging
-- [ ] T012 [P] Setup Next.js App Router structure in `frontend/app/` with layout and basic routing
-- [ ] T013 [P] Implement session context provider in `frontend/app/state/SessionContext.tsx`
-- [ ] T014 [P] Create theme provider in `frontend/app/theme/ThemeProvider.tsx` with theme tokens
-- [ ] T015 [P] Setup API client in `frontend/app/services/sessionClient.ts` with error handling
-- [ ] T016 Configure environment variables and API proxy settings for frontend-backend communication
+- [x] T006 Create FastAPI application structure in `backend/app/main.py` with CORS and basic routing
+- [x] T007 [P] Implement session storage service in `backend/app/services/session_store.py` (in-memory, ephemeral)
+- [x] T008 [P] Create base data models in `backend/app/models/session.py` (Session, Scene, Choice, Axis, TypeProfile)
+- [x] T009 [P] Setup LLM client abstraction in `backend/app/clients/llm.py` with retry and fallback logic
+- [x] T010 [P] Implement fallback assets service in `backend/app/services/fallback_assets.py`
+- [x] T011 [P] Create observability service in `backend/app/services/observability.py` for metrics and logging
+- [x] T012 [P] Setup Next.js App Router structure in `frontend/app/` with layout and basic routing
+- [x] T013 [P] Implement session context provider in `frontend/app/state/SessionContext.tsx`
+- [x] T014 [P] Create theme provider in `frontend/app/theme/ThemeProvider.tsx` with theme tokens
+- [x] T015 [P] Setup API client in `frontend/app/services/sessionClient.ts` with error handling
+- [x] T016 Configure environment variables and API proxy settings for frontend-backend communication
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -62,22 +62,22 @@
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T017 [P] [US1] Contract test for `/api/sessions/start` endpoint in `backend/tests/api/test_bootstrap.py`
-- [ ] T018 [P] [US1] Contract test for `/api/sessions/{sessionId}/keyword` endpoint in `backend/tests/api/test_keyword.py`
-- [ ] T019 [P] [US1] Integration test for bootstrap flow in `frontend/tests/integration/bootstrap.test.tsx`
-- [ ] T020 [P] [US1] E2E test for session start flow in `frontend/e2e/bootstrap.spec.ts`
+- [x] T017 [P] [US1] Contract test for `/api/sessions/start` endpoint in `backend/tests/api/test_bootstrap.py`
+- [x] T018 [P] [US1] Contract test for `/api/sessions/{sessionId}/keyword` endpoint in `backend/tests/api/test_keyword.py`
+- [x] T019 [P] [US1] Integration test for bootstrap flow in `frontend/tests/integration/bootstrap.test.tsx`
+- [x] T020 [P] [US1] E2E test for session start flow in `frontend/e2e/bootstrap.spec.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T021 [P] [US1] Implement session bootstrap service in `backend/app/services/session.py`
-- [ ] T022 [P] [US1] Implement scoring service in `backend/app/services/scoring.py`
-- [ ] T023 [P] [US1] Implement typing service in `backend/app/services/typing.py`
-- [ ] T024 [US1] Create bootstrap API endpoint in `backend/app/api/bootstrap.py`
-- [ ] T025 [US1] Create keyword confirmation API endpoint in `backend/app/api/keyword.py`
-- [ ] T026 [P] [US1] Create main landing page in `frontend/app/(play)/page.tsx` with keyword selection UI
-- [ ] T027 [P] [US1] Implement bootstrap flow components and loading states
-- [ ] T028 [US1] Add form validation and error handling for keyword input
-- [ ] T029 [US1] Integrate session API client with bootstrap flow
+- [x] T021 [P] [US1] Implement session bootstrap service in `backend/app/services/session.py`
+- [x] T022 [P] [US1] Implement scoring service in `backend/app/services/scoring.py`
+- [x] T023 [P] [US1] Implement typing service in `backend/app/services/typing.py`
+- [x] T024 [US1] Create bootstrap API endpoint in `backend/app/api/bootstrap.py`
+- [x] T025 [US1] Create keyword confirmation API endpoint in `backend/app/api/keyword.py`
+- [x] T026 [P] [US1] Create main landing page in `frontend/app/(play)/page.tsx` with keyword selection UI
+- [x] T027 [P] [US1] Implement bootstrap flow components and loading states
+- [x] T028 [US1] Add form validation and error handling for keyword input
+- [x] T029 [US1] Integrate session API client with bootstrap flow
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 
