@@ -26,7 +26,7 @@
 - [x] T002 [P] Initialize backend Python 3.12 environment with uv and FastAPI dependencies
 - [x] T003 [P] Initialize frontend Next.js 14 project with TypeScript, Tailwind CSS, pnpm dependencies
 - [x] T004 [P] Configure linting, formatting, and pre-commit hooks for both backend and frontend
-- [x] T005 [P] Setup test frameworks: pytest + respx for backend, Jest + Testing Library + Playwright for frontend
+- [x] T005 [P] Setup test frameworks: pytest + respx for backend, Jest + Testing Library + Playwright for frontend (MSW v2対応完了)
 
 ---
 
@@ -142,7 +142,27 @@
 
 ---
 
-## Phase 3.5: Accessibility Implementation (FR-010 対応)
+## Phase 3.5: Test Quality & Infrastructure (2025-10-16完了) ✅
+
+**Purpose**: テスト品質向上とインフラ安定化
+
+**今回の作業で完了した項目:**
+- [x] MSW v2への完全対応とテスト環境安定化
+- [x] React Testing Library設定最適化とReact 18互換性向上
+- [x] Jest設定でのESモジュール対応強化
+- [x] 統合テストの信頼性向上と安定化
+- [x] E2Eテスト実行環境整備
+- [x] プロジェクトクリーンアップ（不要ファイル削除）
+- [x] テストエラー抑制とログ最適化
+
+**技術詳細:**
+- [`frontend/jest.config.js`](frontend/jest.config.js:31): MSW v2動的モジュール解決対応
+- [`frontend/jest.setup.ts`](frontend/jest.setup.ts:103): 包括的なpolyfill実装（WebSocket、BroadcastChannel、AbortController等）
+- [`frontend/tests/mocks/handlers.ts`](frontend/tests/mocks/handlers.ts:7): MSW v2 APIへの移行完了
+
+---
+
+## Phase 3.6: Accessibility Implementation (FR-010 対応)
 
 **Purpose**: アクセシビリティ基準の満足 (FR-010)
 
@@ -206,11 +226,11 @@
 - [ ] T054 [P] Implement responsive design and mobile optimization for 360px+ viewports
 - [ ] T055 [P] Implement `prefers-reduced-motion` support across animations
 - [ ] T057 [P] Add performance monitoring and latency tracking
-- [ ] T058 [P] Expand unit test coverage to 90%+ in `backend/tests/` and `frontend/tests/`
-- [ ] T059 [P] Add fallback scenario testing and LLM failure simulation
+- [x] T058 [P] Expand unit test coverage to 90%+ in `backend/tests/` and `frontend/tests/`
+- [x] T059 [P] Add fallback scenario testing and LLM failure simulation
 - [ ] T060 [P] Documentation updates in `docs/` and `README.md`
 - [ ] T061 Security hardening: input validation, rate limiting, session protection
-- [ ] T062 Code cleanup and refactoring based on test results
+- [x] T062 Code cleanup and refactoring based on test results
 - [ ] T063 Run quickstart.md validation and update setup instructions
 - [ ] T064 Performance optimization based on p95 latency requirements (≤800ms scenes, ≤1.2s results)
 
