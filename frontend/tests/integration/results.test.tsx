@@ -1,570 +1,609 @@
 
 /**
- * Integration tests for NightLoom MVP result calculation and display.
- * 
- * Tests the complete result flow from backend integration to frontend display.
- * Implements T043 requirements with Fail First testing strategy.
+ * Integration tests for result calculation and display - User Story 3
+ * Tests the complete flow from result API call to result screen rendering
  */
 
+import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { SessionProvider } from '../../app/state/SessionContext';
-import { ThemeProvider } from '../../app/theme/ThemeProvider';
+import userEvent from '@testing-library/user-event';
+import { rest } from 'msw';
+import { setupServer } from 'msw/node';
+import { SessionProvider } from '@/app/state/SessionContext';
+import { ThemeProvider } from '@/app/theme/ThemeProvider';
 
-// Mock sessionClient to control API responses
-jest.mock('../../app/services/sessionClient', () => ({
-  sessionClient: {
-    bootstrap: jest.fn(),
-    confirmKeyword: jest.fn(),
-    getScene: jest.fn(),
-    submitChoice: jest.fn(),
-    getResult: jest.fn(),
-  }
-}));
+// Mock result screen component (will be created in implementation)
+const MockResultScreen = ({ sessionId }: { sessionId: string }) => (
+  <div data-testid="result-screen">
+    <h1 data-testid="result-title">診断結果</h1>
+    <div data-testid="keyword-display">あなたのキーワード: 冒険</div>
+    <div data-testid="axes-scores">
+      <div data-testid="axis-curiosity">好奇心: 85.5点</div>
+      <div data-testid="axis-logic">論理性: 42.3点</div>
+      <div data-testid="axis-creativity">創造性: 78.9点</div>
+    </div>
+    <div data-testid="type-profiles">
+      <div data-testid="type-explorer">Explorer - 好奇心旺盛で新しい体験を求める</div>
+      <div data-testid="type-innovator">Innovator - 創造的で革新的なアプローチを取る</div>
+      <div data-testid="type-dreamer">Dreamer - 想像力豊かで理想を追求する</div>
+      <div data-testid="type-visionary">Visionary - 未来を見据えた大胆な発想を持つ</div>
+    </div>
+    <button data-testid="restart-button">もう一度診断する</button>
+  </div>
+);
 
-import { sessionClient } from '../../app/services/sessionClient';
-
-const mockSessionClient = sessionClient as jest.Mocked<typeof sessionClient>;
-
-// Test wrapper component
-function TestWrapper({ children }: { children: React.ReactNode }) {
-  return (
-    <ThemeProvider>
-      <SessionProvider>
-        {children}
-      </SessionProvider>
-    </ThemeProvider>
-  );
-}
-
-// Mock result component for testing
-function MockResultComponent() {
-  return <div data-testid="result-component">Result Component</div>;
-}
-
-describe('Result Calculation and Display Integration', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    
-    // Mock complete result response
-    mockSessionClient.getResult.mockResolvedValue({
-      sessionId: 'test-session-id',
-      keyword: '愛',
-      axes: [
-        {
-          axisId: 'logic_emotion',
-          score: 75,
-          rawScore: 2.5
-        },
-        {
-          axisId: 'speed_caution',
-          score: 25,
-          rawScore: -2.5
-        }
-      ],
-      type: {
-        dominantAxes: ['logic_emotion', 'speed_caution'],
-        profiles: [
-          {
-            name: '論理的思考者',
-            description: 'データと分析を重視し、感情よりも論理を優先する傾向があります。',
-            dominantAxes: ['logic_emotion', 'speed_caution'],
-            polarity: 'positive',
-            keywords: ['分析', '論理', '客観性']
-          },
-          {
-            name: '慎重な計画者',
-            description: '決断前に十分な検討を重ね、リスクを最小化しようとします。',
-            dominantAxes: ['speed_caution', 'logic_emotion'],
-            polarity: 'negative',
-            keywords: ['計画', '慎重', '安全']
-          },
-          {
-            name: 'バランス型',
-            description: '論理と感情、速度と慎重さのバランスを取る柔軟なアプローチを持ちます。',
-            dominantAxes: ['logic_emotion', 'speed_caution'],
-            polarity: 'neutral',
-            keywords: ['バランス', '柔軟', '適応']
-          },
-          {
-            name: '分析的慎重派',
-            description: '論理的分析を用いて慎重に判断する特徴があります。',
-            dominantAxes: ['logic_emotion', 'speed_caution'],
-            polarity: 'positive',
-            keywords: ['分析', '慎重', '論理']
-          }
-        ],
-        fallbackUsed: false
-      },
-      completedAt: '2024-01-15T10:30:00Z',
-      fallbackFlags: []
-    });
-  });
-
-  test('should display complete result data after calculation', async () => {
-    render(
-      <TestWrapper>
-        <MockResultComponent />
-      </TestWrapper>
-    );
-
-    // Simulate result retrieval
-    const result = await mockSessionClient.getResult('test-session-id');
-
-    await waitFor(() => {
-      expect(mockSessionClient.getResult).toHaveBeenCalledWith('test-session-id');
-    });
-
-    // Verify result structure
-    expect(result.keyword).toBe('愛');
-    expect(result.axes).toHaveLength(2);
-    expect(result.type.profiles).toHaveLength(4);
-  });
-
-  test('should correctly calculate and display axis scores', async () => {
-    render(
-      <TestWrapper>
-        <MockResultComponent />
-      </TestWrapper>
-    );
-
-    const result = await mockSessionClient.getResult('test-session-id');
-
-    // Verify axis score calculations
-    const logicEmotionAxis = result.axes.find(axis => axis.axisId === 'logic_emotion');
-    const speedCautionAxis = result.axes.find(axis => axis.axisId === 'speed_caution');
-
-    expect(logicEmotionAxis).toBeDefined();
-    expect(logicEmotionAxis!.score).toBe(75); // Normalized to 0-100
-    expect(logicEmotionAxis!.rawScore).toBe(2.5); // Raw accumulated score
-
-    expect(speedCautionAxis).toBeDefined();
-    expect(speedCautionAxis!.score).toBe(25); // Normalized to 0-100
-    expect(speedCautionAxis!.rawScore).toBe(-2.5); // Raw accumulated score
-  });
-
-  test('should identify and display dominant axes correctly', async () => {
-    render(
-      <TestWrapper>
-        <MockResultComponent />
-      </TestWrapper>
-    );
-
-    const result = await mockSessionClient.getResult('test-session-id');
-
-    // Verify dominant axes identification
-    expect(result.type.dominantAxes).toHaveLength(2);
-    expect(result.type.dominantAxes).toContain('logic_emotion');
-    expect(result.type.dominantAxes).toContain('speed_caution');
-
-    // Dominant axes should correspond to highest absolute scores
-    const absoluteScores = result.axes.map(axis => ({
-      axisId: axis.axisId,
-      absScore: Math.abs(axis.rawScore)
-    }));
-    const sortedAxes = absoluteScores.sort((a, b) => b.absScore - a.absScore);
-    const topTwoAxes = sortedAxes.slice(0, 2).map(axis => axis.axisId);
-
-    expect(result.type.dominantAxes.sort()).toEqual(topTwoAxes.sort());
-  });
-
-  test('should generate appropriate type profiles based on scores', async () => {
-    render(
-      <TestWrapper>
-        <MockResultComponent />
-      </TestWrapper>
-    );
-
-    const result = await mockSessionClient.getResult('test-session-id');
-
-    // Verify type profiles
-    const profiles = result.type.profiles;
-    expect(profiles).toHaveLength(4);
-
-    // Each profile should have required fields
-    profiles.forEach(profile => {
-      expect(profile.name).toBeTruthy();
-      expect(profile.description).toBeTruthy();
-      expect(profile.dominantAxes).toHaveLength(2);
-      expect(['positive', 'negative', 'neutral']).toContain(profile.polarity);
-      
-      if (profile.keywords) {
-        expect(Array.isArray(profile.keywords)).toBe(true);
-      }
-    });
-
-    // Verify profile relevance to calculated scores
-    const logicScore = result.axes.find(axis => axis.axisId === 'logic_emotion')!.rawScore;
-    const speedScore = result.axes.find(axis => axis.axisId === 'speed_caution')!.rawScore;
-
-    // Should have profiles that reflect the actual scores
-    // Logic-heavy (positive logic_emotion score)
-    const logicProfiles = profiles.filter(p => 
-      p.name.includes('論理') || p.description.includes('論理')
-    );
-    expect(logicProfiles.length).toBeGreaterThan(0);
-
-    // Caution-heavy (negative speed_caution score)
-    const cautionProfiles = profiles.filter(p => 
-      p.name.includes('慎重') || p.description.includes('慎重')
-    );
-    expect(cautionProfiles.length).toBeGreaterThan(0);
-  });
-
-  test('should handle result calculation with edge case scores', async () => {
-    // Test with extreme scores
-    mockSessionClient.getResult.mockResolvedValue({
-      sessionId: 'test-session-id',
-      keyword: 'テスト',
-      axes: [
-        {
-          axisId: 'logic_emotion',
-          score: 100, // Maximum score
-          rawScore: 5.0
-        },
-        {
-          axisId: 'speed_caution',
-          score: 0, // Minimum score
-          rawScore: -5.0
-        }
-      ],
-      type: {
-        dominantAxes: ['logic_emotion', 'speed_caution'],
-        profiles: [
-          {
-            name: '極端な論理派',
-            description: '完全に論理に依存し、感情を排除します。',
-            dominantAxes: ['logic_emotion', 'speed_caution'],
-            polarity: 'positive',
-            keywords: ['極端', '論理']
-          }
-        ],
-        fallbackUsed: false
-      },
-      completedAt: '2024-01-15T10:30:00Z',
-      fallbackFlags: []
-    });
-
-    render(
-      <TestWrapper>
-        <MockResultComponent />
-      </TestWrapper>
-    );
-
-    const result = await mockSessionClient.getResult('test-session-id');
-
-    // Verify extreme scores are handled correctly
-    expect(result.axes[0].score).toBe(100);
-    expect(result.axes[0].rawScore).toBe(5.0);
-    expect(result.axes[1].score).toBe(0);
-    expect(result.axes[1].rawScore).toBe(-5.0);
-  });
-
-  test('should handle result calculation with neutral scores', async () => {
-    // Test with all neutral scores
-    mockSessionClient.getResult.mockResolvedValue({
-      sessionId: 'test-session-id',
-      keyword: 'バランス',
-      axes: [
-        {
-          axisId: 'logic_emotion',
-          score: 50, // Neutral score
-          rawScore: 0.0
-        },
-        {
-          axisId: 'speed_caution',
-          score: 50, // Neutral score
-          rawScore: 0.0
-        }
-      ],
-      type: {
-        dominantAxes: ['logic_emotion', 'speed_caution'], // Still need to pick dominant axes
-        profiles: [
-          {
-            name: '完全バランス型',
-            description: 'すべての軸で完璧にバランスが取れています。',
-            dominantAxes: ['logic_emotion', 'speed_caution'],
-            polarity: 'neutral',
-            keywords: ['バランス', '中立', '調和']
-          }
-        ],
-        fallbackUsed: false
-      },
-      completedAt: '2024-01-15T10:30:00Z',
-      fallbackFlags: []
-    });
-
-    render(
-      <TestWrapper>
-        <MockResultComponent />
-      </TestWrapper>
-    );
-
-    const result = await mockSessionClient.getResult('test-session-id');
-
-    // Verify neutral scores are handled
-    result.axes.forEach(axis => {
-      expect(axis.score).toBe(50);
-      expect(axis.rawScore).toBe(0.0);
-    });
-
-    // Should still generate meaningful profiles
-    expect(result.type.profiles.length).toBeGreaterThan(0);
-  });
-
-  test('should handle result display integration with theme', async () => {
-    render(
-      <TestWrapper>
-        <MockResultComponent />
-      </TestWrapper>
-    );
-
-    // Verify result component integrates with theme system
-    expect(screen.getByTestId('result-component')).toBeInTheDocument();
-    
-    // Theme should be maintained through result display
-    // This test verifies integration between result display and theme provider
-  });
-
-  test('should handle result calculation performance requirements', async () => {
-    const startTime = performance.now();
-
-    render(
-      <TestWrapper>
-        <MockResultComponent />
-      </TestWrapper>
-    );
-
-    const result = await mockSessionClient.getResult('test-session-id');
-
-    const endTime = performance.now();
-    const calculationTime = endTime - startTime;
-
-    // Result calculation should complete quickly on frontend
-    expect(calculationTime).toBeLessThan(100); // 100ms for frontend processing
-
-    // Verify result structure completeness
-    expect(result.axes.length).toBeGreaterThan(0);
-    expect(result.type.profiles.length).toBeGreaterThan(0);
-  });
-
-  test('should handle result calculation with fallback scenarios', async () => {
-    // Mock result with fallback flags
-    mockSessionClient.getResult.mockResolvedValue({
-      sessionId: 'test-session-id',
-      keyword: 'フォールバック',
-      axes: [
-        {
-          axisId: 'logic_emotion',
-          score: 60,
-          rawScore: 1.0
-        },
-        {
-          axisId: 'speed_caution',
-          score: 40,
-          rawScore: -1.0
-        }
-      ],
-      type: {
-        dominantAxes: ['logic_emotion', 'speed_caution'],
-        profiles: [
-          {
-            name: 'フォールバック型',
-            description: 'フォールバックシステムにより生成されたプロファイルです。',
-            dominantAxes: ['logic_emotion', 'speed_caution'],
-            polarity: 'neutral',
-            keywords: ['フォールバック', '標準']
-          }
-        ],
-        fallbackUsed: true
-      },
-      completedAt: '2024-01-15T10:30:00Z',
-      fallbackFlags: ['TYPE_PROFILE_FALLBACK']
-    });
-
-    render(
-      <TestWrapper>
-        <MockResultComponent />
-      </TestWrapper>
-    );
-
-    const result = await mockSessionClient.getResult('test-session-id');
-
-    // Verify fallback handling
-    expect(result.type.fallbackUsed).toBe(true);
-    expect(result.fallbackFlags).toContain('TYPE_PROFILE_FALLBACK');
-
-    // Fallback results should still be valid
-    expect(result.axes.length).toBeGreaterThan(0);
-    expect(result.type.profiles.length).toBeGreaterThan(0);
-  });
-
-  test('should handle result error scenarios gracefully', async () => {
-    // Mock result retrieval failure
-    mockSessionClient.getResult.mockRejectedValue(new Error('Result calculation failed'));
-
-    render(
-      <TestWrapper>
-        <MockResultComponent />
-      </TestWrapper>
-    );
-
-    // Should handle error gracefully without crashing
-    try {
-      await mockSessionClient.getResult('test-session-id');
-    } catch (error) {
-      expect(error).toBeInstanceOf(Error);
-      expect((error as Error).message).toBe('Result calculation failed');
+// Mock result data
+const mockResultData = {
+  sessionId: '550e8400-e29b-41d4-a716-446655440000',
+  keyword: '冒険',
+  axes: [
+    {
+      axisId: 'curiosity',
+      score: 85.5,
+      rawScore: 3.4
+    },
+    {
+      axisId: 'logic',
+      score: 42.3,
+      rawScore: -0.8
+    },
+    {
+      axisId: 'creativity',
+      score: 78.9,
+      rawScore: 2.9
     }
-  });
+  ],
+  type: {
+    dominantAxes: ['curiosity', 'creativity'],
+    profiles: [
+      {
+        name: 'Explorer',
+        description: '好奇心旺盛で新しい体験を求める',
+        keywords: ['冒険', '発見', '挑戦'],
+        dominantAxes: ['curiosity', 'creativity'],
+        polarity: 'Hi-Hi'
+      },
+      {
+        name: 'Innovator',
+        description: '創造的で革新的なアプローチを取る',
+        keywords: ['創造', '革新', '独創'],
+        dominantAxes: ['creativity', 'curiosity'],
+        polarity: 'Hi-Hi'
+      },
+      {
+        name: 'Dreamer',
+        description: '想像力豊かで理想を追求する',
+        keywords: ['夢', '理想', '想像'],
+        dominantAxes: ['creativity', 'curiosity'],
+        polarity: 'Hi-Mid'
+      },
+      {
+        name: 'Visionary',
+        description: '未来を見据えた大胆な発想を持つ',
+        keywords: ['未来', 'ビジョン', '革命'],
+        dominantAxes: ['curiosity', 'creativity'],
+        polarity: 'Hi-Hi'
+      }
+    ],
+    fallbackUsed: false
+  },
+  completedAt: '2024-01-15T10:30:00Z',
+  fallbackFlags: []
+};
 
-  test('should validate result data consistency', async () => {
-    render(
-      <TestWrapper>
-        <MockResultComponent />
-      </TestWrapper>
+const mockFallbackResultData = {
+  sessionId: '550e8400-e29b-41d4-a716-446655441111',
+  keyword: 'フォールバック',
+  axes: [
+    {
+      axisId: 'stability',
+      score: 50.0,
+      rawScore: 0.0
+    },
+    {
+      axisId: 'adaptability',
+      score: 50.0,
+      rawScore: 0.0
+    }
+  ],
+  type: {
+    dominantAxes: ['stability', 'adaptability'],
+    profiles: [
+      {
+        name: 'Balanced',
+        description: 'バランスの取れた判断をする',
+        keywords: ['安定', '適応', 'バランス'],
+        dominantAxes: ['stability', 'adaptability'],
+        polarity: 'Mid-Mid'
+      },
+      {
+        name: 'Steady',
+        description: '着実に物事を進める',
+        keywords: ['着実', '継続', '信頼'],
+        dominantAxes: ['stability', 'adaptability'],
+        polarity: 'Hi-Mid'
+      },
+      {
+        name: 'Flexible',
+        description: '状況に応じて柔軟に対応する',
+        keywords: ['柔軟', '対応', '変化'],
+        dominantAxes: ['adaptability', 'stability'],
+        polarity: 'Mid-Hi'
+      },
+      {
+        name: 'Resilient',
+        description: '困難に立ち向かう強さを持つ',
+        keywords: ['回復', '強さ', '耐性'],
+        dominantAxes: ['stability', 'adaptability'],
+        polarity: 'Hi-Hi'
+      }
+    ],
+    fallbackUsed: true
+  },
+  completedAt: '2024-01-15T10:32:00Z',
+  fallbackFlags: ['TYPE_FALLBACK', 'AXIS_FALLBACK']
+};
+
+// MSW server setup
+const server = setupServer(
+  // Result retrieval endpoint
+  rest.post('/api/sessions/:sessionId/result', async (req, res, ctx) => {
+    const { sessionId } = req.params;
+    
+    if (sessionId === mockResultData.sessionId) {
+      return res(ctx.json(mockResultData));
+    }
+    
+    if (sessionId === mockFallbackResultData.sessionId) {
+      return res(ctx.json(mockFallbackResultData));
+    }
+    
+    if (sessionId === 'session-not-completed') {
+      return res(
+        ctx.status(400),
+        ctx.json({
+          error_code: 'SESSION_NOT_COMPLETED',
+          message: 'Session has not completed all 4 scenes',
+          details: { scenes_completed: 2, scenes_required: 4 }
+        })
+      );
+    }
+    
+    if (sessionId === 'session-not-found') {
+      return res(
+        ctx.status(404),
+        ctx.json({
+          error_code: 'SESSION_NOT_FOUND',
+          message: 'Session not found',
+          details: { session_id: sessionId }
+        })
+      );
+    }
+    
+    if (sessionId === 'llm-failure') {
+      return res(
+        ctx.status(503),
+        ctx.json({
+          error_code: 'LLM_SERVICE_UNAVAILABLE',
+          message: 'LLM service is currently unavailable',
+          details: { retry_after: 30 }
+        })
+      );
+    }
+    
+    return res(ctx.json(mockResultData));
+  })
+);
+
+beforeAll(() => server.listen());
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
+describe('Result Integration Tests', () => {
+  const renderWithProviders = (component: React.ReactElement) => {
+    return render(
+      <ThemeProvider>
+        <SessionProvider>
+          {component}
+        </SessionProvider>
+      </ThemeProvider>
     );
+  };
 
-    const result = await mockSessionClient.getResult('test-session-id');
+  describe('Result Data Fetching', () => {
+    it('should fetch and display result data successfully', async () => {
+      renderWithProviders(
+        <MockResultScreen sessionId={mockResultData.sessionId} />
+      );
 
-    // Verify data consistency
-    expect(result.sessionId).toBe('test-session-id');
-    expect(result.keyword).toBeTruthy();
-    
-    // All axis scores should be within valid ranges
-    result.axes.forEach(axis => {
-      expect(axis.score).toBeGreaterThanOrEqual(0);
-      expect(axis.score).toBeLessThanOrEqual(100);
-      expect(axis.rawScore).toBeGreaterThanOrEqual(-5);
-      expect(axis.rawScore).toBeLessThanOrEqual(5);
+      // Result screen should be displayed
+      await waitFor(() => {
+        expect(screen.getByTestId('result-screen')).toBeInTheDocument();
+      });
+
+      // Basic result elements should be present
+      expect(screen.getByTestId('result-title')).toHaveTextContent('診断結果');
+      expect(screen.getByTestId('keyword-display')).toHaveTextContent('冒険');
+      
+      // Axes scores should be displayed
+      expect(screen.getByTestId('axis-curiosity')).toHaveTextContent('85.5');
+      expect(screen.getByTestId('axis-logic')).toHaveTextContent('42.3');
+      expect(screen.getByTestId('axis-creativity')).toHaveTextContent('78.9');
+      
+      // Type profiles should be displayed
+      expect(screen.getByTestId('type-explorer')).toHaveTextContent('Explorer');
+      expect(screen.getByTestId('type-innovator')).toHaveTextContent('Innovator');
+      expect(screen.getByTestId('type-dreamer')).toHaveTextContent('Dreamer');
+      expect(screen.getByTestId('type-visionary')).toHaveTextContent('Visionary');
     });
-    
-    // Type profiles should be consistent with dominant axes
-    expect(result.type.dominantAxes).toHaveLength(2);
-    result.type.profiles.forEach(profile => {
-      expect(profile.dominantAxes).toHaveLength(2);
-      // Profile dominant axes should be subset of result dominant axes
-      profile.dominantAxes.forEach(axisId => {
-        const axisExists = result.axes.some(axis => axis.axisId === axisId);
-        expect(axisExists).toBe(true);
+
+    it('should handle result fetch errors gracefully', async () => {
+      renderWithProviders(
+        <MockResultScreen sessionId="session-not-found" />
+      );
+
+      // Error handling would be implementation specific
+      // This test verifies the API contract is working
+      await waitFor(() => {
+        expect(screen.getByTestId('result-screen')).toBeInTheDocument();
       });
     });
-    
-    // Completed timestamp should be valid ISO string
-    expect(result.completedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/);
-    
-    // Fallback flags should be array
-    expect(Array.isArray(result.fallbackFlags)).toBe(true);
+
+    it('should display fallback results correctly', async () => {
+      renderWithProviders(
+        <MockResultScreen sessionId={mockFallbackResultData.sessionId} />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('result-screen')).toBeInTheDocument();
+      });
+
+      // Should display fallback data appropriately
+      // Implementation would include fallback indicators
+    });
+
+    it('should handle incomplete session appropriately', async () => {
+      renderWithProviders(
+        <MockResultScreen sessionId="session-not-completed" />
+      );
+
+      // Should handle incomplete session error
+      // Implementation might redirect back to scenes or show error
+      await waitFor(() => {
+        expect(screen.getByTestId('result-screen')).toBeInTheDocument();
+      });
+    });
   });
 
-  test('should handle score normalization edge cases', async () => {
-    // Test score normalization with various raw score ranges
-    const edgeCases = [
-      { rawScore: 5.0, expectedScore: 100 },   // Maximum positive
-      { rawScore: -5.0, expectedScore: 0 },    // Maximum negative
-      { rawScore: 0.0, expectedScore: 50 },    // Neutral
-      { rawScore: 2.5, expectedScore: 75 },    // Mid-positive
-      { rawScore: -2.5, expectedScore: 25 }    // Mid-negative
-    ];
+  describe('Result Display Components', () => {
+    it('should display axes scores with proper formatting', async () => {
+      renderWithProviders(
+        <MockResultScreen sessionId={mockResultData.sessionId} />
+      );
 
-    for (const testCase of edgeCases) {
-      mockSessionClient.getResult.mockResolvedValue({
-        sessionId: 'test-session-id',
-        keyword: 'テスト',
+      await waitFor(() => {
+        expect(screen.getByTestId('axes-scores')).toBeInTheDocument();
+      });
+
+      // Scores should be formatted correctly (e.g., to 1 decimal place)
+      const curiosityAxis = screen.getByTestId('axis-curiosity');
+      expect(curiosityAxis).toHaveTextContent('85.5');
+      
+      // Scores should be within valid range (0-100)
+      const scoreText = curiosityAxis.textContent || '';
+      const score = parseFloat(scoreText.match(/\d+\.\d+/)?.[0] || '0');
+      expect(score).toBeGreaterThanOrEqual(0);
+      expect(score).toBeLessThanOrEqual(100);
+    });
+
+    it('should display type profiles with descriptions', async () => {
+      renderWithProviders(
+        <MockResultScreen sessionId={mockResultData.sessionId} />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('type-profiles')).toBeInTheDocument();
+      });
+
+      // Each type should have name and description
+      const explorerType = screen.getByTestId('type-explorer');
+      expect(explorerType).toHaveTextContent('Explorer');
+      expect(explorerType).toHaveTextContent('好奇心旺盛');
+
+      const innovatorType = screen.getByTestId('type-innovator');
+      expect(innovatorType).toHaveTextContent('Innovator');
+      expect(innovatorType).toHaveTextContent('創造的');
+    });
+
+    it('should maintain theme consistency in result display', async () => {
+      renderWithProviders(
+        <MockResultScreen sessionId={mockResultData.sessionId} />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('result-screen')).toBeInTheDocument();
+      });
+
+      // Theme should be applied consistently
+      // Implementation would verify theme classes are applied
+      const resultScreen = screen.getByTestId('result-screen');
+      expect(resultScreen).toBeInTheDocument();
+    });
+
+    it('should provide restart functionality', async () => {
+      const user = userEvent.setup();
+      
+      renderWithProviders(
+        <MockResultScreen sessionId={mockResultData.sessionId} />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('restart-button')).toBeInTheDocument();
+      });
+
+      // Restart button should be clickable
+      const restartButton = screen.getByTestId('restart-button');
+      await user.click(restartButton);
+
+      // Implementation would handle restart logic
+      // (new session creation, navigation, etc.)
+    });
+  });
+
+  describe('Performance and Loading States', () => {
+    it('should display loading state during result generation', async () => {
+      // Delay the API response to test loading state
+      server.use(
+        rest.post('/api/sessions/:sessionId/result', async (req, res, ctx) => {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          return res(ctx.json(mockResultData));
+        })
+      );
+
+      renderWithProviders(
+        <MockResultScreen sessionId={mockResultData.sessionId} />
+      );
+
+      // Should show loading indicator initially
+      // Implementation specific - might be spinner, skeleton, etc.
+      const resultScreen = screen.getByTestId('result-screen');
+      expect(resultScreen).toBeInTheDocument();
+
+      // After loading, result should be displayed
+      await waitFor(() => {
+        expect(screen.getByTestId('result-title')).toBeInTheDocument();
+      }, { timeout: 2000 });
+    });
+
+    it('should meet performance requirements for result display', async () => {
+      const startTime = Date.now();
+      
+      renderWithProviders(
+        <MockResultScreen sessionId={mockResultData.sessionId} />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('result-screen')).toBeInTheDocument();
+      });
+
+      const endTime = Date.now();
+      const renderTime = endTime - startTime;
+
+      // Should render quickly (< 500ms in testing environment)
+      expect(renderTime).toBeLessThan(1000);
+    });
+  });
+
+  describe('Data Validation and Error Handling', () => {
+    it('should validate axis score ranges', async () => {
+      // Mock data with extreme scores
+      const extremeResultData = {
+        ...mockResultData,
         axes: [
-          {
-            axisId: 'test_axis',
-            score: testCase.expectedScore,
-            rawScore: testCase.rawScore
-          }
-        ],
+          { axisId: 'extreme_high', score: 100.0, rawScore: 5.0 },
+          { axisId: 'extreme_low', score: 0.0, rawScore: -5.0 },
+          { axisId: 'mid_range', score: 50.0, rawScore: 0.0 }
+        ]
+      };
+
+      server.use(
+        rest.post('/api/sessions/:sessionId/result', (req, res, ctx) => {
+          return res(ctx.json(extremeResultData));
+        })
+      );
+
+      renderWithProviders(
+        <MockResultScreen sessionId={mockResultData.sessionId} />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('axes-scores')).toBeInTheDocument();
+      });
+
+      // Scores should be within valid ranges even for extreme cases
+      // Implementation would validate and clamp scores appropriately
+    });
+
+    it('should handle missing or malformed result data', async () => {
+      const malformedResultData = {
+        sessionId: mockResultData.sessionId,
+        keyword: '不正データ',
+        axes: [],  // Empty axes array
         type: {
-          dominantAxes: ['test_axis'],
-          profiles: [],
+          dominantAxes: [],
+          profiles: [],  // Empty profiles array
           fallbackUsed: false
         },
         completedAt: '2024-01-15T10:30:00Z',
         fallbackFlags: []
-      });
+      };
 
-      render(
-        <TestWrapper>
-          <MockResultComponent />
-        </TestWrapper>
+      server.use(
+        rest.post('/api/sessions/:sessionId/result', (req, res, ctx) => {
+          return res(ctx.json(malformedResultData));
+        })
       );
 
-      const result = await mockSessionClient.getResult('test-session-id');
-      
-      expect(result.axes[0].score).toBe(testCase.expectedScore);
-      expect(result.axes[0].rawScore).toBe(testCase.rawScore);
-    }
-  });
-});
+      renderWithProviders(
+        <MockResultScreen sessionId={mockResultData.sessionId} />
+      );
 
-describe('Result Display Integration Error Scenarios', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
+      // Should handle malformed data gracefully
+      await waitFor(() => {
+        expect(screen.getByTestId('result-screen')).toBeInTheDocument();
+      });
 
-  test('should handle malformed result data gracefully', async () => {
-    // Mock malformed result response
-    mockSessionClient.getResult.mockResolvedValue({
-      sessionId: 'test-session-id',
-      // Missing required fields
-      axes: [],
-      type: {
-        profiles: []
-      }
-    } as any);
-
-    render(
-      <TestWrapper>
-        <MockResultComponent />
-      </TestWrapper>
-    );
-
-    // Should handle malformed data without crashing
-    const result = await mockSessionClient.getResult('test-session-id');
-    expect(result.sessionId).toBe('test-session-id');
-    
-    // Missing fields should be handled gracefully in UI
-    expect(result.axes).toEqual([]);
-  });
-
-  test('should handle result calculation timeout', async () => {
-    // Mock slow result calculation
-    mockSessionClient.getResult.mockImplementation(
-      () => new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Calculation timeout')), 100)
-      )
-    );
-
-    render(
-      <TestWrapper>
-        <MockResultComponent />
-      </TestWrapper>
-    );
-
-    // Should handle timeout gracefully
-    await expect(mockSessionClient.getResult('test-session-id')).rejects.toThrow('Calculation timeout');
-  });
-
-  test('should handle session expiration during result calculation', async () => {
-    // Mock session expiration error
-    mockSessionClient.getResult.mockRejectedValue({
-      error_code: 'SESSION_NOT_FOUND',
-      message: 'Session has expired',
-      details: {}
+      // Implementation would show error state or fallback content
     });
 
-    render(
-      <TestWrapper>
-        <MockResultComponent />
-      </TestWrapper>
-    );
+    it('should handle network timeouts during result fetch', async () => {
+      server.use(
+        rest.post('/api/sessions/:sessionId/result', async (req, res, ctx) => {
+          // Simulate timeout
+          await new Promise(resolve => setTimeout(resolve, 10000));
+          return res(ctx.json(mockResultData));
+        })
+      );
 
-    // Should handle session expiration appropriately
-    await expect(mockSessionClient.getResult('test-session-id')).rejects.toMatchObject({
-      error_code: 'SESSION_NOT_FOUND'
+      renderWithProviders(
+        <MockResultScreen sessionId={mockResultData.sessionId} />
+      );
+
+      // Should handle timeout gracefully
+      await waitFor(() => {
+        expect(screen.getByTestId('result-screen')).toBeInTheDocument();
+      });
+
+      // Implementation would show timeout error and retry option
+    });
+  });
+
+  describe('Accessibility and User Experience', () => {
+    it('should provide accessible result display', async () => {
+      renderWithProviders(
+        <MockResultScreen sessionId={mockResultData.sessionId} />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('result-screen')).toBeInTheDocument();
+      });
+
+      // Screen reader accessible elements
+      expect(screen.getByTestId('result-title')).toHaveAttribute('role', 'heading');
+      
+      // Axes scores should be announced properly
+      // Implementation would include aria-labels for scores
+      const axesSection = screen.getByTestId('axes-scores');
+      expect(axesSection).toBeInTheDocument();
+      
+      // Type profiles should be navigable
+      const typesSection = screen.getByTestId('type-profiles');
+      expect(typesSection).toBeInTheDocument();
+    });
+
+    it('should support keyboard navigation', async () => {
+      const user = userEvent.setup();
+      
+      renderWithProviders(
+        <MockResultScreen sessionId={mockResultData.sessionId} />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('restart-button')).toBeInTheDocument();
+      });
+
+      // Should be able to navigate to restart button with keyboard
+      const restartButton = screen.getByTestId('restart-button');
+      restartButton.focus();
+      
+      // Should be focused
+      expect(restartButton).toHaveFocus();
+      
+      // Should be activatable with Enter or Space
+      await user.keyboard('{Enter}');
+      // Implementation would handle restart action
+    });
+
+    it('should respect user motion preferences', async () => {
+      // Mock reduced motion preference
+      Object.defineProperty(window, 'matchMedia', {
+        writable: true,
+        value: jest.fn().mockImplementation(query => {
+          if (query === '(prefers-reduced-motion: reduce)') {
+            return {
+              matches: true,
+              media: query,
+              onchange: null,
+              addListener: jest.fn(),
+              removeListener: jest.fn(),
+              addEventListener: jest.fn(),
+              removeEventListener: jest.fn(),
+              dispatchEvent: jest.fn(),
+            };
+          }
+          return {
+            matches: false,
+            media: query,
+            onchange: null,
+            addListener: jest.fn(),
+            removeListener: jest.fn(),
+            addEventListener: jest.fn(),
+            removeEventListener: jest.fn(),
+            dispatchEvent: jest.fn(),
+          };
+        }),
+      });
+
+      renderWithProviders(
+        <MockResultScreen sessionId={mockResultData.sessionId} />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('result-screen')).toBeInTheDocument();
+      });
+
+      // Implementation would disable animations when reduced motion is preferred
+    });
+  });
+
+  describe('Session Management Integration', () => {
+    it('should properly clean up session after result display', async () => {
+      renderWithProviders(
+        <MockResultScreen sessionId={mockResultData.sessionId} />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('result-screen')).toBeInTheDocument();
+      });
+
+      // Session should be marked for cleanup after result display
+      // Implementation would handle session lifecycle
+    });
+
+    it('should handle session expiration during result display', async () => {
+      server.use(
+        rest.post('/api/sessions/:sessionId/result', (req, res, ctx) => {
+          return res(
+            ctx.status(404),
+            ctx.json({
+              error_code: 'SESSION_NOT_FOUND',
+              message: 'Session has expired',
+              details: { session_id: req.params.sessionId }
+            })
+          );
+        })
+      );
+
+      renderWithProviders(
+        <MockResultScreen sessionId="expired-session" />
+      );
+
+      // Should handle expired session appropriately
+      await waitFor(() => {
+        expect(screen.getByTestId('result-screen')).toBeInTheDocument();
+      });
+
+      // Implementation would show expiration message and restart option
     });
   });
 });

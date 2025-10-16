@@ -7,7 +7,7 @@ integrating with LLM services and maintaining session state.
 
 import uuid
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 from uuid import UUID
 
 from app.models.session import Session, SessionState, ChoiceRecord, Axis, Scene, AxisScore, TypeProfile
@@ -109,8 +109,10 @@ class SessionService:
         SessionGuard.require_state(session, SessionState.INIT)
         
         # Validate keyword
-        if not keyword or len(keyword) > 20:
-            raise SessionServiceError("Invalid keyword length")
+        if not keyword or len(keyword.strip()) == 0:
+            raise SessionServiceError("Invalid keyword: empty keyword not allowed")
+        if len(keyword) >= 20:
+            raise SessionServiceError("Invalid keyword length: exceeds maximum allowed length")
         
         # Generate scenes using LLM service with existing axes
         try:
@@ -161,6 +163,69 @@ class SessionService:
                 return scene
         
         raise SessionServiceError(f"Scene {scene_index} not found")
+    
+    def get_scene(self, session: Session, scene_index: int) -> Scene:
+        """
+        Get scene by index from session.
+        
+        Args:
+            session: Session object
+            scene_index: Scene number (1-4)
+            
+        Returns:
+            Requested scene
+        """
+        # Validate scene access
+        if not SessionGuard.can_access_scene(session, scene_index):
+            raise InvalidSessionStateError(f"Cannot access scene {scene_index}")
+        
+        # Find scene
+        for scene in session.scenes:
+            if scene.sceneIndex == scene_index:
+                return scene
+        
+        raise SessionServiceError(f"Scene {scene_index} not found")
+    
+    def submit_choice(self, session: Session, scene_index: int, choice_id: str) -> Dict[str, Any]:
+        """
+        Submit choice and return result with next scene.
+        
+        Args:
+            session: Session object
+            scene_index: Current scene number
+            choice_id: Selected choice identifier
+            
+        Returns:
+            Dictionary with nextScene and sceneCompleted status
+        """
+        # Validate choice can be made
+        SessionGuard.validate_choice_transition(session, scene_index, choice_id)
+        
+        # Record choice
+        choice_record = ChoiceRecord(
+            sceneIndex=scene_index,
+            choiceId=choice_id,
+            timestamp=datetime.utcnow()
+        )
+        session.choices.append(choice_record)
+        
+        # Update session
+        session_store.update_session(session)
+        
+        # Return next scene if available
+        next_scene_index = scene_index + 1
+        next_scene = None
+        
+        if next_scene_index <= 4:
+            for scene in session.scenes:
+                if scene.sceneIndex == next_scene_index:
+                    next_scene = scene
+                    break
+        
+        return {
+            "nextScene": next_scene,
+            "sceneCompleted": True
+        }
     
     def record_choice(self, session_id: UUID, scene_index: int, choice_id: str) -> Optional[Scene]:
         """
@@ -216,6 +281,10 @@ class SessionService:
         session = session_store.get_session(session_id)
         if not session:
             raise SessionNotFoundError(f"Session {session_id} not found")
+        
+        # Check session state first before checking completion
+        if session.state == SessionState.INIT:
+            raise InvalidSessionStateError("Session is in INIT state, keyword must be selected first")
         
         SessionGuard.require_all_scenes_completed(session)
         
@@ -298,3 +367,6 @@ class SessionService:
 
 # Default service instance
 default_session_service = SessionService()
+
+# Add session_store attribute for API access
+default_session_service.session_store = session_store

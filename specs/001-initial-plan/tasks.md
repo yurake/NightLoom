@@ -91,21 +91,21 @@
 
 ### Tests for User Story 2 (必須: Fail First) ⚠️
 
-- [ ] T030 [P] [US2] Contract test for `/api/sessions/{sessionId}/scenes/{sceneIndex}` endpoint in `backend/tests/api/test_scenes.py`
-- [ ] T031 [P] [US2] Contract test for `/api/sessions/{sessionId}/scenes/{sceneIndex}/choice` endpoint in `backend/tests/api/test_choices.py`
-- [ ] T032 [P] [US2] Integration test for scene progression flow in `frontend/tests/integration/scenes.test.tsx`
-- [ ] T033 [P] [US2] E2E test for 4-scene completion flow in `frontend/e2e/scenes.spec.ts`
+- [x] T030 [P] [US2] Contract test for `/api/sessions/{sessionId}/scenes/{sceneIndex}` endpoint in `backend/tests/api/test_scenes.py`
+- [x] T031 [P] [US2] Contract test for `/api/sessions/{sessionId}/scenes/{sceneIndex}/choice` endpoint in `backend/tests/api/test_choices.py`
+- [x] T032 [P] [US2] Integration test for scene progression flow in `frontend/tests/integration/scenes.test.tsx`
+- [x] T033 [P] [US2] E2E test for 4-scene completion flow in `frontend/e2e/scenes.spec.ts`
 
 ### Implementation for User Story 2
 
-- [ ] T034 [US2] Extend session service with scene generation and choice recording in `backend/app/services/session.py`
-- [ ] T035 [US2] Create scene retrieval API endpoint in `backend/app/api/scenes.py`
-- [ ] T036 [US2] Create choice submission API endpoint in `backend/app/api/choices.py`
-- [ ] T037 [P] [US2] Implement scene display components in `frontend/app/(play)/components/Scene.tsx`
-- [ ] T038 [P] [US2] Implement choice selection components in `frontend/app/(play)/components/ChoiceOptions.tsx`
-- [ ] T039 [P] [US2] Add progress indicator component in `frontend/app/(play)/components/ProgressIndicator.tsx`
-- [ ] T040 [US2] Integrate scene API calls with session context and navigation
-- [ ] T041 [US2] Add loading states and error handling for scene transitions
+- [x] T034 [US2] Extend session service with scene generation and choice recording in `backend/app/services/session.py`
+- [x] T035 [US2] Create scene retrieval API endpoint in `backend/app/api/scenes.py`
+- [x] T036 [US2] Create choice submission API endpoint in `backend/app/api/choices.py`
+- [x] T037 [P] [US2] Implement scene display components in `frontend/app/(play)/components/Scene.tsx`
+- [x] T038 [P] [US2] Implement choice selection components in `frontend/app/(play)/components/ChoiceOptions.tsx`
+- [x] T039 [P] [US2] Add progress indicator component in `frontend/app/(play)/components/ProgressIndicator.tsx`
+- [x] T040 [US2] Integrate scene API calls with session context and navigation
+- [x] T041 [US2] Add loading states and error handling for scene transitions
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 
@@ -119,20 +119,20 @@
 
 ### Tests for User Story 3 (必須: Fail First) ⚠️
 
-- [ ] T042 [P] [US3] Contract test for `/api/sessions/{sessionId}/result` endpoint in `backend/tests/api/test_results.py`
-- [ ] T043 [P] [US3] Integration test for result calculation and display in `frontend/tests/integration/results.test.tsx`
-- [ ] T044 [P] [US3] E2E test for complete diagnosis flow including results in `frontend/e2e/results.spec.ts`
+- [x] T042 [P] [US3] Contract test for `/api/sessions/{sessionId}/result` endpoint in `backend/tests/api/test_results.py`
+- [x] T043 [P] [US3] Integration test for result calculation and display in `frontend/tests/integration/results.test.tsx`
+- [x] T044 [P] [US3] E2E test for complete diagnosis flow including results in `frontend/e2e/results.spec.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T045 [US3] Extend session service with result generation and type profiling in `backend/app/services/session.py`
-- [ ] T046 [US3] Create result retrieval API endpoint in `backend/app/api/results.py`
-- [ ] T047 [P] [US3] Create result page in `frontend/app/(play)/result/page.tsx`
-- [ ] T048 [P] [US3] Implement result display components in `frontend/app/(play)/components/ResultScreen.tsx`
-- [ ] T049 [P] [US3] Implement axis scores component in `frontend/app/(play)/components/AxesScores.tsx`
-- [ ] T050 [P] [US3] Implement type card component in `frontend/app/(play)/components/TypeCard.tsx`
-- [ ] T051 [US3] Add "restart diagnosis" functionality with session cleanup
-- [ ] T052 [US3] Integrate result API calls with navigation and session management
+- [x] T045 [US3] Extend session service with result generation and type profiling in `backend/app/services/session.py`
+- [x] T046 [US3] Create result retrieval API endpoint in `backend/app/api/results.py`
+- [x] T047 [P] [US3] Create result page in `frontend/app/(play)/result/page.tsx`
+- [x] T048 [P] [US3] Implement result display components in `frontend/app/(play)/components/ResultScreen.tsx`
+- [x] T049 [P] [US3] Implement axis scores component in `frontend/app/(play)/components/AxesScores.tsx`
+- [x] T050 [P] [US3] Implement type card component in `frontend/app/(play)/components/TypeCard.tsx`
+- [x] T051 [US3] Add "restart diagnosis" functionality with session cleanup
+- [x] T052 [US3] Integrate result API calls with navigation and session management
 
 **Checkpoint**: All user stories should now be independently functional
 

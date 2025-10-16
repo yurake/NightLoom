@@ -275,6 +275,9 @@ class ObservabilityService:
 # Global observability instance
 observability = ObservabilityService()
 
+# Observability service for API endpoints (alias for compatibility)
+observability_service = observability
+
 
 # Convenience functions
 def log_session_event(session_id: UUID, event_type: str, **kwargs) -> None:
@@ -297,3 +300,57 @@ def measure_latency(func):
             latency_ms = (time.time() - start_time) * 1000
             # Could log this latency if session context is available
     return wrapper
+
+
+# Additional methods needed by API endpoints
+class ObservabilityServiceAPI:
+    """Extended observability service with additional API methods."""
+    
+    def __init__(self, base_service: ObservabilityService):
+        self.base = base_service
+    
+    def start_timer(self, operation: str) -> float:
+        """Start a timer for an operation."""
+        return time.time()
+    
+    def increment_counter(self, metric_name: str) -> None:
+        """Increment a counter metric."""
+        # Simple implementation - could be enhanced with actual metrics storage
+        print(f"[METRIC] Counter {metric_name} incremented")
+    
+    def record_latency(self, operation: str, start_time: float) -> None:
+        """Record latency for an operation."""
+        latency_ms = (time.time() - start_time) * 1000
+        print(f"[METRIC] {operation} latency: {latency_ms:.2f}ms")
+    
+    def get_current_timestamp(self) -> str:
+        """Get current timestamp in ISO format."""
+        return datetime.utcnow().isoformat()
+    
+    def get_elapsed_time(self, start_time: float) -> float:
+        """Get elapsed time in milliseconds."""
+        return (time.time() - start_time) * 1000
+    
+    def log_info(self, message: str, context: Dict[str, Any] = None) -> None:
+        """Log info message with context."""
+        event = {
+            "level": "info",
+            "message": message,
+            "timestamp": self.get_current_timestamp(),
+            **(context or {})
+        }
+        print(f"[INFO] {json.dumps(event)}")
+    
+    def log_error(self, message: str, context: Dict[str, Any] = None) -> None:
+        """Log error message with context."""
+        event = {
+            "level": "error",
+            "message": message,
+            "timestamp": self.get_current_timestamp(),
+            **(context or {})
+        }
+        print(f"[ERROR] {json.dumps(event)}")
+
+
+# Enhanced observability service instance for API usage
+observability_service = ObservabilityServiceAPI(observability)

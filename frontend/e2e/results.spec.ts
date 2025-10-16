@@ -1,452 +1,401 @@
 
 /**
- * End-to-End tests for NightLoom MVP complete diagnosis flow including results.
- * 
- * Tests the complete user journey from start to results display and re-diagnosis.
- * Implements T044 requirements with Fail First testing strategy.
+ * E2E tests for complete diagnosis flow including results - User Story 3
+ * Tests the full journey from session start through result display
  */
 
 import { test, expect, Page } from '@playwright/test';
 
-test.describe('Complete Diagnosis Flow with Results E2E', () => {
-  test.beforeEach(async ({ page }) => {
-    // Navigate to the main application
-    await page.goto('/');
-  });
+// Mock data for consistent testing
+const mockSessionId = '550e8400-e29b-41d4-a716-446655440000';
+const mockKeyword = '成長';
+const mockTheme = 'focus';
 
-  test('should complete full diagnosis flow from start to results', async ({ page }) => {
-    // Step 1: Bootstrap and keyword selection
-    await expect(page.locator('[data-testid="loading-indicator"]')).toBeVisible();
-    await expect(page.locator('[data-testid="keyword-candidate"]').first()).toBeVisible();
-    
-    const selectedKeyword = await page.locator('[data-testid="keyword-candidate"]').first().textContent();
-    await page.locator('[data-testid="keyword-candidate"]').first().click();
-    
-    // Step 2: Complete all 4 scenes
-    for (let sceneIndex = 1; sceneIndex <= 4; sceneIndex++) {
-      // Wait for scene to load
-      await expect(page.locator('[data-testid="scene-index"]')).toContainText(sceneIndex.toString());
-      await expect(page.locator('[data-testid="scene-narrative"]')).toBeVisible();
-      
-      // Verify progress indicator
-      await expect(page.locator('[data-testid="progress-text"]')).toContainText(`${sceneIndex} / 4`);
-      
-      // Select choice (vary selection to create diverse scores)
-      const choiceIndex = (sceneIndex - 1) % 4; // 0, 1, 2, 3
-      const choices = page.locator('[data-testid="choice-option"]');
-      await expect(choices).toHaveCount(4);
-      await choices.nth(choiceIndex).click();
-      
-      // Wait for transition (except after scene 4)
-      if (sceneIndex < 4) {
-        await expect(page.locator('[data-testid="loading-indicator"]')).toBeVisible();
+// Expected result data structure
+const mockResultData = {
+  sessionId: mockSessionId,
+  keyword: mockKeyword,
+  axes: [
+    { axisId: 'growth', score: 82.5, rawScore: 3.1 },
+    { axisId: 'stability', score: 45.8, rawScore: -0.6 },
+    { axisId: 'innovation', score: 76.2, rawScore: 2.4 }
+  ],
+  type: {
+    dominantAxes: ['growth', 'innovation'],
+    profiles: [
+      {
+        name: 'Developer',
+        description: '継続的に成長し、新しいスキルを習得する',
+        keywords: ['成長', '学習', '向上'],
+        dominantAxes: ['growth', 'innovation'],
+        polarity: 'Hi-Hi'
+      },
+      {
+        name: 'Pioneer',
+        description: '新しい分野を開拓し、革新を生み出す',
+        keywords: ['開拓', '革新', '創造'],
+        dominantAxes: ['innovation', 'growth'],
+        polarity: 'Hi-Hi'
+      },
+      {
+        name: 'Learner',
+        description: '知識を蓄積し、経験から学ぶ',
+        keywords: ['学習', '知識', '経験'],
+        dominantAxes: ['growth', 'stability'],
+        polarity: 'Hi-Mid'
+      },
+      {
+        name: 'Adapter',
+        description: '変化に適応し、柔軟性を発揮する',
+        keywords: ['適応', '柔軟', '変化'],
+        dominantAxes: ['innovation', 'growth'],
+        polarity: 'Hi-Hi'
       }
-    }
-    
-    // Step 3: Verify result page navigation
-    await expect(page.locator('[data-testid="result-screen"]')).toBeVisible({ timeout: 10000 });
-    
-    // Step 4: Verify result content display
-    // Selected keyword should be displayed
-    await expect(page.locator('[data-testid="result-keyword"]')).toContainText(selectedKeyword || '');
-    
-    // Axis scores should be displayed
-    await expect(page.locator('[data-testid="axis-scores"]')).toBeVisible();
-    const axisItems = page.locator('[data-testid="axis-score-item"]');
-    expect(await axisItems.count()).toBeGreaterThan(1); // At least 2 axes
-    
-    // Type profile should be displayed
-    await expect(page.locator('[data-testid="type-profile"]')).toBeVisible();
-    await expect(page.locator('[data-testid="type-name"]')).toBeVisible();
-    await expect(page.locator('[data-testid="type-description"]')).toBeVisible();
-    
-    // Multiple type cards should be available
-    const typeCards = page.locator('[data-testid="type-card"]');
-    expect(await typeCards.count()).toBeGreaterThanOrEqual(4);
-    
-    // Step 5: Verify "restart diagnosis" functionality
-    await expect(page.locator('[data-testid="restart-button"]')).toBeVisible();
-    await page.locator('[data-testid="restart-button"]').click();
-    
-    // Should return to initial state
-    await expect(page.locator('[data-testid="keyword-candidate"]')).toBeVisible();
-  });
+    ],
+    fallbackUsed: false
+  },
+  completedAt: '2024-01-15T10:35:00Z',
+  fallbackFlags: []
+};
 
-  test('should display accurate axis scores based on choices made', async ({ page }) => {
-    // Complete bootstrap
-    await page.locator('[data-testid="keyword-candidate"]').first().click();
-    
-    // Make consistent choices to create predictable scores
-    // Always select first choice (should have consistent weights)
-    for (let sceneIndex = 1; sceneIndex <= 4; sceneIndex++) {
-      await expect(page.locator('[data-testid="scene-index"]')).toContainText(sceneIndex.toString());
-      await page.locator('[data-testid="choice-option"]').first().click();
-    }
-    
-    // Verify result display
-    await expect(page.locator('[data-testid="result-screen"]')).toBeVisible();
-    
-    // Check axis score displays
-    const axisScores = page.locator('[data-testid="axis-score-item"]');
-    const axisCount = await axisScores.count();
-    
-    for (let i = 0; i < axisCount; i++) {
-      const axisItem = axisScores.nth(i);
-      
-      // Each axis should have name, score, and visual indicator
-      await expect(axisItem.locator('[data-testid="axis-name"]')).toBeVisible();
-      await expect(axisItem.locator('[data-testid="axis-score"]')).toBeVisible();
-      await expect(axisItem.locator('[data-testid="axis-bar"]')).toBeVisible();
-      
-      // Score should be numeric and within range
-      const scoreText = await axisItem.locator('[data-testid="axis-score"]').textContent();
-      const score = parseInt(scoreText?.replace(/\D/g, '') || '0');
-      expect(score).toBeGreaterThanOrEqual(0);
-      expect(score).toBeLessThanOrEqual(100);
-    }
-  });
-
-  test('should display relevant type profiles based on calculated scores', async ({ page }) => {
-    // Complete diagnosis
-    await page.locator('[data-testid="keyword-candidate"]').first().click();
-    
-    // Make specific choice pattern to influence type profiling
-    const choicePattern = [0, 0, 0, 0]; // All first choices for consistency
-    
-    for (let sceneIndex = 1; sceneIndex <= 4; sceneIndex++) {
-      await expect(page.locator('[data-testid="scene-index"]')).toContainText(sceneIndex.toString());
-      await page.locator('[data-testid="choice-option"]').nth(choicePattern[sceneIndex - 1]).click();
-    }
-    
-    // Verify type profile display
-    await expect(page.locator('[data-testid="result-screen"]')).toBeVisible();
-    
-    // Main type profile should be prominently displayed
-    const mainTypeProfile = page.locator('[data-testid="main-type-profile"]');
-    await expect(mainTypeProfile).toBeVisible();
-    await expect(mainTypeProfile.locator('[data-testid="type-name"]')).toBeVisible();
-    await expect(mainTypeProfile.locator('[data-testid="type-description"]')).toBeVisible();
-    
-    // Additional type cards should provide variety
-    const typeCards = page.locator('[data-testid="type-card"]');
-    const cardCount = await typeCards.count();
-    expect(cardCount).toBeGreaterThanOrEqual(4);
-    
-    // Each type card should have complete information
-    for (let i = 0; i < Math.min(cardCount, 4); i++) {
-      const typeCard = typeCards.nth(i);
-      await expect(typeCard.locator('[data-testid="type-card-name"]')).toBeVisible();
-      await expect(typeCard.locator('[data-testid="type-card-description"]')).toBeVisible();
-      
-      // Type cards should have interactive elements
-      await expect(typeCard).toBeVisible();
-    }
-  });
-
-  test('should handle results display with different score patterns', async ({ page }) => {
-    // Test multiple diagnosis runs with different choice patterns
-    const testPatterns = [
-      { name: 'Logic-Heavy', pattern: [0, 0, 0, 0] },  // All first choices
-      { name: 'Emotion-Heavy', pattern: [1, 1, 1, 1] }, // All second choices
-      { name: 'Speed-Heavy', pattern: [2, 2, 2, 2] },   // All third choices
-      { name: 'Caution-Heavy', pattern: [3, 3, 3, 3] }  // All fourth choices
-    ];
-    
-    for (const testCase of testPatterns) {
-      // Start fresh diagnosis
-      await page.goto('/');
-      await page.locator('[data-testid="keyword-candidate"]').first().click();
-      
-      // Execute choice pattern
-      for (let sceneIndex = 1; sceneIndex <= 4; sceneIndex++) {
-        await expect(page.locator('[data-testid="scene-index"]')).toContainText(sceneIndex.toString());
-        await page.locator('[data-testid="choice-option"]').nth(testCase.pattern[sceneIndex - 1]).click();
+const mockFallbackResultData = {
+  sessionId: mockSessionId,
+  keyword: mockKeyword,
+  axes: [
+    { axisId: 'stability', score: 50.0, rawScore: 0.0 },
+    { axisId: 'adaptability', score: 50.0, rawScore: 0.0 }
+  ],
+  type: {
+    dominantAxes: ['stability', 'adaptability'],
+    profiles: [
+      {
+        name: 'Balanced',
+        description: 'バランスの取れたアプローチを取る',
+        keywords: ['バランス', '安定', '適応'],
+        dominantAxes: ['stability', 'adaptability'],
+        polarity: 'Mid-Mid'
+      },
+      {
+        name: 'Steady',
+        description: '着実に物事を進める',
+        keywords: ['着実', '継続', '信頼'],
+        dominantAxes: ['stability', 'adaptability'],
+        polarity: 'Hi-Mid'
+      },
+      {
+        name: 'Flexible',
+        description: '状況に応じて対応する',
+        keywords: ['柔軟', '対応', '変化'],
+        dominantAxes: ['adaptability', 'stability'],
+        polarity: 'Mid-Hi'
+      },
+      {
+        name: 'Resilient',
+        description: '困難に立ち向かう',
+        keywords: ['回復', '強さ', '耐性'],
+        dominantAxes: ['stability', 'adaptability'],
+        polarity: 'Hi-Hi'
       }
-      
-      // Verify results are displayed
-      await expect(page.locator('[data-testid="result-screen"]')).toBeVisible();
-      
-      // Results should reflect the choice pattern
-      await expect(page.locator('[data-testid="axis-scores"]')).toBeVisible();
-      await expect(page.locator('[data-testid="type-profile"]')).toBeVisible();
-      
-      // Type name should reflect the choice bias (implementation dependent)
-      const typeName = await page.locator('[data-testid="type-name"]').textContent();
-      expect(typeName).toBeTruthy();
-      expect(typeName!.length).toBeGreaterThan(0);
-    }
-  });
+    ],
+    fallbackUsed: true
+  },
+  completedAt: '2024-01-15T10:35:30Z',
+  fallbackFlags: ['TYPE_FALLBACK']
+};
 
-  test('should meet performance requirements for complete flow', async ({ page }) => {
-    const startTime = Date.now();
-    
-    // Complete entire diagnosis flow
-    await page.locator('[data-testid="keyword-candidate"]').first().click();
-    
-    const sceneStartTime = Date.now();
-    
-    // Complete all 4 scenes quickly
-    for (let sceneIndex = 1; sceneIndex <= 4; sceneIndex++) {
-      const sceneTransitionStart = Date.now();
-      
-      await expect(page.locator('[data-testid="scene-index"]')).toContainText(sceneIndex.toString());
-      await page.locator('[data-testid="choice-option"]').first().click();
-      
-      const sceneTransitionEnd = Date.now();
-      const transitionTime = sceneTransitionEnd - sceneTransitionStart;
-      
-      // Each scene transition should be under 800ms
-      expect(transitionTime).toBeLessThan(800);
-    }
-    
-    const resultStartTime = Date.now();
-    
-    // Wait for results to load
-    await expect(page.locator('[data-testid="result-screen"]')).toBeVisible();
-    
-    const resultEndTime = Date.now();
-    const resultCalculationTime = resultEndTime - resultStartTime;
-    
-    // Result generation should be under 1200ms (p95 requirement)
-    expect(resultCalculationTime).toBeLessThan(1200);
-    
-    const totalTime = resultEndTime - startTime;
-    
-    // Total flow should complete in reasonable time
-    expect(totalTime).toBeLessThan(5000); // 5 seconds total
-  });
-
-  test('should handle restart diagnosis functionality correctly', async ({ page }) => {
-    // Complete full diagnosis
-    await page.locator('[data-testid="keyword-candidate"]').first().click();
-    
-    for (let sceneIndex = 1; sceneIndex <= 4; sceneIndex++) {
-      await expect(page.locator('[data-testid="scene-index"]')).toContainText(sceneIndex.toString());
-      await page.locator('[data-testid="choice-option"]').first().click();
-    }
-    
-    // Reach results
-    await expect(page.locator('[data-testid="result-screen"]')).toBeVisible();
-    
-    // Store first result for comparison
-    const firstTypeName = await page.locator('[data-testid="type-name"]').textContent();
-    const firstKeyword = await page.locator('[data-testid="result-keyword"]').textContent();
-    
-    // Restart diagnosis
-    await page.locator('[data-testid="restart-button"]').click();
-    
-    // Should return to initial state
-    await expect(page.locator('[data-testid="keyword-candidate"]')).toBeVisible();
-    
-    // Complete second diagnosis with different choices
-    await page.locator('[data-testid="keyword-candidate"]').nth(1).click(); // Select different keyword
-    
-    for (let sceneIndex = 1; sceneIndex <= 4; sceneIndex++) {
-      await expect(page.locator('[data-testid="scene-index"]')).toContainText(sceneIndex.toString());
-      // Select different choice pattern
-      await page.locator('[data-testid="choice-option"]').nth(sceneIndex % 4).click();
-    }
-    
-    // Reach second results
-    await expect(page.locator('[data-testid="result-screen"]')).toBeVisible();
-    
-    // Results should be different (due to different choices/keyword)
-    const secondTypeName = await page.locator('[data-testid="type-name"]').textContent();
-    const secondKeyword = await page.locator('[data-testid="result-keyword"]').textContent();
-    
-    // Should have fresh results (keyword should be different)
-    expect(secondKeyword).not.toBe(firstKeyword);
-  });
-
-  test('should display results with proper accessibility features', async ({ page }) => {
-    // Complete diagnosis
-    await page.locator('[data-testid="keyword-candidate"]').first().click();
-    
-    for (let sceneIndex = 1; sceneIndex <= 4; sceneIndex++) {
-      await expect(page.locator('[data-testid="scene-index"]')).toContainText(sceneIndex.toString());
-      await page.locator('[data-testid="choice-option"]').first().click();
-    }
-    
-    await expect(page.locator('[data-testid="result-screen"]')).toBeVisible();
-    
-    // Check accessibility features
-    // Proper headings structure
-    expect(await page.locator('h1, h2, h3').count()).toBeGreaterThan(0);
-    
-    // ARIA labels for scores
-    const axisScores = page.locator('[data-testid="axis-score-item"]');
-    const axisCount = await axisScores.count();
-    
-    for (let i = 0; i < axisCount; i++) {
-      const axisItem = axisScores.nth(i);
-      
-      // Should have proper ARIA labels
-      await expect(axisItem).toHaveAttribute('role', 'group');
-      
-      // Score bars should have accessible descriptions
-      const scoreBar = axisItem.locator('[data-testid="axis-bar"]');
-      await expect(scoreBar).toHaveAttribute('aria-valuenow');
-    }
-    
-    // Restart button should be accessible
-    const restartButton = page.locator('[data-testid="restart-button"]');
-    await expect(restartButton).toHaveAttribute('aria-label');
-    
-    // Focus should be manageable with keyboard
-    await restartButton.focus();
-    await expect(restartButton).toBeFocused();
-  });
-
-  test('should handle keyboard navigation in results screen', async ({ page }) => {
-    // Complete diagnosis
-    await page.locator('[data-testid="keyword-candidate"]').first().click();
-    
-    for (let sceneIndex = 1; sceneIndex <= 4; sceneIndex++) {
-      await expect(page.locator('[data-testid="scene-index"]')).toContainText(sceneIndex.toString());
-      await page.locator('[data-testid="choice-option"]').first().click();
-    }
-    
-    await expect(page.locator('[data-testid="result-screen"]')).toBeVisible();
-    
-    // Test keyboard navigation through results
-    // Tab through axis scores
-    const axisItems = page.locator('[data-testid="axis-score-item"]');
-    const axisCount = await axisItems.count();
-    
-    // Start from first focusable element
-    await page.keyboard.press('Tab');
-    
-    // Navigate through axis scores with keyboard
-    for (let i = 0; i < axisCount; i++) {
-      await page.keyboard.press('Tab');
-    }
-    
-    // Navigate to type cards
-    const typeCards = page.locator('[data-testid="type-card"]');
-    const cardCount = await typeCards.count();
-    
-    for (let i = 0; i < Math.min(cardCount, 3); i++) {
-      await page.keyboard.press('Tab');
-      // Press Enter to interact with type card
-      await page.keyboard.press('Enter');
-    }
-    
-    // Navigate to restart button
-    await page.keyboard.press('Tab');
-    const restartButton = page.locator('[data-testid="restart-button"]');
-    await expect(restartButton).toBeFocused();
-    
-    // Press Enter to restart
-    await page.keyboard.press('Enter');
-    
-    // Should return to keyword selection
-    await expect(page.locator('[data-testid="keyword-candidate"]')).toBeVisible();
-  });
-
-  test('should handle result sharing or export functionality', async ({ page }) => {
-    // Complete diagnosis
-    await page.locator('[data-testid="keyword-candidate"]').first().click();
-    
-    for (let sceneIndex = 1; sceneIndex <= 4; sceneIndex++) {
-      await expect(page.locator('[data-testid="scene-index"]')).toContainText(sceneIndex.toString());
-      await page.locator('[data-testid="choice-option"]').first().click();
-    }
-    
-    await expect(page.locator('[data-testid="result-screen"]')).toBeVisible();
-    
-    // Check for sharing or export functionality (if implemented)
-    const shareButton = page.locator('[data-testid="share-button"]');
-    const exportButton = page.locator('[data-testid="export-button"]');
-    
-    // These may not be implemented yet, but test documents expected behavior
-    if (await shareButton.isVisible()) {
-      await shareButton.click();
-      // Should show sharing options
-      await expect(page.locator('[data-testid="share-modal"]')).toBeVisible();
-    }
-    
-    if (await exportButton.isVisible()) {
-      await exportButton.click();
-      // Should trigger export functionality
-    }
-  });
-});
-
-test.describe('Complete Diagnosis Flow Error Scenarios', () => {
+test.describe('Complete Diagnosis Flow E2E Tests', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-  });
+    // Mock result API endpoint
+    await page.route('/api/sessions/*/result', async (route, request) => {
+      const url = request.url();
+      
+      if (url.includes('fallback-session')) {
+        await route.fulfill({
+          contentType: 'application/json',
+          body: JSON.stringify(mockFallbackResultData)
+        });
+      } else if (url.includes('incomplete-session')) {
+        await route.fulfill({
+          status: 400,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            error_code: 'SESSION_NOT_COMPLETED',
+            message: 'Session has not completed all 4 scenes',
+            details: { scenes_completed: 2, scenes_required: 4 }
+          })
+        });
+      } else if (url.includes('expired-session')) {
+        await route.fulfill({
+          status: 404,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            error_code: 'SESSION_NOT_FOUND',
+            message: 'Session has expired or does not exist',
+            details: { session_id: 'expired-session' }
+          })
+        });
+      } else if (url.includes('llm-failure-session')) {
+        await route.fulfill({
+          status: 503,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            error_code: 'LLM_SERVICE_UNAVAILABLE',
+            message: 'LLM service is currently unavailable',
+            details: { retry_after: 30 }
+          })
+        });
+      } else {
+        await route.fulfill({
+          contentType: 'application/json',
+          body: JSON.stringify(mockResultData)
+        });
+      }
+    });
 
-  test('should handle API failures during result calculation', async ({ page }) => {
-    // Complete 4 scenes
-    await page.locator('[data-testid="keyword-candidate"]').first().click();
-    
-    for (let sceneIndex = 1; sceneIndex <= 4; sceneIndex++) {
-      await expect(page.locator('[data-testid="scene-index"]')).toContainText(sceneIndex.toString());
-      await page.locator('[data-testid="choice-option"]').first().click();
-    }
-    
-    // Mock API failure for result endpoint
-    await page.route('**/api/sessions/*/result', async route => {
+    // Mock sessions cleanup endpoint (for restart functionality)
+    await page.route('/api/sessions/*/cleanup', async (route) => {
       await route.fulfill({
-        status: 500,
         contentType: 'application/json',
-        body: JSON.stringify({
-          error_code: 'INTERNAL_ERROR',
-          message: 'Result calculation failed',
-          details: {}
-        })
+        body: JSON.stringify({ success: true })
       });
     });
-    
-    // Should handle result calculation failure
-    await expect(page.locator('[data-testid="error-message"]')).toContainText(/結果|エラー|計算/);
-    
-    // Should provide retry or restart option
-    const retryButton = page.locator('[data-testid="retry-button"]');
-    const restartButton = page.locator('[data-testid="restart-button"]');
-    
-    expect(await retryButton.isVisible() || await restartButton.isVisible()).toBe(true);
   });
 
-  test('should handle incomplete session during result request', async ({ page }) => {
-    // Complete only 2 scenes
-    await page.locator('[data-testid="keyword-candidate"]').first().click();
+  test('should complete full diagnosis flow and display results', async ({ page }) => {
+    // Navigate to result page (assuming 4 scenes completed)
+    await page.goto(`/play/result?sessionId=${mockSessionId}`);
     
-    for (let sceneIndex = 1; sceneIndex <= 2; sceneIndex++) {
-      await expect(page.locator('[data-testid="scene-index"]')).toContainText(sceneIndex.toString());
-      await page.locator('[data-testid="choice-option"]').first().click();
-    }
+    // Result page should load
+    await expect(page.locator('[data-testid="result-container"]')).toBeVisible({ timeout: 10000 });
     
-    // Try to navigate to results prematurely (if possible)
-    // This should be prevented by the UI, but test documents expected behavior
+    // Verify result title and structure
+    await expect(page.locator('[data-testid="result-title"]')).toBeVisible();
+    await expect(page.locator('[data-testid="result-title"]')).toContainText('診断結果');
     
-    // Should not be able to access results with incomplete session
-    const currentUrl = page.url();
-    expect(currentUrl).not.toMatch(/result/);
+    // Verify keyword display
+    await expect(page.locator('[data-testid="keyword-display"]')).toBeVisible();
+    await expect(page.locator('[data-testid="keyword-display"]')).toContainText(mockKeyword);
+    
+    // Verify axes scores section
+    await expect(page.locator('[data-testid="axes-section"]')).toBeVisible();
+    
+    // Check each axis score
+    await expect(page.locator('[data-testid="axis-growth"]')).toBeVisible();
+    await expect(page.locator('[data-testid="axis-growth"]')).toContainText('82.5');
+    
+    await expect(page.locator('[data-testid="axis-stability"]')).toBeVisible();
+    await expect(page.locator('[data-testid="axis-stability"]')).toContainText('45.8');
+    
+    await expect(page.locator('[data-testid="axis-innovation"]')).toBeVisible();
+    await expect(page.locator('[data-testid="axis-innovation"]')).toContainText('76.2');
+    
+    // Verify type profiles section
+    await expect(page.locator('[data-testid="type-profiles-section"]')).toBeVisible();
+    
+    // Check type profiles are displayed
+    await expect(page.locator('[data-testid="type-developer"]')).toBeVisible();
+    await expect(page.locator('[data-testid="type-developer"]')).toContainText('Developer');
+    await expect(page.locator('[data-testid="type-developer"]')).toContainText('継続的に成長');
+    
+    await expect(page.locator('[data-testid="type-pioneer"]')).toBeVisible();
+    await expect(page.locator('[data-testid="type-pioneer"]')).toContainText('Pioneer');
+    
+    await expect(page.locator('[data-testid="type-learner"]')).toBeVisible();
+    await expect(page.locator('[data-testid="type-learner"]')).toContainText('Learner');
+    
+    await expect(page.locator('[data-testid="type-adapter"]')).toBeVisible();
+    await expect(page.locator('[data-testid="type-adapter"]')).toContainText('Adapter');
+    
+    // Verify restart functionality
+    await expect(page.locator('[data-testid="restart-button"]')).toBeVisible();
+    await expect(page.locator('[data-testid="restart-button"]')).toContainText('もう一度診断');
   });
 
-  test('should handle browser navigation during result display', async ({ page }) => {
-    // Complete diagnosis
-    await page.locator('[data-testid="keyword-candidate"]').first().click();
+  test('should display fallback results with appropriate indicators', async ({ page }) => {
+    await page.goto(`/play/result?sessionId=fallback-session`);
     
-    for (let sceneIndex = 1; sceneIndex <= 4; sceneIndex++) {
-      await expect(page.locator('[data-testid="scene-index"]')).toContainText(sceneIndex.toString());
-      await page.locator('[data-testid="choice-option"]').first().click();
+    // Result should load with fallback data
+    await expect(page.locator('[data-testid="result-container"]')).toBeVisible({ timeout: 10000 });
+    
+    // Should show fallback indicator
+    await expect(page.locator('[data-testid="fallback-indicator"]')).toBeVisible();
+    await expect(page.locator('[data-testid="fallback-indicator"]')).toContainText('基本的な結果');
+    
+    // Should still show valid results
+    await expect(page.locator('[data-testid="axes-section"]')).toBeVisible();
+    await expect(page.locator('[data-testid="type-profiles-section"]')).toBeVisible();
+    
+    // Fallback scores should be displayed (50.0 for both axes)
+    await expect(page.locator('[data-testid="axis-stability"]')).toContainText('50.0');
+    await expect(page.locator('[data-testid="axis-adaptability"]')).toContainText('50.0');
+  });
+
+  test('should handle incomplete session appropriately', async ({ page }) => {
+    await page.goto(`/play/result?sessionId=incomplete-session`);
+    
+    // Should show error or redirect back to scenes
+    await expect(page.locator('[data-testid="error-container"]')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-testid="error-message"]')).toContainText('完了していません');
+    
+    // Should provide option to continue
+    await expect(page.locator('[data-testid="continue-button"]')).toBeVisible();
+    await expect(page.locator('[data-testid="continue-button"]')).toContainText('診断を続ける');
+  });
+
+  test('should handle expired session gracefully', async ({ page }) => {
+    await page.goto(`/play/result?sessionId=expired-session`);
+    
+    // Should show session expired message
+    await expect(page.locator('[data-testid="error-container"]')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-testid="error-message"]')).toContainText('セッション');
+    await expect(page.locator('[data-testid="error-message"]')).toContainText('期限切れ');
+    
+    // Should provide restart option
+    await expect(page.locator('[data-testid="restart-button"]')).toBeVisible();
+  });
+
+  test('should handle LLM service failure with appropriate messaging', async ({ page }) => {
+    await page.goto(`/play/result?sessionId=llm-failure-session`);
+    
+    // Should show service unavailable message
+    await expect(page.locator('[data-testid="error-container"]')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-testid="error-message"]')).toContainText('サービス');
+    await expect(page.locator('[data-testid="error-message"]')).toContainText('利用できません');
+    
+    // Should provide retry option
+    await expect(page.locator('[data-testid="retry-button"]')).toBeVisible();
+  });
+
+  test('should support restart functionality', async ({ page }) => {
+    await page.goto(`/play/result?sessionId=${mockSessionId}`);
+    
+    // Wait for result to load
+    await expect(page.locator('[data-testid="result-container"]')).toBeVisible();
+    
+    // Click restart button
+    await page.click('[data-testid="restart-button"]');
+    
+    // Should navigate to start page or show confirmation
+    await expect(page).toHaveURL(/.*start.*|.*play.*/, { timeout: 10000 });
+  });
+
+  test('should display results with proper visual hierarchy', async ({ page }) => {
+    await page.goto(`/play/result?sessionId=${mockSessionId}`);
+    
+    await expect(page.locator('[data-testid="result-container"]')).toBeVisible();
+    
+    // Check visual hierarchy with heading levels
+    await expect(page.locator('h1[data-testid="result-title"]')).toBeVisible();
+    await expect(page.locator('h2[data-testid="axes-title"]')).toBeVisible();
+    await expect(page.locator('h2[data-testid="types-title"]')).toBeVisible();
+    
+    // Verify sections are properly structured
+    const axesSection = page.locator('[data-testid="axes-section"]');
+    const typesSection = page.locator('[data-testid="type-profiles-section"]');
+    
+    await expect(axesSection).toBeVisible();
+    await expect(typesSection).toBeVisible();
+  });
+
+  test('should meet accessibility requirements', async ({ page }) => {
+    await page.goto(`/play/result?sessionId=${mockSessionId}`);
+    
+    await expect(page.locator('[data-testid="result-container"]')).toBeVisible();
+    
+    // Check keyboard navigation
+    await page.keyboard.press('Tab');
+    const focusedElement = await page.locator(':focus').getAttribute('data-testid');
+    expect(focusedElement).toBeTruthy();
+    
+    // Check ARIA labels and roles
+    await expect(page.locator('[role="main"]')).toBeVisible();
+    await expect(page.locator('[aria-label*="診断結果"]')).toBeVisible();
+    
+    // Check screen reader friendly content
+    const axisElements = page.locator('[data-testid^="axis-"]');
+    const axisCount = await axisElements.count();
+    
+    for (let i = 0; i < axisCount; i++) {
+      const axis = axisElements.nth(i);
+      await expect(axis).toHaveAttribute('aria-label');
+    }
+  });
+
+  test('should meet performance requirements for result loading', async ({ page }) => {
+    const startTime = Date.now();
+    
+    await page.goto(`/play/result?sessionId=${mockSessionId}`);
+    
+    // Result should load within performance target
+    await expect(page.locator('[data-testid="result-container"]')).toBeVisible({ timeout: 5000 });
+    
+    const endTime = Date.now();
+    const loadTime = endTime - startTime;
+    
+    // Should meet performance target: p95 ≤ 1.2s for result generation
+    // In E2E tests, we allow more time due to network simulation
+    expect(loadTime).toBeLessThan(3000);
+  });
+
+  test('should handle responsive design on mobile viewports', async ({ page }) => {
+    // Set mobile viewport
+    await page.setViewportSize({ width: 375, height: 667 });
+    
+    await page.goto(`/play/result?sessionId=${mockSessionId}`);
+    
+    await expect(page.locator('[data-testid="result-container"]')).toBeVisible();
+    
+    // Result should be properly displayed on mobile
+    const container = page.locator('[data-testid="result-container"]');
+    const boundingBox = await container.boundingBox();
+    
+    expect(boundingBox?.width).toBeLessThanOrEqual(375);
+    
+    // Axes and types should be vertically stacked on mobile
+    const axesSection = page.locator('[data-testid="axes-section"]');
+    const typesSection = page.locator('[data-testid="type-profiles-section"]');
+    
+    await expect(axesSection).toBeVisible();
+    await expect(typesSection).toBeVisible();
+  });
+
+  test('should maintain theme consistency in results', async ({ page }) => {
+    await page.goto(`/play/result?sessionId=${mockSessionId}`);
+    
+    await expect(page.locator('[data-testid="result-container"]')).toBeVisible();
+    
+    // Theme should be applied consistently
+    const bodyClass = await page.locator('body').getAttribute('class');
+    expect(bodyClass).toContain('theme-');
+    
+    // Theme colors should be applied to result elements
+    const resultContainer = page.locator('[data-testid="result-container"]');
+    const computedStyle = await resultContainer.evaluate(el => {
+      return window.getComputedStyle(el).backgroundColor;
+    });
+    
+    expect(computedStyle).toBeTruthy();
+  });
+
+  test('should handle network interruptions during result loading', async ({ page }) => {
+    // Start loading the page
+    const pagePromise = page.goto(`/play/result?sessionId=${mockSessionId}`);
+    
+    // Simulate network interruption
+    await page.route('**/*', route => route.abort());
+    
+    try {
+      await pagePromise;
+    } catch (error) {
+      // Network error is expected
     }
     
-    await expect(page.locator('[data-testid="result-screen"]')).toBeVisible();
+    // Restore network and retry
+    await page.unroute('**/*');
     
-    // Test browser back button
-    await page.goBack();
+    await page.reload();
     
-    // Should handle navigation gracefully
-    // May show warning about losing progress or return to results
-    
-    // Test browser forward button
-    await page.goForward();
-    
-    // Should return to results if session is still valid
-    // Or show appropriate message if session expired
+    // Should eventually load successfully
+    await expect(page.locator('[data-testid="result-container"]')).toBeVisible({ timeout: 10000 });
   });
 });

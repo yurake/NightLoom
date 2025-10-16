@@ -263,3 +263,35 @@ def get_fallback_scenes(theme_id: str, keyword: str) -> List[Scene]:
 def get_fallback_types() -> List[TypeProfile]:
     """Get fallback type profiles."""
     return FallbackAssets.get_fallback_type_profiles()
+
+
+def get_fallback_scene(scene_index: int, theme_id: str) -> Scene:
+    """Get a single fallback scene by index."""
+    # Create a generic fallback scene for any index
+    return Scene(
+        sceneIndex=scene_index,
+        themeId=theme_id,
+        narrative=f"診断シーン{scene_index}：重要な選択の場面です。あなたの価値観に最も近い選択肢を選んでください。",
+        choices=[
+            Choice(
+                id=f"choice_{scene_index}_1",
+                text="論理的に分析して決める",
+                weights={"logic_emotion": 1.0, "speed_caution": -0.3, "individual_group": 0.2, "stability_change": 0.1}
+            ),
+            Choice(
+                id=f"choice_{scene_index}_2",
+                text="直感を信じて決める",
+                weights={"logic_emotion": -1.0, "speed_caution": 0.4, "individual_group": -0.1, "stability_change": 0.3}
+            ),
+            Choice(
+                id=f"choice_{scene_index}_3",
+                text="迅速に行動する",
+                weights={"logic_emotion": 0.2, "speed_caution": 1.0, "individual_group": 0.5, "stability_change": 0.6}
+            ),
+            Choice(
+                id=f"choice_{scene_index}_4",
+                text="慎重に検討する",
+                weights={"logic_emotion": 0.3, "speed_caution": -1.0, "individual_group": -0.3, "stability_change": -0.5}
+            )
+        ]
+    )

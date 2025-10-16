@@ -47,9 +47,53 @@ async def post_session_keyword(session_id: str, request: KeywordRequest) -> dict
         }
         
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid session ID format: {str(e)}")
+        # Check if this is a UUID parsing error vs session state error
+        error_msg = str(e)
+        if ("invalid" in error_msg.lower() and "uuid" in error_msg.lower()) or "badly formed hexadecimal" in error_msg.lower():
+            # This is a UUID parsing error - return 400
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid session ID format: {str(e)}"
+            )
+        elif "state" in error_msg.lower() and ("required" in error_msg.lower() or "init" in error_msg.lower()):
+            # This is a session state error - return 500
+            raise HTTPException(
+                status_code=500,
+                detail=f"Session state error: {str(e)}"
+            )
+        else:
+            # Default to 400 for other ValueError cases (likely validation)
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid session ID format: {str(e)}"
+            )
     except Exception as e:
         # Log error for observability
         observability.log_error(session_uuid if 'session_uuid' in locals() else None,
                                "keyword_confirmation_error", str(e))
-        raise HTTPException(status_code=500, detail=f"Failed to confirm keyword: {str(e)}")
+        
+        # Import SessionServiceError for proper exception handling
+        from app.services.session import SessionServiceError, InvalidSessionStateError
+        
+        # Check if keyword validation failed
+        if isinstance(e, SessionServiceError) and "Invalid keyword length" in str(e):
+            raise HTTPException(
+                status_code=500,
+                detail=f"Invalid keyword: {str(e)}"
+            )
+        
+        # Check for session state errors (no longer INIT) - including ValueError from SessionGuard
+        if (isinstance(e, InvalidSessionStateError) or
+            isinstance(e, ValueError) or
+            "require_state" in str(e).lower() or
+            "required" in str(e).lower() or
+            "state" in str(e).lower()):
+            raise HTTPException(
+                status_code=500,
+                detail=f"Session state error: {str(e)}"
+            )
+        
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to confirm keyword: {str(e)}"
+        )

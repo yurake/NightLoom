@@ -1,0 +1,537 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.8, pytest-8.4.2, pluggy-1.6.0 -- /Users/yurak/git/NightLoom/backend/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/yurak/git/NightLoom/backend
+configfile: pyproject.toml
+plugins: respx-0.22.0, asyncio-1.2.0, anyio-4.11.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 59 items
+
+tests/api/test_bootstrap.py::TestBootstrapAPI::test_bootstrap_success PASSED [  1%]
+tests/api/test_bootstrap.py::TestBootstrapAPI::test_bootstrap_with_custom_character PASSED [  3%]
+tests/api/test_bootstrap.py::TestBootstrapAPI::test_bootstrap_with_llm_fallback PASSED [  5%]
+tests/api/test_bootstrap.py::TestBootstrapAPI::test_bootstrap_multiple_sessions PASSED [  6%]
+tests/api/test_bootstrap.py::TestBootstrapAPI::test_bootstrap_response_performance PASSED [  8%]
+tests/api/test_bootstrap.py::TestBootstrapAPI::test_bootstrap_session_storage PASSED [ 10%]
+tests/api/test_bootstrap.py::TestBootstrapAPI::test_bootstrap_invalid_request_body PASSED [ 11%]
+tests/api/test_bootstrap.py::TestBootstrapAPI::test_bootstrap_observability_logging PASSED [ 13%]
+tests/api/test_bootstrap.py::TestBootstrapEdgeCases::test_bootstrap_with_empty_body PASSED [ 15%]
+tests/api/test_bootstrap.py::TestBootstrapEdgeCases::test_bootstrap_concurrent_requests PASSED [ 16%]
+tests/api/test_bootstrap.py::TestBootstrapEdgeCases::test_bootstrap_memory_usage PASSED [ 18%]
+tests/api/test_choices.py::TestChoiceSubmission::test_submit_choice_valid_session_and_choice PASSED [ 20%]
+tests/api/test_choices.py::TestChoiceSubmission::test_submit_choice_last_scene_no_next PASSED [ 22%]
+tests/api/test_choices.py::TestChoiceSubmission::test_submit_choice_session_not_found PASSED [ 23%]
+tests/api/test_choices.py::TestChoiceSubmission::test_submit_choice_invalid_session_state FAILED [ 25%]
+tests/api/test_choices.py::TestChoiceSubmission::test_submit_choice_invalid_choice_id PASSED [ 27%]
+tests/api/test_choices.py::TestChoiceSubmission::test_submit_choice_missing_choice_id FAILED [ 28%]
+tests/api/test_choices.py::TestChoiceSubmission::test_submit_choice_invalid_scene_index PASSED [ 30%]
+tests/api/test_choices.py::TestChoiceSubmission::test_submit_choice_malformed_request_body FAILED [ 32%]
+tests/api/test_choices.py::TestChoiceSubmission::test_submit_choice_llm_service_unavailable PASSED [ 33%]
+tests/api/test_choices.py::TestChoiceSubmission::test_submit_choice_score_accumulation_tracking FAILED [ 35%]
+tests/api/test_choices.py::TestChoiceSubmission::test_submit_choice_performance_contract PASSED [ 37%]
+tests/api/test_choices.py::TestChoiceValidation::test_choice_id_format_validation PASSED [ 38%]
+tests/api/test_choices.py::TestChoiceValidation::test_choice_submission_sequence PASSED [ 40%]
+tests/api/test_choices.py::TestChoiceValidation::test_duplicate_choice_submission PASSED [ 42%]
+tests/api/test_health.py::test_health_endpoint[asyncio] PASSED           [ 44%]
+tests/api/test_health.py::test_health_endpoint[trio] PASSED              [ 45%]
+tests/api/test_keyword.py::TestKeywordConfirmationAPI::test_keyword_confirmation_success PASSED [ 47%]
+tests/api/test_keyword.py::TestKeywordConfirmationAPI::test_keyword_confirmation_custom_keyword PASSED [ 49%]
+tests/api/test_keyword.py::TestKeywordConfirmationAPI::test_keyword_confirmation_invalid_session PASSED [ 50%]
+tests/api/test_keyword.py::TestKeywordConfirmationAPI::test_keyword_confirmation_invalid_session_id_format PASSED [ 52%]
+tests/api/test_keyword.py::TestKeywordConfirmationAPI::test_keyword_confirmation_empty_keyword PASSED [ 54%]
+tests/api/test_keyword.py::TestKeywordConfirmationAPI::test_keyword_confirmation_too_long_keyword FAILED [ 55%]
+tests/api/test_keyword.py::TestKeywordConfirmationAPI::test_keyword_confirmation_missing_request_fields PASSED [ 57%]
+tests/api/test_keyword.py::TestKeywordConfirmationAPI::test_keyword_confirmation_performance PASSED [ 59%]
+tests/api/test_keyword.py::TestKeywordConfirmationAPI::test_keyword_confirmation_scene_narrative_contains_keyword PASSED [ 61%]
+tests/api/test_keyword.py::TestKeywordConfirmationAPI::test_keyword_confirmation_observability_logging PASSED [ 62%]
+tests/api/test_keyword.py::TestKeywordConfirmationEdgeCases::test_keyword_confirmation_japanese_characters PASSED [ 64%]
+tests/api/test_keyword.py::TestKeywordConfirmationEdgeCases::test_keyword_confirmation_twice_same_session FAILED [ 66%]
+tests/api/test_results.py::TestResultRetrieval::test_get_result_completed_session PASSED [ 67%]
+tests/api/test_results.py::TestResultRetrieval::test_get_result_session_not_found PASSED [ 69%]
+tests/api/test_results.py::TestResultRetrieval::test_get_result_session_not_completed FAILED [ 71%]
+tests/api/test_results.py::TestResultRetrieval::test_get_result_invalid_session_state FAILED [ 72%]
+tests/api/test_results.py::TestResultRetrieval::test_get_result_llm_service_unavailable_with_fallback PASSED [ 74%]
+tests/api/test_results.py::TestResultRetrieval::test_get_result_llm_service_complete_failure FAILED [ 76%]
+tests/api/test_results.py::TestResultRetrieval::test_get_result_malformed_session_id FAILED [ 77%]
+tests/api/test_results.py::TestResultRetrieval::test_get_result_performance_contract PASSED [ 79%]
+tests/api/test_results.py::TestResultDataValidation::test_axis_score_normalization PASSED [ 81%]
+tests/api/test_results.py::TestResultDataValidation::test_type_profile_count_validation PASSED [ 83%]
+tests/api/test_results.py::TestResultDataValidation::test_dominant_axes_consistency PASSED [ 84%]
+tests/api/test_scenes.py::TestSceneRetrieval::test_get_scene_valid_session_and_index PASSED [ 86%]
+tests/api/test_scenes.py::TestSceneRetrieval::test_get_scene_session_not_found PASSED [ 88%]
+tests/api/test_scenes.py::TestSceneRetrieval::test_get_scene_invalid_session_state PASSED [ 89%]
+tests/api/test_scenes.py::TestSceneRetrieval::test_get_scene_invalid_scene_index PASSED [ 91%]
+tests/api/test_scenes.py::TestSceneRetrieval::test_get_scene_llm_service_unavailable FAILED [ 93%]
+tests/api/test_scenes.py::TestSceneRetrieval::test_get_scene_malformed_uuid FAILED [ 94%]
+tests/api/test_scenes.py::TestSceneRetrieval::test_get_scene_performance_contract PASSED [ 96%]
+tests/api/test_scenes.py::TestSceneProgressTracking::test_scene_sequence_validation PASSED [ 98%]
+tests/api/test_scenes.py::TestSceneProgressTracking::test_scene_data_consistency PASSED [100%]
+
+=================================== FAILURES ===================================
+________ TestChoiceSubmission.test_submit_choice_invalid_session_state _________
+
+self = <test_choices.TestChoiceSubmission object at 0x10c0e0e30>
+mock_session_in_store = <function mock_session_in_store.<locals>._create_session at 0x10c1d18a0>
+
+    def test_submit_choice_invalid_session_state(self, mock_session_in_store):
+        """Test choice submission for session in wrong state."""
+        session_id = str(uuid.uuid4())
+    
+        # Session in INIT state (before keyword selection)
+        mock_session = mock_session_in_store(
+            session_id=session_id,
+            state=SessionState.INIT,
+            selected_keyword=None,  # No keyword selected yet
+            theme_id="serene",
+            initial_character="む"
+        )
+    
+        response = client.post(
+            f"/api/sessions/{session_id}/scenes/1/choice",
+            json={"choiceId": "choice_1_1"}
+        )
+    
+>       assert response.status_code == 400
+E       assert 503 == 400
+E        +  where 503 = <Response [503 Service Unavailable]>.status_code
+
+tests/api/test_choices.py:134: AssertionError
+----------------------------- Captured stdout call -----------------------------
+[METRIC] Counter choice_submission_unexpected_error incremented
+__________ TestChoiceSubmission.test_submit_choice_missing_choice_id ___________
+
+self = <test_choices.TestChoiceSubmission object at 0x10c0e1220>
+
+    def test_submit_choice_missing_choice_id(self):
+        """Test choice submission without choiceId in request body."""
+        session_id = str(uuid.uuid4())
+    
+        response = client.post(
+            f"/api/sessions/{session_id}/scenes/1/choice",
+            json={}  # Missing choiceId
+        )
+    
+        assert response.status_code == 422
+        data = response.json()
+>       assert data["error_code"] == "VALIDATION_ERROR"
+               ^^^^^^^^^^^^^^^^^^
+E       KeyError: 'error_code'
+
+tests/api/test_choices.py:171: KeyError
+________ TestChoiceSubmission.test_submit_choice_malformed_request_body ________
+
+self = <test_choices.TestChoiceSubmission object at 0x10c0e15e0>
+
+    def test_submit_choice_malformed_request_body(self):
+        """Test choice submission with malformed JSON."""
+        session_id = str(uuid.uuid4())
+    
+        response = client.post(
+            f"/api/sessions/{session_id}/scenes/1/choice",
+            json={"wrongField": "value"}  # Wrong field name
+        )
+    
+        assert response.status_code == 422
+        data = response.json()
+>       assert data["error_code"] == "VALIDATION_ERROR"
+               ^^^^^^^^^^^^^^^^^^
+E       KeyError: 'error_code'
+
+tests/api/test_choices.py:208: KeyError
+_____ TestChoiceSubmission.test_submit_choice_score_accumulation_tracking ______
+
+self = <test_choices.TestChoiceSubmission object at 0x10c0e19a0>
+mock_session_in_store = <function mock_session_in_store.<locals>._create_session at 0x10c1ee2a0>
+
+    def test_submit_choice_score_accumulation_tracking(self, mock_session_in_store):
+        """Test that choice submission properly tracks score accumulation."""
+        session_id = str(uuid.uuid4())
+        scene_index = 1
+        choice_id = "choice_1_2"
+    
+        mock_session = mock_session_in_store(
+            session_id=session_id,
+            state=SessionState.PLAY,
+            selected_keyword="集計",
+            theme_id="focus",
+            initial_character="し"
+        )
+    
+        mock_next_scene = Scene(
+            sceneIndex=2,
+            themeId="focus",
+            narrative="選択の結果が現れ始めた。",
+            choices=[
+                Choice(id="choice_2_1", text="結果を詳しく分析する", weights={"analysis": 0.8}),
+                Choice(id="choice_2_2", text="直感に従って進む", weights={"intuition": 0.9}),
+                Choice(id="choice_2_3", text="他の人の意見を求める", weights={"collaboration": 0.7}),
+                Choice(id="choice_2_4", text="慎重に様子を見る", weights={"caution": 0.6})
+            ]
+        )
+    
+        response = client.post(
+            f"/api/sessions/{session_id}/scenes/{scene_index}/choice",
+            json={"choiceId": choice_id}
+        )
+    
+        assert response.status_code == 200
+    
+        # Verify that choice was recorded in session
+>       updated_session = session_store.get_session(uuid.UUID(session_id))
+                          ^^^^^^^^^^^^^
+E       NameError: name 'session_store' is not defined
+
+tests/api/test_choices.py:266: NameError
+----------------------------- Captured stdout call -----------------------------
+[METRIC] Counter choice_submission_success incremented
+[METRIC] choice_submission latency: 0.03ms
+____ TestKeywordConfirmationAPI.test_keyword_confirmation_too_long_keyword _____
+
+self = <test_keyword.TestKeywordConfirmationAPI object at 0x10c0e3f80>
+
+    def test_keyword_confirmation_too_long_keyword(self):
+        """Test keyword confirmation with overly long keyword."""
+        # First create a session
+        bootstrap_response = client.post("/api/sessions/start")
+        assert bootstrap_response.status_code == 200
+        session_data = bootstrap_response.json()
+        session_id = session_data["sessionId"]
+    
+        # Try overly long keyword (>20 characters)
+        keyword_request = {
+            "keyword": "これは非常に長いキーワードでテストします",
+            "source": "manual"
+        }
+    
+        response = client.post(
+            f"/api/sessions/{session_id}/keyword",
+            json=keyword_request
+        )
+    
+        # Should fail due to invalid keyword length
+>       assert response.status_code == 500
+E       assert 200 == 500
+E        +  where 200 = <Response [200 OK]>.status_code
+
+tests/api/test_keyword.py:181: AssertionError
+----------------------------- Captured stdout call -----------------------------
+[NIGHTLOOM] {"event_type": "session_start", "timestamp": "2025-10-16T04:50:18.142476", "session_id": "f2379049-11c0-4fbd-bbe1-4f583bdda70e", "initial_character": "\u3042", "theme_id": "serene", "fallback_used": false}
+[NIGHTLOOM] {"event_type": "keyword_confirmation", "timestamp": "2025-10-16T04:50:18.347347", "session_id": "f2379049-11c0-4fbd-bbe1-4f583bdda70e", "keyword": "\u3053\u308c\u306f\u975e\u5e38\u306b\u9577\u3044\u30ad\u30fc\u30ef\u30fc\u30c9\u3067\u30c6\u30b9\u30c8\u3057\u307e\u3059", "source": "manual", "latency_ms": 201.51185989379883}
+_ TestKeywordConfirmationEdgeCases.test_keyword_confirmation_twice_same_session _
+
+self = <test_keyword.TestKeywordConfirmationEdgeCases object at 0x10c0e3620>
+
+    def test_keyword_confirmation_twice_same_session(self):
+        """Test attempting to confirm keyword twice for same session."""
+        # First create a session
+        bootstrap_response = client.post("/api/sessions/start")
+        assert bootstrap_response.status_code == 200
+        session_data = bootstrap_response.json()
+        session_id = session_data["sessionId"]
+    
+        keyword_request = {
+            "keyword": session_data["keywordCandidates"][0],
+            "source": "suggestion"
+        }
+    
+        # First confirmation should succeed
+        response1 = client.post(
+            f"/api/sessions/{session_id}/keyword",
+            json=keyword_request
+        )
+        assert response1.status_code == 200
+    
+        # Second confirmation should fail (session state validation)
+        response2 = client.post(
+            f"/api/sessions/{session_id}/keyword",
+            json={
+                "keyword": session_data["keywordCandidates"][1],
+                "source": "suggestion"
+            }
+        )
+    
+        # Should fail due to session state (no longer INIT)
+>       assert response2.status_code == 500
+E       assert 400 == 500
+E        +  where 400 = <Response [400 Bad Request]>.status_code
+
+tests/api/test_keyword.py:355: AssertionError
+----------------------------- Captured stdout call -----------------------------
+[NIGHTLOOM] {"event_type": "session_start", "timestamp": "2025-10-16T04:50:19.816193", "session_id": "8c6cba43-107a-4aa3-af2f-a0dafe8111dc", "initial_character": "\u3042", "theme_id": "serene", "fallback_used": false}
+[NIGHTLOOM] {"event_type": "keyword_confirmation", "timestamp": "2025-10-16T04:50:20.023825", "session_id": "8c6cba43-107a-4aa3-af2f-a0dafe8111dc", "keyword": "\u611b", "source": "suggestion", "latency_ms": 203.28593254089355}
+__________ TestResultRetrieval.test_get_result_session_not_completed ___________
+
+self = <test_results.TestResultRetrieval object at 0x10c0fd700>
+
+    def test_get_result_session_not_completed(self):
+        """Test result retrieval for session with incomplete scenes."""
+        session_id = str(uuid.uuid4())
+    
+        # Mock session with only 2 scenes completed
+        mock_session = Session(
+            id=session_id,
+            state=SessionState.PLAY,
+            selectedKeyword="未完了",
+            themeId="focus",
+            initialCharacter="み",
+            keywordCandidates=["未完了", "みらい", "みっつ", "みんな"]
+        )
+    
+        # Only 2 choice records (need 4 for completion)
+        mock_session.choices = [
+            type('ChoiceRecord', (), {
+                'sceneIndex': 1,
+                'choiceId': 'choice_1_1',
+                'timestamp': datetime.now()
+            })(),
+            type('ChoiceRecord', (), {
+                'sceneIndex': 2,
+                'choiceId': 'choice_2_3',
+                'timestamp': datetime.now()
+            })()
+        ]
+    
+        with patch('app.services.session_store.SessionStore.get_session') as mock_get:
+            mock_get.return_value = mock_session
+    
+            response = client.post(f"/api/sessions/{session_id}/result")
+    
+            assert response.status_code == 400
+            data = response.json()
+>           assert data["error_code"] == "SESSION_NOT_COMPLETED"
+                   ^^^^^^^^^^^^^^^^^^
+E           KeyError: 'error_code'
+
+tests/api/test_results.py:193: KeyError
+----------------------------- Captured stdout call -----------------------------
+[METRIC] Counter result_generation_invalid_state incremented
+__________ TestResultRetrieval.test_get_result_invalid_session_state ___________
+
+self = <test_results.TestResultRetrieval object at 0x10c0fd8e0>
+
+    def test_get_result_invalid_session_state(self):
+        """Test result retrieval for session in INIT state."""
+        session_id = str(uuid.uuid4())
+    
+        mock_session = Session(
+            id=session_id,
+            state=SessionState.INIT,  # Invalid state for result
+            themeId="serene",
+            initialCharacter="し",
+            keywordCandidates=["しずか", "しんぱい", "しっかり", "しあわせ"]
+        )
+    
+        with patch('app.services.session_store.SessionStore.get_session') as mock_get:
+            mock_get.return_value = mock_session
+    
+            response = client.post(f"/api/sessions/{session_id}/result")
+    
+            assert response.status_code == 400
+            data = response.json()
+>           assert data["error_code"] == "BAD_REQUEST"
+                   ^^^^^^^^^^^^^^^^^^
+E           KeyError: 'error_code'
+
+tests/api/test_results.py:215: KeyError
+----------------------------- Captured stdout call -----------------------------
+[METRIC] Counter result_generation_invalid_state incremented
+_______ TestResultRetrieval.test_get_result_llm_service_complete_failure _______
+
+self = <test_results.TestResultRetrieval object at 0x10c0fdca0>
+
+    def test_get_result_llm_service_complete_failure(self):
+        """Test result retrieval when LLM fails and no fallback available."""
+        session_id = str(uuid.uuid4())
+    
+        mock_session = Session(
+            id=session_id,
+            state=SessionState.PLAY,
+            selectedKeyword="失敗",
+            themeId="adventure",
+            initialCharacter="し",
+            keywordCandidates=["失敗", "しんぱい", "しっぱい", "しかた"]
+        )
+    
+        # 4 completed scenes
+        mock_session.choices = [
+            type('ChoiceRecord', (), {
+                'sceneIndex': i,
+                'choiceId': f'choice_{i}_1',
+                'timestamp': datetime.now()
+            })()
+            for i in range(1, 5)
+        ]
+    
+        with patch('app.services.session_store.SessionStore.get_session') as mock_get, \
+             patch('app.services.session.SessionService.generate_result') as mock_generate:
+    
+            mock_get.return_value = mock_session
+            mock_generate.side_effect = Exception("Complete LLM failure")
+    
+            response = client.post(f"/api/sessions/{session_id}/result")
+    
+            assert response.status_code == 503
+            data = response.json()
+>           assert data["error_code"] == "LLM_SERVICE_UNAVAILABLE"
+                   ^^^^^^^^^^^^^^^^^^
+E           KeyError: 'error_code'
+
+tests/api/test_results.py:335: KeyError
+----------------------------- Captured stdout call -----------------------------
+[METRIC] Counter result_generation_unexpected_error incremented
+[ERROR] {"level": "error", "message": "Unexpected error in result generation", "timestamp": "2025-10-16T04:50:20.051885", "session_id": "b18909e8-f42c-4180-a35f-a944048dcb76", "error": "Complete LLM failure"}
+___________ TestResultRetrieval.test_get_result_malformed_session_id ___________
+
+self = <test_results.TestResultRetrieval object at 0x10c0fde80>
+
+    def test_get_result_malformed_session_id(self):
+        """Test result retrieval with malformed session ID."""
+        invalid_session_id = "not-a-uuid"
+    
+        response = client.post(f"/api/sessions/{invalid_session_id}/result")
+    
+>       assert response.status_code == 400
+E       assert 422 == 400
+E        +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+
+tests/api/test_results.py:343: AssertionError
+__________ TestSceneRetrieval.test_get_scene_llm_service_unavailable ___________
+
+self = <test_scenes.TestSceneRetrieval object at 0x10c0ff110>
+mock_session_in_store = <function mock_session_in_store.<locals>._create_session at 0x10c1eee80>
+
+    def test_get_scene_llm_service_unavailable(self, mock_session_in_store):
+        """Test scene retrieval when LLM service fails (503 fallback)."""
+        session_id = str(uuid.uuid4())
+    
+        mock_session = mock_session_in_store(
+            session_id=session_id,
+            state=SessionState.PLAY,
+            selected_keyword="平和",
+            theme_id="serene",
+            initial_character="へ"
+        )
+    
+        with patch('app.services.session.SessionService.get_scene') as mock_get_scene:
+            mock_get_scene.side_effect = Exception("LLM service unavailable")
+    
+            response = client.get(f"/api/sessions/{session_id}/scenes/1")
+    
+            # Should return 503 with error details or fallback scene
+            assert response.status_code in [200, 503]
+    
+            if response.status_code == 200:
+                # Fallback scene returned
+                data = response.json()
+                assert "fallbackUsed" in data
+>               assert data["fallbackUsed"] is True
+E               assert False is True
+
+tests/api/test_scenes.py:163: AssertionError
+----------------------------- Captured stdout call -----------------------------
+[METRIC] Counter scene_retrieval_success incremented
+[METRIC] scene_retrieval latency: 0.03ms
+_______________ TestSceneRetrieval.test_get_scene_malformed_uuid _______________
+
+self = <test_scenes.TestSceneRetrieval object at 0x10c0ff320>
+
+    def test_get_scene_malformed_uuid(self):
+        """Test scene retrieval with malformed session ID."""
+        invalid_session_id = "not-a-uuid"
+    
+        response = client.get(f"/api/sessions/{invalid_session_id}/scenes/1")
+    
+>       assert response.status_code == 400
+E       assert 422 == 400
+E        +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+
+tests/api/test_scenes.py:175: AssertionError
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/pydantic/_internal/_config.py:323
+.venv/lib/python3.12/site-packages/pydantic/_internal/_config.py:323
+.venv/lib/python3.12/site-packages/pydantic/_internal/_config.py:323
+.venv/lib/python3.12/site-packages/pydantic/_internal/_config.py:323
+.venv/lib/python3.12/site-packages/pydantic/_internal/_config.py:323
+.venv/lib/python3.12/site-packages/pydantic/_internal/_config.py:323
+.venv/lib/python3.12/site-packages/pydantic/_internal/_config.py:323
+  /Users/yurak/git/NightLoom/backend/.venv/lib/python3.12/site-packages/pydantic/_internal/_config.py:323: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.11/migration/
+    warnings.warn(DEPRECATION_MESSAGE, DeprecationWarning)
+
+tests/api/test_bootstrap.py: 25 warnings
+tests/api/test_keyword.py: 10 warnings
+  /Users/yurak/git/NightLoom/backend/app/services/session.py:84: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    createdAt=datetime.utcnow()
+
+tests/api/test_bootstrap.py: 25 warnings
+tests/api/test_keyword.py: 10 warnings
+  /Users/yurak/git/NightLoom/backend/app/services/observability.py:32: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "timestamp": datetime.utcnow().isoformat(),
+
+tests/api/test_bootstrap.py::TestBootstrapAPI::test_bootstrap_with_llm_fallback
+  /Users/yurak/git/NightLoom/backend/tests/api/test_bootstrap.py:104: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    createdAt=datetime.utcnow()
+
+tests/api/test_choices.py: 11 warnings
+tests/api/test_results.py: 9 warnings
+tests/api/test_scenes.py: 7 warnings
+  /Users/yurak/git/NightLoom/backend/.venv/lib/python3.12/site-packages/pydantic/main.py:253: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+
+tests/api/test_choices.py::TestChoiceSubmission::test_submit_choice_valid_session_and_choice
+tests/api/test_choices.py::TestChoiceSubmission::test_submit_choice_last_scene_no_next
+tests/api/test_choices.py::TestChoiceSubmission::test_submit_choice_llm_service_unavailable
+tests/api/test_choices.py::TestChoiceSubmission::test_submit_choice_score_accumulation_tracking
+tests/api/test_choices.py::TestChoiceSubmission::test_submit_choice_performance_contract
+tests/api/test_choices.py::TestChoiceValidation::test_duplicate_choice_submission
+  /Users/yurak/git/NightLoom/backend/app/services/session.py:252: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    timestamp=datetime.utcnow()
+
+tests/api/test_choices.py: 12 warnings
+tests/api/test_results.py: 11 warnings
+tests/api/test_scenes.py: 3 warnings
+  /Users/yurak/git/NightLoom/backend/app/services/observability.py:328: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    return datetime.utcnow().isoformat()
+
+tests/api/test_keyword.py::TestKeywordConfirmationAPI::test_keyword_confirmation_success
+tests/api/test_keyword.py::TestKeywordConfirmationAPI::test_keyword_confirmation_custom_keyword
+tests/api/test_keyword.py::TestKeywordConfirmationAPI::test_keyword_confirmation_too_long_keyword
+tests/api/test_keyword.py::TestKeywordConfirmationAPI::test_keyword_confirmation_performance
+tests/api/test_keyword.py::TestKeywordConfirmationAPI::test_keyword_confirmation_scene_narrative_contains_keyword
+tests/api/test_keyword.py::TestKeywordConfirmationEdgeCases::test_keyword_confirmation_japanese_characters
+tests/api/test_keyword.py::TestKeywordConfirmationEdgeCases::test_keyword_confirmation_twice_same_session
+  /Users/yurak/git/NightLoom/backend/app/services/observability.py:59: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "timestamp": datetime.utcnow().isoformat(),
+
+tests/api/test_keyword.py::TestKeywordConfirmationAPI::test_keyword_confirmation_invalid_session
+tests/api/test_keyword.py::TestKeywordConfirmationAPI::test_keyword_confirmation_empty_keyword
+  /Users/yurak/git/NightLoom/backend/app/services/observability.py:193: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "timestamp": datetime.utcnow().isoformat(),
+
+tests/api/test_results.py::TestResultRetrieval::test_get_result_completed_session
+tests/api/test_results.py::TestResultRetrieval::test_get_result_completed_session
+tests/api/test_results.py::TestResultRetrieval::test_get_result_completed_session
+  /Users/yurak/git/NightLoom/backend/tests/api/test_results.py:88: PydanticDeprecatedSince20: The `dict` method is deprecated; use `model_dump` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.11/migration/
+    "axes": [axis.dict() for axis in mock_axes],
+
+tests/api/test_results.py::TestResultRetrieval::test_get_result_completed_session
+tests/api/test_results.py::TestResultRetrieval::test_get_result_completed_session
+tests/api/test_results.py::TestResultRetrieval::test_get_result_completed_session
+tests/api/test_results.py::TestResultRetrieval::test_get_result_completed_session
+  /Users/yurak/git/NightLoom/backend/tests/api/test_results.py:91: PydanticDeprecatedSince20: The `dict` method is deprecated; use `model_dump` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.11/migration/
+    "profiles": [profile.dict() for profile in mock_type_profiles],
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/api/test_choices.py::TestChoiceSubmission::test_submit_choice_invalid_session_state
+FAILED tests/api/test_choices.py::TestChoiceSubmission::test_submit_choice_missing_choice_id
+FAILED tests/api/test_choices.py::TestChoiceSubmission::test_submit_choice_malformed_request_body
+FAILED tests/api/test_choices.py::TestChoiceSubmission::test_submit_choice_score_accumulation_tracking
+FAILED tests/api/test_keyword.py::TestKeywordConfirmationAPI::test_keyword_confirmation_too_long_keyword
+FAILED tests/api/test_keyword.py::TestKeywordConfirmationEdgeCases::test_keyword_confirmation_twice_same_session
+FAILED tests/api/test_results.py::TestResultRetrieval::test_get_result_session_not_completed
+FAILED tests/api/test_results.py::TestResultRetrieval::test_get_result_invalid_session_state
+FAILED tests/api/test_results.py::TestResultRetrieval::test_get_result_llm_service_complete_failure
+FAILED tests/api/test_results.py::TestResultRetrieval::test_get_result_malformed_session_id
+FAILED tests/api/test_scenes.py::TestSceneRetrieval::test_get_scene_llm_service_unavailable
+FAILED tests/api/test_scenes.py::TestSceneRetrieval::test_get_scene_malformed_uuid
+================= 12 failed, 47 passed, 153 warnings in 5.18s ==================

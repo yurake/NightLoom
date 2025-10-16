@@ -19,6 +19,11 @@ class SessionStore:
         self._sessions: Dict[UUID, Session] = {}
         self._lock = threading.RLock()
     
+    @property
+    def sessions(self) -> Dict[UUID, Session]:
+        """Access to sessions dict for test compatibility."""
+        return self._sessions
+    
     def create_session(self, session: Session) -> None:
         """Store a new session."""
         with self._lock:
