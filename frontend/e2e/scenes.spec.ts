@@ -12,7 +12,7 @@ const mockKeyword = '冒険';
 const mockTheme = 'adventure';
 
 // Scene narratives for validation
-const expectedNarratives = {
+const expectedNarratives: Record<number, string> = {
   1: '森の入り口に立っている',
   2: '川のほとりに着いた',
   3: '古い遺跡を発見した',

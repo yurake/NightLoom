@@ -141,7 +141,7 @@ describe('Screen Reader Compatibility Tests', () => {
       // タイプ名の見出し確認
       const typeHeading = screen.getByRole('heading', { level: 2 });
       expect(typeHeading).toBeInTheDocument();
-      expect(typeHeading).toHaveTextContent(mockResult2Axes.type.name);
+      expect(typeHeading).toHaveTextContent(mockResult2Axes.type.name ?? '診断タイプ');
     });
   });
 

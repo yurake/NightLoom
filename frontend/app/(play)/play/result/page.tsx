@@ -10,33 +10,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from '../../../state/SessionContext';
 import { useTheme } from '../../../theme/ThemeProvider';
 import { ResultScreen } from '../../components/ResultScreen';
-
-interface AxisScore {
-  axisId: string;
-  score: number;
-  rawScore: number;
-}
-
-interface TypeProfile {
-  name: string;
-  description: string;
-  keywords: string[];
-  dominantAxes: string[];
-  polarity: string;
-}
-
-interface ResultData {
-  sessionId: string;
-  keyword: string;
-  axes: AxisScore[];
-  type: {
-    dominantAxes: string[];
-    profiles: TypeProfile[];
-    fallbackUsed: boolean;
-  };
-  completedAt: string;
-  fallbackFlags: string[];
-}
+import type { ResultData } from '@/types/result';
 
 export default function ResultPage() {
   const [resultData, setResultData] = useState<ResultData | null>(null);
@@ -50,7 +24,7 @@ export default function ResultPage() {
   useTheme();
 
   // Get session ID from URL params or session context
-  const sessionId = searchParams?.get('sessionId') || sessionState?.sessionId;
+  const sessionId = searchParams?.get('sessionId') || sessionState?.id;
 
   useEffect(() => {
     if (sessionId) {
@@ -109,7 +83,7 @@ export default function ResultPage() {
       
       // Update session context with result state
       if (sessionState) {
-        sessionState.currentState = 'RESULT';
+        sessionState.state = 'RESULT';
         sessionState.completedAt = data.completedAt;
       }
 

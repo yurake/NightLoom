@@ -18,6 +18,8 @@ interface ProgressIndicatorProps {
   variant?: 'bar' | 'dots' | 'steps';
 }
 
+type RingAwareStyle = React.CSSProperties & { '--tw-ring-color'?: string };
+
 export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
   currentScene,
   totalScenes = 4,
@@ -144,6 +146,15 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
             const sceneNum = index + 1;
             const isCompleted = sceneNum <= completed;
             const isCurrent = sceneNum === currentScene;
+            const dotStyle: RingAwareStyle = {
+              backgroundColor: isCompleted
+                ? currentTheme.primary
+                : isCurrent
+                  ? `${currentTheme.primary}60`
+                  : currentTheme.border,
+              transform: isCurrent ? 'scale(1.2)' : 'scale(1)',
+              '--tw-ring-color': isCurrent ? currentTheme.primary : 'transparent'
+            };
             
             return (
               <div
@@ -151,15 +162,7 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
                 className={`progress-dot w-4 h-4 rounded-full transition-all duration-300 ${
                   isCurrent ? 'ring-2 ring-offset-2' : ''
                 }`}
-                style={{
-                  backgroundColor: isCompleted 
-                    ? currentTheme.primary 
-                    : isCurrent
-                      ? `${currentTheme.primary}60`
-                      : currentTheme.border,
-                  ringColor: isCurrent ? currentTheme.primary : 'transparent',
-                  transform: isCurrent ? 'scale(1.2)' : 'scale(1)'
-                }}
+                style={dotStyle}
                 data-testid={`progress-dot-${sceneNum}`}
                 aria-label={`シーン ${sceneNum} ${isCompleted ? '完了' : isCurrent ? '現在' : '未完了'}`}
               />
@@ -192,6 +195,15 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
             const isCompleted = sceneNum <= completed;
             const isCurrent = sceneNum === currentScene;
             const isLast = index === totalScenes - 1;
+            const stepCircleStyle: RingAwareStyle = {
+              backgroundColor: isCompleted
+                ? currentTheme.primary
+                : isCurrent
+                  ? `${currentTheme.primary}60`
+                  : currentTheme.border,
+              color: isCompleted || isCurrent ? 'white' : currentTheme.text.muted,
+              '--tw-ring-color': isCurrent ? currentTheme.primary : 'transparent'
+            };
             
             return (
               <React.Fragment key={sceneNum}>
@@ -201,15 +213,7 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
                     className={`step-circle w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${
                       isCurrent ? 'ring-2 ring-offset-2' : ''
                     }`}
-                    style={{
-                      backgroundColor: isCompleted 
-                        ? currentTheme.primary 
-                        : isCurrent
-                          ? `${currentTheme.primary}60`
-                          : currentTheme.border,
-                      color: isCompleted || isCurrent ? 'white' : currentTheme.text.muted,
-                      ringColor: isCurrent ? currentTheme.primary : 'transparent'
-                    }}
+                    style={stepCircleStyle}
                     data-testid={`step-${sceneNum}`}
                   >
                     {isCompleted ? (

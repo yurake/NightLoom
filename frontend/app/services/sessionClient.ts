@@ -5,7 +5,8 @@
  * and result retrieval with proper error handling and type safety.
  */
 
-import { Session, Scene, AxisScore, TypeProfile } from '../types/session';
+import { Session, Scene } from '../types/session';
+import type { ResultData } from '@/types/result';
 import { performanceService } from './performance';
 
 export interface BootstrapResponse {
@@ -34,18 +35,7 @@ export interface ChoiceResponse {
   sceneCompleted: boolean;
 }
 
-export interface ResultResponse {
-  sessionId: string;
-  keyword: string;
-  axes: AxisScore[];
-  type: {
-    dominantAxes: string[];
-    profiles: TypeProfile[];
-    fallbackUsed?: boolean;
-  };
-  completedAt: string;
-  fallbackFlags: string[];
-}
+export type ResultResponse = ResultData;
 
 export class SessionAPIError extends Error {
   constructor(

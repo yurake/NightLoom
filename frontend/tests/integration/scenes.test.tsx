@@ -7,7 +7,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { rest, HttpResponse } from 'msw';
+import { rest } from 'msw';
 import { setupServer } from 'msw/node';
 import { SessionProvider } from '../../app/state/SessionContext';
 import { ThemeProvider } from '../../app/theme/ThemeProvider';
@@ -117,7 +117,7 @@ const server = {
   listen: () => {},
   resetHandlers: () => {},
   close: () => {},
-  use: () => {}
+  use: (..._handlers: unknown[]) => {}
 };
 /*
 const server = setupServer(
@@ -214,14 +214,14 @@ describe('Scene Progression Integration Tests', () => {
     it('should handle scene retrieval errors gracefully', async () => {
       // Override server to return error
       server.use(
-        rest.get('/api/sessions/:sessionId/scenes/:sceneIndex', ({ params }: any) => {
-          return HttpResponse.json(
-            {
+        rest.get('/api/sessions/:sessionId/scenes/:sceneIndex', (req, res, ctx) => {
+          return res(
+            ctx.status(404),
+            ctx.json({
               error_code: 'SESSION_NOT_FOUND',
               message: 'Session not found',
-              details: { session_id: params.sessionId }
-            },
-            { status: 404 }
+              details: { session_id: req.params.sessionId }
+            })
           );
         })
       );
@@ -240,14 +240,14 @@ describe('Scene Progression Integration Tests', () => {
     it('should enforce scene sequence restrictions', async () => {
       // Test accessing scene 3 before completing previous scenes
       server.use(
-        rest.get('/api/sessions/:sessionId/scenes/3', ({ params }: any) => {
-          return HttpResponse.json(
-            {
+        rest.get('/api/sessions/:sessionId/scenes/3', (_req, res, ctx) => {
+          return res(
+            ctx.status(400),
+            ctx.json({
               error_code: 'BAD_REQUEST',
               message: 'Previous scenes must be completed first',
               details: { required_scene: 1 }
-            },
-            { status: 400 }
+            })
           );
         })
       );
@@ -288,14 +288,14 @@ describe('Scene Progression Integration Tests', () => {
       
       // Override to return validation error
       server.use(
-        rest.post('/api/sessions/:sessionId/scenes/:sceneIndex/choice', ({ params }: any) => {
-          return HttpResponse.json(
-            {
+        rest.post('/api/sessions/:sessionId/scenes/:sceneIndex/choice', (_req, res, ctx) => {
+          return res(
+            ctx.status(422),
+            ctx.json({
               error_code: 'VALIDATION_ERROR',
               message: 'Invalid choice ID format',
               details: { field: 'choiceId', expected: 'choice_X_Y' }
-            },
-            { status: 422 }
+            })
           );
         })
       );
@@ -371,8 +371,8 @@ describe('Scene Progression Integration Tests', () => {
   describe('Error Handling & Resilience', () => {
     it('should handle network errors during scene retrieval', async () => {
       server.use(
-        rest.get('/api/sessions/:sessionId/scenes/:sceneIndex', ({ params }: any) => {
-          return HttpResponse.error();
+        rest.get('/api/sessions/:sessionId/scenes/:sceneIndex', (_req, res) => {
+          return res.networkError('Network error');
         })
       );
 
@@ -390,8 +390,8 @@ describe('Scene Progression Integration Tests', () => {
       const user = userEvent.setup();
       
       server.use(
-        rest.post('/api/sessions/:sessionId/scenes/:sceneIndex/choice', ({ params }: any) => {
-          return HttpResponse.error();
+        rest.post('/api/sessions/:sessionId/scenes/:sceneIndex/choice', (_req, res) => {
+          return res.networkError('Network error');
         })
       );
 
@@ -411,15 +411,18 @@ describe('Scene Progression Integration Tests', () => {
 
     it('should provide fallback content when LLM service fails', async () => {
       server.use(
-        rest.get('/api/sessions/:sessionId/scenes/:sceneIndex', ({ params }: any) => {
-          return HttpResponse.json({
-            ...(mockScenes as any)[1],
-            fallbackUsed: true,
-            scene: {
-              ...(mockScenes as any)[1].scene,
-              narrative: 'フォールバック用のシンプルなシナリオです。'
-            }
-          });
+        rest.get('/api/sessions/:sessionId/scenes/:sceneIndex', (_req, res, ctx) => {
+          const fallbackScene = mockScenes[1];
+          return res(
+            ctx.json({
+              ...fallbackScene,
+              fallbackUsed: true,
+              scene: {
+                ...fallbackScene.scene,
+                narrative: 'フォールバック用のシンプルなシナリオです。'
+              }
+            })
+          );
         })
       );
 

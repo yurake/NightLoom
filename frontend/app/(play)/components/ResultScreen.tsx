@@ -105,26 +105,36 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({ sessionId, apiClient
 
     const { type } = result;
     const profiles = Array.isArray(type.profiles) ? type.profiles : [];
-    const primaryProfile = profiles[0];
+    const primaryProfile = profiles.find(profile => profile?.name);
 
-    if (!primaryProfile?.name) {
+    const name = primaryProfile?.name ?? type.name;
+    if (!name) {
       return null;
     }
 
-    const dominantAxes = primaryProfile.dominantAxes ?? type.dominantAxes ?? [];
-    const safeDominantAxes: [string, string] = [
-      dominantAxes[0] ?? 'axis_1',
-      dominantAxes[1] ?? 'axis_2',
+    const description =
+      primaryProfile?.description ??
+      type.description ??
+      '診断タイプの説明を取得できませんでした。';
+
+    const dominantAxesSource = Array.isArray(primaryProfile?.dominantAxes) && primaryProfile!.dominantAxes.length > 0
+      ? primaryProfile!.dominantAxes
+      : Array.isArray(type.dominantAxes)
+        ? type.dominantAxes
+        : [];
+
+    const safeDominantAxes: string[] = [
+      dominantAxesSource[0] ?? 'axis_1',
+      dominantAxesSource[1] ?? dominantAxesSource[0] ?? 'axis_2'
     ];
 
-    const polarity = (primaryProfile.polarity ?? 'Mid-Mid') as TypeResult['polarity'];
+    const polarity = (primaryProfile?.polarity ?? type.polarity ?? 'Mid-Mid') as TypeResult['polarity'];
 
     return {
-      name: primaryProfile.name,
-      description:
-        primaryProfile.description ?? '診断タイプの説明を取得できませんでした。',
+      name,
+      description,
       dominantAxes: safeDominantAxes,
-      polarity,
+      polarity
     };
   }, [result]);
 
