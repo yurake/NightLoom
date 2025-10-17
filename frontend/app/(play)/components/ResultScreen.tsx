@@ -99,26 +99,26 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({ sessionId, apiClient
   }, [sessionId, apiClient]);
 
   const typeCardData: TypeResult | null = useMemo(() => {
-    if (!result?.type?.profiles?.length) {
+    if (!result?.type) {
       return null;
     }
 
-    const profile = result.type.profiles[0];
-    if (!profile?.name) {
+    const type = result.type;
+    if (!type.name) {
       return null;
     }
 
-    const dominantAxes = profile.dominantAxes ?? [];
+    const dominantAxes = type.dominantAxes ?? [];
     const safeDominantAxes: [string, string] = [
       dominantAxes[0] ?? 'axis_1',
       dominantAxes[1] ?? 'axis_2',
     ];
 
-    const polarity = (profile.polarity ?? 'Mid-Mid') as TypeResult['polarity'];
+    const polarity = (type.polarity ?? 'Mid-Mid') as TypeResult['polarity'];
 
     return {
-      name: profile.name,
-      description: profile.description ?? '診断タイプの説明を取得できませんでした。',
+      name: type.name,
+      description: type.description ?? '診断タイプの説明を取得できませんでした。',
       dominantAxes: safeDominantAxes,
       polarity,
     };

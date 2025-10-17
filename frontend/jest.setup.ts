@@ -51,6 +51,16 @@ console.error = (...args: any[]) => {
         message.includes('falling back to fallback theme')) {
       return; // Suppress these during tests
     }
+
+    // Suppress getComputedStyle not implemented error from axe-core
+    if (message.includes('Not implemented: window.getComputedStyle')) {
+      return;
+    }
+  }
+  
+  // Suppress Error objects from axe-core
+  if (args[0] instanceof Error && args[0].message.includes('Not implemented: window.getComputedStyle')) {
+    return;
   }
 
   // Suppress console.log retrying messages during tests
@@ -74,6 +84,18 @@ console.warn = (...args: any[]) => {
     // Suppress theme fallback warnings during tests
     if (message.includes('Invalid theme ID') ||
         message.includes('falling back to fallback theme')) {
+      return;
+    }
+
+    // Suppress axe-core preload timeout warnings
+    if (message.includes("Couldn't load preload assets") ||
+        message.includes('Preload assets timed out')) {
+      return;
+    }
+
+    // Suppress PerformanceObserver warnings during tests
+    if (message.includes('observer not supported') ||
+        message.includes('PerformanceObserver is not defined')) {
       return;
     }
   }
@@ -103,7 +125,7 @@ console.log = (...args: any[]) => {
 
 // MSW v2 ClientRequest interceptor support
 if (typeof global.setImmediate === 'undefined') {
-  global.setImmediate = (callback: (...args: any[]) => void, ...args: any[]) =>
+  (global as any).setImmediate = (callback: (...args: any[]) => void, ...args: any[]) =>
     setTimeout(callback, 0, ...args);
 }
 
@@ -391,7 +413,7 @@ if (typeof global.DOMException === 'undefined') {
 
 // jest-axe setup for accessibility testing
 import { toHaveNoViolations } from 'jest-axe';
-expect.extend(toHaveNoViolations);
+(expect as any).extend(toHaveNoViolations);
 
 // Canvas API Mock for axe-core compatibility
 if (typeof global.HTMLCanvasElement !== 'undefined') {
@@ -431,6 +453,52 @@ if (typeof global.HTMLCanvasElement !== 'undefined') {
   }));
 
   (global.HTMLCanvasElement.prototype.toDataURL as any) = jest.fn(() => '');
+}
+
+// getComputedStyle polyfill for axe-core compatibility
+if (typeof global.getComputedStyle === 'undefined') {
+  (global as any).getComputedStyle = jest.fn((element: Element, pseudoElement?: string | null) => {
+    // Return a basic CSSStyleDeclaration mock
+    return {
+      getPropertyValue: jest.fn((property: string) => {
+        // Return sensible defaults for common properties
+        const defaults: { [key: string]: string } = {
+          'color': 'rgb(0, 0, 0)',
+          'background-color': 'rgba(0, 0, 0, 0)',
+          'font-size': '16px',
+          'font-family': 'Arial, sans-serif',
+          'display': 'block',
+          'visibility': 'visible',
+          'opacity': '1',
+          'width': '100px',
+          'height': '20px'
+        };
+        return defaults[property] || '';
+      }),
+      getPropertyPriority: jest.fn(() => ''),
+      item: jest.fn((index: number) => ''),
+      removeProperty: jest.fn((property: string) => ''),
+      setProperty: jest.fn((property: string, value: string, priority?: string) => {}),
+      length: 0,
+      parentRule: null,
+      cssText: '',
+      // Add common CSS properties as direct properties
+      color: 'rgb(0, 0, 0)',
+      backgroundColor: 'rgba(0, 0, 0, 0)',
+      fontSize: '16px',
+      fontFamily: 'Arial, sans-serif',
+      display: 'block',
+      visibility: 'visible',
+      opacity: '1',
+      width: '100px',
+      height: '20px'
+    };
+  });
+}
+
+// Ensure window.getComputedStyle is also available
+if (typeof window !== 'undefined' && typeof window.getComputedStyle === 'undefined') {
+  (window as any).getComputedStyle = (global as any).getComputedStyle;
 }
 
 // Enhanced HTMLElement.focus mock for SkipLinks tests

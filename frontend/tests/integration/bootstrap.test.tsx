@@ -8,7 +8,21 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { SessionProvider } from '../../app/state/SessionContext';
 import { ThemeProvider } from '../../app/theme/ThemeProvider';
-import PlayPage from '../../app/(play)/page';
+import PlayPage from '../../app/(play)/play/page';
+
+// Mock Next.js useRouter
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+    prefetch: jest.fn(),
+    back: jest.fn(),
+    forward: jest.fn(),
+    refresh: jest.fn(),
+  }),
+  usePathname: () => '/play',
+  useSearchParams: () => new URLSearchParams(),
+}));
 
 // Mock sessionClient to control API responses
 jest.mock('../../app/services/sessionClient', () => ({
