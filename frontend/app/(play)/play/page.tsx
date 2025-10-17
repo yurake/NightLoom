@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "../../theme/ThemeProvider";
 import { useSession, sessionActions } from "../../state/SessionContext";
@@ -40,17 +40,7 @@ export default function PlayPage() {
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
   const [isSubmittingChoice, setIsSubmittingChoice] = useState(false);
 
-  // Start bootstrap on mount
-  useEffect(() => {
-    startBootstrap();
-  }, []);
-
-  useEffect(() => {
-    setSelectedChoiceId(null);
-    setSceneError(null);
-  }, [state.currentScene?.sceneIndex]);
-
-  const startBootstrap = async (retryCount = 0) => {
+  const startBootstrap = useCallback(async (retryCount = 0) => {
     const maxRetries = 3;
     const baseDelay = 100; // Reduced to 100ms for faster test execution
 
@@ -99,7 +89,7 @@ export default function PlayPage() {
         console.log(`Retrying bootstrap in ${delay}ms (attempt ${retryCount + 1}/${maxRetries + 1})`);
         
         setTimeout(() => {
-          startBootstrap(retryCount + 1);
+          void startBootstrap(retryCount + 1);
         }, delay);
         return;
       }
@@ -113,10 +103,20 @@ export default function PlayPage() {
       setIsBootstrapping(false);
       dispatch(sessionActions.setLoading(false));
     }
-  };
+  }, [dispatch, themeId, setThemeId]);
+
+  // Start bootstrap on mount
+  useEffect(() => {
+    void startBootstrap();
+  }, [startBootstrap]);
+
+  useEffect(() => {
+    setSelectedChoiceId(null);
+    setSceneError(null);
+  }, [state.currentScene?.sceneIndex]);
 
   const handleRetryBootstrap = () => {
-    startBootstrap();
+    void startBootstrap();
   };
 
   const handleKeywordSelection = async (keyword: string, source: 'suggestion' | 'manual') => {

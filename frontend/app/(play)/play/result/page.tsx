@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from '../../../state/SessionContext';
 import { useTheme } from '../../../theme/ThemeProvider';
@@ -26,17 +26,7 @@ export default function ResultPage() {
   // Get session ID from URL params or session context
   const sessionId = searchParams?.get('sessionId') || sessionState?.id;
 
-  useEffect(() => {
-    if (sessionId) {
-      fetchResult();
-    } else {
-      setError('セッションIDが見つかりません');
-      setErrorType('session_expired');
-      setIsLoading(false);
-    }
-  }, [sessionId]);
-
-  const fetchResult = async () => {
+  const fetchResult = useCallback(async () => {
     if (!sessionId) return;
 
     setIsLoading(true);
@@ -94,7 +84,17 @@ export default function ResultPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [sessionId, sessionState]);
+
+  useEffect(() => {
+    if (sessionId) {
+      void fetchResult();
+    } else {
+      setError('セッションIDが見つかりません');
+      setErrorType('session_expired');
+      setIsLoading(false);
+    }
+  }, [sessionId, fetchResult]);
 
   const handleRestart = async () => {
     try {
@@ -120,7 +120,7 @@ export default function ResultPage() {
   };
 
   const handleRetry = () => {
-    fetchResult();
+    void fetchResult();
   };
 
   // Loading state

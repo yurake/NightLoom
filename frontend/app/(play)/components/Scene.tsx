@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSession } from '../../state/SessionContext';
 import { useTheme } from '../../theme/ThemeProvider';
 
@@ -44,12 +44,7 @@ export const Scene: React.FC<SceneProps> = ({
   const { state, dispatch } = useSession();
   const { themeId } = useTheme();
 
-  // Load scene data on mount or when scene index changes
-  useEffect(() => {
-    loadScene();
-  }, [sessionId, sceneIndex]);
-
-  const loadScene = async () => {
+  const loadScene = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     
@@ -72,7 +67,12 @@ export const Scene: React.FC<SceneProps> = ({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [sessionId, sceneIndex]);
+
+  // Load scene data on mount or when scene index changes
+  useEffect(() => {
+    loadScene();
+  }, [loadScene]);
 
   const handleChoiceSelect = (choiceId: string) => {
     setSelectedChoice(choiceId);
