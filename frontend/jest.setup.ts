@@ -501,6 +501,25 @@ if (typeof window !== 'undefined' && typeof window.getComputedStyle === 'undefin
   (window as any).getComputedStyle = (global as any).getComputedStyle;
 }
 
+// jsdom does not implement getComputedStyle for pseudo elements; provide graceful fallback
+if (typeof window !== 'undefined') {
+  const originalGetComputedStyle = window.getComputedStyle.bind(window);
+  window.getComputedStyle = ((elt: Element, pseudoElt?: string | null) => {
+    try {
+      // Fallback to element styles when pseudo elements are requested
+      if (pseudoElt) {
+        return originalGetComputedStyle(elt);
+      }
+      return originalGetComputedStyle(elt, pseudoElt);
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('Not implemented')) {
+        return originalGetComputedStyle(elt);
+      }
+      throw error;
+    }
+  }) as typeof window.getComputedStyle;
+}
+
 // Enhanced HTMLElement.focus mock for SkipLinks tests
 Object.defineProperty(HTMLElement.prototype, 'focus', {
   writable: true,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "../../theme/ThemeProvider";
 import { useSession, sessionActions } from "../../state/SessionContext";
@@ -39,6 +39,7 @@ export default function PlayPage() {
   const [sceneError, setSceneError] = useState<string | null>(null);
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
   const [isSubmittingChoice, setIsSubmittingChoice] = useState(false);
+  const hasBootstrappedRef = useRef(false);
 
   const startBootstrap = useCallback(async (retryCount = 0) => {
     const maxRetries = 3;
@@ -107,6 +108,10 @@ export default function PlayPage() {
 
   // Start bootstrap on mount
   useEffect(() => {
+    if (hasBootstrappedRef.current) {
+      return;
+    }
+    hasBootstrappedRef.current = true;
     void startBootstrap();
   }, [startBootstrap]);
 
