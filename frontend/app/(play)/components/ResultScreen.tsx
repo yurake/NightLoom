@@ -103,22 +103,26 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({ sessionId, apiClient
       return null;
     }
 
-    const type = result.type;
-    if (!type.name) {
+    const { type } = result;
+    const profiles = Array.isArray(type.profiles) ? type.profiles : [];
+    const primaryProfile = profiles[0];
+
+    if (!primaryProfile?.name) {
       return null;
     }
 
-    const dominantAxes = type.dominantAxes ?? [];
+    const dominantAxes = primaryProfile.dominantAxes ?? type.dominantAxes ?? [];
     const safeDominantAxes: [string, string] = [
       dominantAxes[0] ?? 'axis_1',
       dominantAxes[1] ?? 'axis_2',
     ];
 
-    const polarity = (type.polarity ?? 'Mid-Mid') as TypeResult['polarity'];
+    const polarity = (primaryProfile.polarity ?? 'Mid-Mid') as TypeResult['polarity'];
 
     return {
-      name: type.name,
-      description: type.description ?? '診断タイプの説明を取得できませんでした。',
+      name: primaryProfile.name,
+      description:
+        primaryProfile.description ?? '診断タイプの説明を取得できませんでした。',
       dominantAxes: safeDominantAxes,
       polarity,
     };
