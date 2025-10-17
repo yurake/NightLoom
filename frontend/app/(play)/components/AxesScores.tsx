@@ -35,9 +35,13 @@ export const AxesScores: React.FC<AxesScoresProps> = ({ axesScores }) => {
       className="w-full px-2 xs:px-0"
       role="region"
       aria-label={`軸スコア一覧 (${axesScores.length}軸)`}
+      data-testid="axes-section"
     >
       {/* セクションタイトル */}
-      <h2 className="text-base xs:text-lg sm:text-xl font-semibold text-gray-900 mb-3 xs:mb-4 sm:mb-6 text-center xs:text-left">
+      <h2
+        className="text-base xs:text-lg sm:text-xl font-semibold text-gray-900 mb-3 xs:mb-4 sm:mb-6 text-center xs:text-left"
+        data-testid="axes-title"
+      >
         軸スコア ({axesScores.length}軸)
       </h2>
 

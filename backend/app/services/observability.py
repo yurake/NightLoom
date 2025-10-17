@@ -7,7 +7,7 @@ as specified in research.md and plan.md requirements.
 
 import json
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
 from uuid import UUID
 
@@ -29,7 +29,7 @@ class ObservabilityService:
         """Log session bootstrap event."""
         event = {
             "event_type": "session_start",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "session_id": str(session_id),
             "initial_character": initial_character,
             "theme_id": theme_id,
@@ -56,7 +56,7 @@ class ObservabilityService:
         """Log keyword confirmation event."""
         event = {
             "event_type": "keyword_confirmation",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "session_id": str(session_id),
             "keyword": keyword,
             "source": source,
@@ -76,7 +76,7 @@ class ObservabilityService:
         """Log scene access event."""
         event = {
             "event_type": "scene_access",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "session_id": str(session_id),
             "scene_index": scene_index,
             "latency_ms": latency_ms,
@@ -99,7 +99,7 @@ class ObservabilityService:
         """Log choice submission event."""
         event = {
             "event_type": "choice_submission",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "session_id": str(session_id),
             "scene_index": scene_index,
             "choice_id": choice_id,
@@ -119,7 +119,7 @@ class ObservabilityService:
         """Log result generation event."""
         event = {
             "event_type": "result_generation",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "session_id": str(session_id),
             "latency_ms": latency_ms,
             "fallback_used": fallback_used,
@@ -144,7 +144,7 @@ class ObservabilityService:
         
         event = {
             "event_type": "session_completion",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "session_id": session_key,
             "total_duration_ms": total_duration,
             "fallback_flags": metrics.get("fallback_flags", []),
@@ -169,7 +169,7 @@ class ObservabilityService:
         """Log LLM API request details."""
         event = {
             "event_type": "llm_request",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "session_id": str(session_id) if session_id else None,
             "endpoint": endpoint,
             "latency_ms": latency_ms,
@@ -190,7 +190,7 @@ class ObservabilityService:
         """Log error with context."""
         event = {
             "event_type": "error",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "session_id": str(session_id) if session_id else None,
             "error_type": error_type,
             "error_message": error_message,
@@ -258,7 +258,7 @@ class ObservabilityService:
         performance = self.get_performance_metrics()
         
         return {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "performance": performance,
             "active_sessions": len(self.session_metrics),
             "session_details": {
@@ -325,7 +325,7 @@ class ObservabilityServiceAPI:
     
     def get_current_timestamp(self) -> str:
         """Get current timestamp in ISO format."""
-        return datetime.utcnow().isoformat()
+        return datetime.now(timezone.utc).isoformat()
     
     def get_elapsed_time(self, start_time: float) -> float:
         """Get elapsed time in milliseconds."""

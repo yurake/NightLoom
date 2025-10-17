@@ -89,13 +89,12 @@ app.add_middleware(
     max_age=86400,  # Cache preflight requests for 24 hours
 )
 
-# Routers are namespaced for clarity; actual handlers currently return
-# placeholder data until the implementation tasks are completed.
+# Routers are namespaced for clarity; actual handlers are fully implemented.
 app.include_router(bootstrap.router, prefix="/api/sessions", tags=["session"])
 app.include_router(keyword.router, prefix="/api/sessions", tags=["session"])
-app.include_router(scenes.router, tags=["scenes"])
-app.include_router(choices.router, tags=["choices"])
-app.include_router(results.router, tags=["results"])
+app.include_router(scenes.router, prefix="/api/sessions", tags=["scenes"])
+app.include_router(choices.router, prefix="/api/sessions", tags=["choices"])
+app.include_router(results.router, prefix="/api/sessions", tags=["results"])
 
 
 @app.middleware("http")
@@ -125,7 +124,7 @@ async def cleanup_middleware(request: Request, call_next):
 @app.get("/health", tags=["health"])
 async def health_check() -> dict[str, str]:
     """Simple health check endpoint used by monitoring / CI."""
-    return {"status": "ok", "timestamp": observability_service.get_current_timestamp()}
+    return {"status": "ok"}
 
 @app.get("/security-stats", tags=["admin"])
 async def security_stats():

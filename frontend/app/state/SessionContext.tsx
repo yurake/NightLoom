@@ -177,7 +177,19 @@ export function useSession() {
     throw new Error('useSession must be used within a SessionProvider');
   }
   
-  return context;
+  // Add clearSession helper for compatibility
+  const clearSession = () => {
+    context.dispatch({ type: 'RESET_SESSION' });
+  };
+  
+  // Add sessionState alias for compatibility
+  const sessionState = context.state.session;
+  
+  return {
+    ...context,
+    clearSession,
+    sessionState
+  };
 }
 
 // Action creators for common operations

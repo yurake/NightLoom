@@ -6,8 +6,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useSession } from '@/app/state/SessionContext';
-import { useTheme } from '@/app/theme/ThemeProvider';
+import { useSession } from '../../state/SessionContext';
+import { useTheme } from '../../theme/ThemeProvider';
 
 interface Choice {
   id: string;
@@ -41,8 +41,8 @@ export const Scene: React.FC<SceneProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  const { sessionState, updateSessionState } = useSession();
-  const { currentTheme, themeId } = useTheme();
+  const { state, dispatch } = useSession();
+  const { themeId } = useTheme();
 
   // Load scene data on mount or when scene index changes
   useEffect(() => {
@@ -64,11 +64,8 @@ export const Scene: React.FC<SceneProps> = ({
       const data = await response.json();
       setSceneData(data.scene);
       
-      // Update session context with current scene
-      updateSessionState({
-        currentScene: sceneIndex,
-        totalScenes: 4
-      });
+      // Update session context with current scene (using dispatch if needed)
+      // This would be handled by the parent component or session actions
       
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error occurred');
@@ -211,13 +208,8 @@ export const Scene: React.FC<SceneProps> = ({
 
       {/* Scene Narrative */}
       <div className="scene-narrative mb-8">
-        <div 
+        <div
           className="bg-surface rounded-xl p-6 shadow-sm border border-border"
-          style={{
-            backgroundColor: currentTheme.surface,
-            borderColor: currentTheme.border,
-            color: currentTheme.text.primary
-          }}
         >
           <p 
             className="text-lg leading-relaxed"
@@ -244,15 +236,6 @@ export const Scene: React.FC<SceneProps> = ({
                   : 'border-border hover:border-primary/50 hover:bg-surface/50'
                 }
               `}
-              style={{
-                backgroundColor: selectedChoice === choice.id 
-                  ? `${currentTheme.primary}10` 
-                  : 'transparent',
-                borderColor: selectedChoice === choice.id 
-                  ? currentTheme.primary 
-                  : currentTheme.border,
-                color: currentTheme.text.primary
-              }}
               data-testid={`choice-${sceneIndex}-${index + 1}`}
               disabled={isSubmitting}
             >
@@ -265,14 +248,6 @@ export const Scene: React.FC<SceneProps> = ({
                         : 'border-gray-300'
                       }
                     `}
-                    style={{
-                      borderColor: selectedChoice === choice.id 
-                        ? currentTheme.primary 
-                        : '#d1d5db',
-                      backgroundColor: selectedChoice === choice.id 
-                        ? currentTheme.primary 
-                        : 'transparent'
-                    }}
                   >
                     {selectedChoice === choice.id && (
                       <div className="w-2 h-2 bg-white rounded-full"></div>
@@ -299,14 +274,6 @@ export const Scene: React.FC<SceneProps> = ({
               : 'bg-primary text-white hover:bg-primary-dark shadow-md hover:shadow-lg'
             }
           `}
-          style={{
-            backgroundColor: !selectedChoice || isSubmitting 
-              ? '#d1d5db' 
-              : currentTheme.primary,
-            color: !selectedChoice || isSubmitting 
-              ? '#6b7280' 
-              : 'white'
-          }}
           data-testid="continue-button"
         >
           {isSubmitting ? (

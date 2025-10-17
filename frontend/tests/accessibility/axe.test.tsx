@@ -209,8 +209,8 @@ describe('Accessibility Tests with axe-core', () => {
 
       const results = await axe(container, {
         rules: {
-          'keyboard': { enabled: true },
-          'focus-order-semantics': { enabled: true }
+          'focus-order-semantics': { enabled: true },
+          'tabindex': { enabled: true }
         }
       });
       expect(results).toHaveNoViolations();

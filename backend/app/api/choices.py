@@ -12,7 +12,7 @@ from typing import Dict, Any, Optional
 from app.services.session import default_session_service, SessionNotFoundError, InvalidSessionStateError, SessionServiceError
 from app.services.observability import observability_service
 
-router = APIRouter(prefix="/api/sessions", tags=["choices"])
+router = APIRouter(tags=["choices"])
 
 
 class ChoiceSubmission(BaseModel):

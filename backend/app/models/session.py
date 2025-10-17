@@ -5,12 +5,12 @@ Covers Session, Scene, Choice, AxisScore, TypeProfile as defined in data-model.m
 All models follow the ephemeral session design with state transitions: INIT -> PLAY -> RESULT.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Dict, List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class SessionState(str, Enum):
@@ -29,17 +29,16 @@ class Choice(BaseModel):
         description="Evaluation axis weights, range -1.0 to 1.0"
     )
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "id": "choice_1_1",
-                "text": "慎重に検討して決める",
-                "weights": {
-                    "logic_emotion": 0.3,
-                    "speed_caution": -0.5
-                }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "id": "choice_1_1",
+            "text": "慎重に検討して決める",
+            "weights": {
+                "logic_emotion": 0.3,
+                "speed_caution": -0.5
             }
         }
+    })
 
 
 class Scene(BaseModel):
@@ -49,21 +48,20 @@ class Scene(BaseModel):
     narrative: str = Field(..., description="Short story text readable in 5 seconds")
     choices: List[Choice] = Field(..., min_length=4, max_length=4, description="4 choice options")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "sceneIndex": 1,
-                "themeId": "serene",
-                "narrative": "あなたは重要な決断を迫られています。どのようにアプローチしますか？",
-                "choices": [
-                    {
-                        "id": "choice_1_1",
-                        "text": "慎重に検討する",
-                        "weights": {"logic_emotion": 0.3}
-                    }
-                ]
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "sceneIndex": 1,
+            "themeId": "serene",
+            "narrative": "あなたは重要な決断を迫られています。どのようにアプローチしますか？",
+            "choices": [
+                {
+                    "id": "choice_1_1",
+                    "text": "慎重に検討する",
+                    "weights": {"logic_emotion": 0.3}
+                }
+            ]
         }
+    })
 
 
 class ChoiceRecord(BaseModel):
@@ -72,14 +70,13 @@ class ChoiceRecord(BaseModel):
     choiceId: str
     timestamp: datetime
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "sceneIndex": 1,
-                "choiceId": "choice_1_1",
-                "timestamp": "2025-10-15T09:30:00Z"
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "sceneIndex": 1,
+            "choiceId": "choice_1_1",
+            "timestamp": "2025-10-15T09:30:00Z"
         }
+    })
 
 
 class Axis(BaseModel):
@@ -89,15 +86,14 @@ class Axis(BaseModel):
     description: str = Field(..., description="Axis description")
     direction: str = Field(..., description="Display label like '論理的 ⟷ 感情的'")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "id": "logic_emotion",
-                "name": "Logic vs Emotion",
-                "description": "Balance between analytical and intuitive decision making",
-                "direction": "論理的 ⟷ 感情的"
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "id": "logic_emotion",
+            "name": "Logic vs Emotion",
+            "description": "Balance between analytical and intuitive decision making",
+            "direction": "論理的 ⟷ 感情的"
         }
+    })
 
 
 class AxisScore(BaseModel):
@@ -106,14 +102,13 @@ class AxisScore(BaseModel):
     score: float = Field(..., ge=0, le=100, description="Normalized score 0-100")
     rawScore: float = Field(..., ge=-5.0, le=5.0, description="Raw weighted score")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "axisId": "logic_emotion",
-                "score": 72.5,
-                "rawScore": 2.3
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "axisId": "logic_emotion",
+            "score": 72.5,
+            "rawScore": 2.3
         }
+    })
 
 
 class TypeProfile(BaseModel):
@@ -125,17 +120,16 @@ class TypeProfile(BaseModel):
     polarity: str = Field(..., description="Polarity pattern like 'Hi-Lo'")
     meta: Optional[Dict] = Field(default_factory=dict, description="Additional metadata")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "name": "Analytical Leader",
-                "description": "決断力があり論理的思考を重視する傾向",
-                "keywords": ["systematic", "decisive", "goal-oriented"],
-                "dominantAxes": ["logic_emotion", "speed_caution"],
-                "polarity": "Hi-Hi",
-                "meta": {"cell": "A1", "isNeutral": False}
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "name": "Analytical Leader",
+            "description": "決断力があり論理的思考を重視する傾向",
+            "keywords": ["systematic", "decisive", "goal-oriented"],
+            "dominantAxes": ["logic_emotion", "speed_caution"],
+            "polarity": "Hi-Hi",
+            "meta": {"cell": "A1", "isNeutral": False}
         }
+    })
 
 
 class ThemeDescriptor(BaseModel):
@@ -169,28 +163,27 @@ class Session(BaseModel):
     fallbackFlags: List[str] = Field(default_factory=list, description="Activated fallback types")
     
     # Timestamps
-    createdAt: datetime = Field(default_factory=datetime.utcnow)
+    createdAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     completedAt: Optional[datetime] = Field(None, description="Result completion timestamp")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "id": "550e8400-e29b-41d4-a716-446655440000",
-                "state": "INIT",
-                "initialCharacter": "あ",
-                "keywordCandidates": ["愛", "冒険", "挑戦", "成長"],
-                "selectedKeyword": None,
-                "themeId": "serene",
-                "scenes": [],
-                "choices": [],
-                "rawScores": {},
-                "normalizedScores": {},
-                "typeProfiles": [],
-                "fallbackFlags": [],
-                "createdAt": "2025-10-15T09:30:00Z",
-                "completedAt": None
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "id": "550e8400-e29b-41d4-a716-446655440000",
+            "state": "INIT",
+            "initialCharacter": "あ",
+            "keywordCandidates": ["愛", "冒険", "挑戦", "成長"],
+            "selectedKeyword": None,
+            "themeId": "serene",
+            "scenes": [],
+            "choices": [],
+            "rawScores": {},
+            "normalizedScores": {},
+            "typeProfiles": [],
+            "fallbackFlags": [],
+            "createdAt": "2025-10-15T09:30:00Z",
+            "completedAt": None
         }
+    })
 
     def can_transition_to_play(self) -> bool:
         """Check if session can transition from INIT to PLAY state."""

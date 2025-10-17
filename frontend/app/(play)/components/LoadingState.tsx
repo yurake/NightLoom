@@ -214,16 +214,66 @@ interface SessionExpiredStateProps {
 export const SessionExpiredState: React.FC<SessionExpiredStateProps> = ({
   onRestart,
   className = ''
-}) => (
-  <ErrorState
-    title="セッションが期限切れです"
-    message="診断セッションの有効期限が切れました。新しい診断を開始してください。"
-    onRetry={onRestart}
-    retryLabel="新しい診断を開始"
-    variant="info"
-    className={className}
-  />
-);
+}) => {
+  const { currentTheme } = useTheme();
+  
+  return (
+    <div
+      className={`error-state flex flex-col items-center justify-center p-6 text-center ${className}`}
+      data-testid="error-container"
+    >
+      <div
+        className="error-icon text-6xl mb-4"
+        style={{ color: '#3b82f6' }}
+      >
+        ℹ️
+      </div>
+      
+      <h2
+        className="error-title text-xl font-semibold mb-2"
+        style={{ color: currentTheme.text.primary }}
+      >
+        セッションが期限切れです
+      </h2>
+      
+      <p
+        className="error-message text-base mb-6 max-w-md leading-relaxed"
+        style={{ color: currentTheme.text.secondary }}
+        data-testid="error-message"
+      >
+        診断セッションの有効期限が切れました。診断を続けるか、新しい診断を開始してください。
+      </p>
+      
+      <div className="flex flex-col gap-4">
+        <button
+          onClick={() => {/* 診断を続ける処理 */}}
+          className="retry-button px-6 py-2 rounded-lg font-medium transition-colors hover:shadow-md"
+          style={{
+            backgroundColor: currentTheme.secondary,
+            color: 'white'
+          }}
+          data-testid="continue-button"
+        >
+          診断を続ける
+        </button>
+        
+        {onRestart && (
+          <button
+            onClick={onRestart}
+            className="retry-button px-6 py-2 rounded-lg font-medium transition-colors hover:shadow-md"
+            style={{
+              backgroundColor: currentTheme.primary,
+              color: 'white'
+            }}
+            data-testid="restart-button"
+          >
+            新しい診断を開始
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
 
 interface ServiceUnavailableStateProps {
   onRetry?: () => void;

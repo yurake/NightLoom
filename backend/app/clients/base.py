@@ -8,7 +8,7 @@ and error handling. Supports the fallback strategy defined in research.md.
 import asyncio
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import httpx
 
 
@@ -73,9 +73,9 @@ class BaseHTTPClient(ABC):
         
         for attempt in range(self.max_retries + 1):
             try:
-                start_time = datetime.utcnow()
+                start_time = datetime.now(timezone.utc)
                 response = await self._client.post(url, json=data)
-                end_time = datetime.utcnow()
+                end_time = datetime.now(timezone.utc)
                 
                 latency_ms = (end_time - start_time).total_seconds() * 1000
                 await self._log_request("POST", url, response.status_code, latency_ms, attempt)

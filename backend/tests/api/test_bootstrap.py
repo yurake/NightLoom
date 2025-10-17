@@ -89,7 +89,7 @@ class TestBootstrapAPI:
         # Import needed classes
         from app.models.session import Session, SessionState
         from app.services.fallback_assets import get_fallback_axes
-        from datetime import datetime
+        from datetime import datetime, timezone
         import uuid
         
         # Create a mock session with fallback flag set
@@ -101,7 +101,7 @@ class TestBootstrapAPI:
             themeId="fallback",
             axes=get_fallback_axes(),  # Need axes for response
             fallbackFlags=["BOOTSTRAP_FALLBACK"],  # This should make fallbackUsed=True
-            createdAt=datetime.utcnow()
+            createdAt=datetime.now(timezone.utc)
         )
         
         # Mock the start_session method

@@ -6,7 +6,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { useTheme } from '@/app/theme/ThemeProvider';
+import { useTheme } from '../../theme/ThemeProvider';
 
 interface Choice {
   id: string;
@@ -31,7 +31,7 @@ export const ChoiceOptions: React.FC<ChoiceOptionsProps> = ({
   sceneIndex,
   className = ''
 }) => {
-  const { currentTheme, themeId } = useTheme();
+  const { themeId } = useTheme();
   const [hoveredChoice, setHoveredChoice] = useState<string | null>(null);
 
   const handleChoiceClick = useCallback((choiceId: string) => {
@@ -99,44 +99,32 @@ export const ChoiceOptions: React.FC<ChoiceOptionsProps> = ({
     return `choice-${sceneIndex}-${index + 1}`;
   };
 
-  const getChoiceStyles = (choiceId: string) => {
+  // CSS変数を使用してスタイリング（Tailwind CSSのカスタムプロパティ）
+  const getChoiceClasses = (choiceId: string) => {
     const isSelected = selectedChoiceId === choiceId;
     const isHovered = hoveredChoice === choiceId;
     
-    return {
-      backgroundColor: isSelected 
-        ? `${currentTheme.primary}15` 
+    return `choice-button w-full p-4 rounded-lg border-2 transition-all duration-200 text-left ${
+      disabled
+        ? 'cursor-not-allowed opacity-50'
+        : 'cursor-pointer hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50'
+    } ${
+      isSelected
+        ? 'border-primary bg-primary/10 shadow-md scale-[1.02]'
         : isHovered && !disabled
-          ? `${currentTheme.surface}80`
-          : 'transparent',
-      borderColor: isSelected 
-        ? currentTheme.primary 
-        : isHovered && !disabled
-          ? `${currentTheme.primary}50`
-          : currentTheme.border,
-      color: disabled 
-        ? currentTheme.text.muted
-        : currentTheme.text.primary,
-      transform: isSelected && !disabled ? 'scale(1.02)' : 'scale(1)',
-      boxShadow: isSelected && !disabled 
-        ? `0 4px 12px ${currentTheme.primary}20`
-        : isHovered && !disabled
-          ? `0 2px 8px ${currentTheme.border}40`
-          : 'none'
-    };
+          ? 'border-primary/50 bg-surface/50'
+          : 'border-border'
+    }`;
   };
 
-  const getRadioButtonStyles = (choiceId: string) => {
+  const getRadioButtonClasses = (choiceId: string) => {
     const isSelected = selectedChoiceId === choiceId;
     
-    return {
-      borderColor: isSelected 
-        ? currentTheme.primary 
-        : currentTheme.border,
-      backgroundColor: isSelected 
-        ? currentTheme.primary 
-        : 'transparent'
-    };
+    return `w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
+      isSelected
+        ? 'border-primary bg-primary'
+        : 'border-gray-300'
+    }`;
   };
 
   if (!choices || choices.length === 0) {
@@ -168,17 +156,11 @@ export const ChoiceOptions: React.FC<ChoiceOptionsProps> = ({
                 onFocus={() => !disabled && setHoveredChoice(choice.id)}
                 onBlur={() => setHoveredChoice(null)}
                 disabled={disabled}
-                className={`choice-button w-full p-4 rounded-lg border-2 transition-all duration-200 text-left
-                  ${disabled 
-                    ? 'cursor-not-allowed opacity-50' 
-                    : 'cursor-pointer hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50'
-                  }
-                `}
-                style={getChoiceStyles(choice.id)}
+                className={getChoiceClasses(choice.id)}
                 data-testid={testId}
                 data-choice-id={choice.id}
                 data-selected={isSelected}
-                aria-pressed={isSelected}
+                aria-checked={isSelected}
                 aria-describedby={`${testId}-description`}
                 role="radio"
                 tabIndex={disabled ? -1 : 0}
@@ -186,9 +168,8 @@ export const ChoiceOptions: React.FC<ChoiceOptionsProps> = ({
                 <div className="flex items-start">
                   {/* Radio Button */}
                   <div className="flex-shrink-0 mr-3 mt-1">
-                    <div 
-                      className="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200"
-                      style={getRadioButtonStyles(choice.id)}
+                    <div
+                      className={getRadioButtonClasses(choice.id)}
                       aria-hidden="true"
                     >
                       {isSelected && (
@@ -221,9 +202,8 @@ export const ChoiceOptions: React.FC<ChoiceOptionsProps> = ({
                   {/* Selection Indicator */}
                   {isSelected && (
                     <div className="flex-shrink-0 ml-3">
-                      <div 
-                        className="w-6 h-6 rounded-full flex items-center justify-center"
-                        style={{ backgroundColor: currentTheme.primary }}
+                      <div
+                        className="w-6 h-6 rounded-full flex items-center justify-center bg-primary"
                         aria-hidden="true"
                       >
                         <svg 
@@ -251,9 +231,9 @@ export const ChoiceOptions: React.FC<ChoiceOptionsProps> = ({
       
       {/* Instructions */}
       <div className="choice-instructions mt-4 text-center">
-        <p className="text-sm" style={{ color: currentTheme.text.muted }}>
-          {selectedChoiceId 
-            ? '選択を変更するには、他の選択肢をクリックしてください' 
+        <p className="text-sm text-muted">
+          {selectedChoiceId
+            ? '選択を変更するには、他の選択肢をクリックしてください'
             : 'ひとつの選択肢を選んでください'
           }
         </p>

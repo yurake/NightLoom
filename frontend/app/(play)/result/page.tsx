@@ -171,10 +171,10 @@ export default function ResultPage() {
   // Error states
   if (error) {
     return (
-      <main 
+      <main
         className="result-page min-h-screen flex items-center justify-center p-4"
         style={{ backgroundColor: currentTheme.background }}
-        data-testid="result-error"
+        data-testid="error-container"
       >
         {errorType === 'session_expired' && (
           <SessionExpiredState
@@ -205,10 +205,10 @@ export default function ResultPage() {
   // No result data
   if (!resultData) {
     return (
-      <main 
+      <main
         className="result-page min-h-screen flex items-center justify-center p-4"
         style={{ backgroundColor: currentTheme.background }}
-        data-testid="result-error"
+        data-testid="error-container"
       >
         <ErrorState
           title="結果が見つかりません"
@@ -223,27 +223,29 @@ export default function ResultPage() {
 
   // Success - display results
   return (
-    <main 
+    <main
       className="result-page min-h-screen"
       style={{ backgroundColor: currentTheme.background }}
-      data-testid="result-page"
+      data-testid="result-container"
     >
       {/* Header */}
       <div className="result-header bg-white/80 backdrop-blur-sm border-b border-gray-200/50 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div>
-              <h1 
+              <h1
                 className="text-xl font-bold"
                 style={{ color: currentTheme.text.primary }}
+                data-testid="result-title"
               >
                 診断結果
               </h1>
-              <p 
+              <p
                 className="text-sm"
                 style={{ color: currentTheme.text.secondary }}
+                data-testid="keyword-display"
               >
-                あなたの診断が完了しました
+                キーワード: {resultData.keyword}
               </p>
             </div>
             

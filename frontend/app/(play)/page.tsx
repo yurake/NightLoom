@@ -247,6 +247,12 @@ export default function PlayPage() {
 
           {/* Progress indicator */}
           <div className="flex items-center justify-between">
+            <progress
+              className="sr-only"
+              data-testid="progress-bar"
+              value={((state.currentSceneIndex || 1) / 4) * 100}
+              max="100"
+            />
             <div
               className="text-sm text-white/60"
               data-testid="progress-indicator"
@@ -278,8 +284,11 @@ export default function PlayPage() {
                 className="text-lg font-medium text-accent mb-2"
                 data-testid="scene-index"
               >
-                シーン {state.currentScene.sceneIndex}
+                {state.currentScene?.sceneIndex || 0}
               </h2>
+              <div className="sr-only" data-testid="scene-counter">
+                シーン {state.currentScene?.sceneIndex || 0}
+              </div>
               
               <div
                 className="text-lg leading-relaxed text-white"
@@ -314,6 +323,7 @@ export default function PlayPage() {
                   aria-checked="false"
                   aria-label={`選択肢${index + 1}: ${choice.text}`}
                   aria-describedby={`choice-help-${choice.id}`}
+                  data-testid={`choice-${state.currentScene?.sceneIndex || 0}-${index + 1}`}
                 >
                   <span className="text-white">{choice.text}</span>
                   <div id={`choice-help-${choice.id}`} className="sr-only">

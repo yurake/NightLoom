@@ -49,7 +49,9 @@ const customJestConfig = {
     runScripts: "dangerously",
   },
   moduleNameMapper: {
-    "^@/(.*)$": "<rootDir>/$1",
+    "^@/(.*)$": "<rootDir>/app/$1",
+    "^@/components/(.*)$": "<rootDir>/app/(play)/components/$1",
+    "^@/types/(.*)$": "<rootDir>/app/types/$1",
     "^msw/node$": mswNodeEntry,
     // MSW v2互換性のための追加マッピング - より柔軟なマッピング
     "^@mswjs/interceptors/ClientRequest$": require.resolve("@mswjs/interceptors"),

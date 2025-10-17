@@ -6,7 +6,7 @@ integrating with LLM services and maintaining session state.
 """
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple, Any
 from uuid import UUID
 
@@ -81,7 +81,7 @@ class SessionService:
             themeId=theme_id,
             axes=axes,
             fallbackFlags=["BOOTSTRAP_FALLBACK"] if fallback_used else [],
-            createdAt=datetime.utcnow()
+            createdAt=datetime.now(timezone.utc)
         )
         
         # Store session
@@ -205,7 +205,7 @@ class SessionService:
         choice_record = ChoiceRecord(
             sceneIndex=scene_index,
             choiceId=choice_id,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         )
         session.choices.append(choice_record)
         
@@ -251,7 +251,7 @@ class SessionService:
         choice_record = ChoiceRecord(
             sceneIndex=scene_index,
             choiceId=choice_id,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         )
         session.choices.append(choice_record)
         
@@ -303,7 +303,7 @@ class SessionService:
             session.normalizedScores = normalized_scores
             session.typeProfiles = type_profiles
             session.state = SessionState.RESULT
-            session.completedAt = datetime.utcnow()
+            session.completedAt = datetime.now(timezone.utc)
             
             if fallback_used:
                 session.fallbackFlags.append("TYPE_FALLBACK")

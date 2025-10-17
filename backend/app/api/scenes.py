@@ -11,7 +11,7 @@ from typing import Dict, Any
 from app.services.session import default_session_service, SessionNotFoundError, InvalidSessionStateError, SessionServiceError
 from app.services.observability import observability_service
 
-router = APIRouter(prefix="/api/sessions", tags=["scenes"])
+router = APIRouter(tags=["scenes"])
 
 
 @router.get("/{session_id}/scenes/{scene_index}")

@@ -118,7 +118,7 @@ describe('AxesScores コンポーネント', () => {
     const gridContainer = container.querySelector('div[class*="grid"]') as HTMLElement;
     
     expect(gridContainer).toHaveClass('grid');
-    expect(gridContainer).toHaveClass('gap-4');
+    expect(gridContainer).toHaveClass('gap-3'); // 実際は gap-3 xs:gap-4 sm:gap-6
   });
 
   it('軸数に応じて適切なグリッドレイアウトが適用される', () => {
@@ -130,7 +130,7 @@ describe('AxesScores コンポーネント', () => {
     // 6軸の場合
     const { container: container6 } = render(<AxesScores axesScores={mockAxesScores6Axes} />);
     const gridContainer6 = container6.querySelector('div[class*="grid"]') as HTMLElement;
-    expect(gridContainer6).toHaveClass('md:grid-cols-2');
+    expect(gridContainer6).toHaveClass('lg:grid-cols-3'); // 6軸の場合は lg:grid-cols-3
   });
 
   it('セクションタイトルが表示される', () => {

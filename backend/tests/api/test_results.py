@@ -85,10 +85,10 @@ class TestResultRetrieval:
         mock_result = {
             "sessionId": session_id,
             "keyword": "完了",
-            "axes": [axis.dict() for axis in mock_axes],
+            "axes": [axis.model_dump() for axis in mock_axes],
             "type": {
                 "dominantAxes": ["curiosity", "creativity"],
-                "profiles": [profile.dict() for profile in mock_type_profiles],
+                "profiles": [profile.model_dump() for profile in mock_type_profiles],
                 "fallbackUsed": False
             },
             "completedAt": datetime.now().isoformat(),

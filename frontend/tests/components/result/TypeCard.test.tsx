@@ -43,7 +43,8 @@ describe('TypeCard コンポーネント', () => {
 
   it('レスポンシブレイアウトのクラスが適用される', () => {
     const { container } = render(<TypeCard typeResult={mockTypeResult} />);
-    const typeCard = container.firstChild as HTMLElement;
+    const section = container.firstChild as HTMLElement;
+    const typeCard = section.querySelector('article') as HTMLElement;
     
     // Tailwind CSS のレスポンシブクラスが適用されることを確認
     expect(typeCard).toHaveClass('p-4');
@@ -52,7 +53,8 @@ describe('TypeCard コンポーネント', () => {
 
   it('グラデーション背景が適用される', () => {
     const { container } = render(<TypeCard typeResult={mockTypeResult} />);
-    const typeCard = container.firstChild as HTMLElement;
+    const section = container.firstChild as HTMLElement;
+    const typeCard = section.querySelector('article') as HTMLElement;
     
     expect(typeCard).toHaveClass('bg-gradient-to-br');
   });
@@ -61,7 +63,8 @@ describe('TypeCard コンポーネント', () => {
     render(<TypeCard typeResult={mockTypeResult} />);
     
     const typeCard = screen.getByRole('article');
-    expect(typeCard).toHaveAttribute('aria-label', expect.stringContaining('Logic Thinker'));
+    expect(typeCard).toHaveAttribute('aria-labelledby', 'type-name');
+    expect(typeCard).toHaveAttribute('aria-describedby', expect.stringContaining('type-description'));
   });
 
   describe('エッジケース', () => {

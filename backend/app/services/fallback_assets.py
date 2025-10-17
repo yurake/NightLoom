@@ -184,7 +184,7 @@ class FallbackAssets:
         """Return fallback type profiles for result generation."""
         return [
             TypeProfile(
-                name="Analytical Leader",
+                name="Logic Leader",
                 description="論理的思考と迅速な判断力を兼ね備えたリーダータイプ。データに基づいて決断し、チームを率いる能力に長けています。",
                 keywords=["systematic", "decisive", "goal-oriented", "leadership"],
                 dominantAxes=["logic_emotion", "speed_caution"],
@@ -192,7 +192,7 @@ class FallbackAssets:
                 meta={"cell": "A1", "isNeutral": False}
             ),
             TypeProfile(
-                name="Thoughtful Planner", 
+                name="Wise Planner",
                 description="慎重な計画性と論理的アプローチを重視するタイプ。安定性を求め、リスクを最小化した確実な成果を追求します。",
                 keywords=["methodical", "careful", "reliable", "thorough"],
                 dominantAxes=["logic_emotion", "speed_caution"],
@@ -200,7 +200,7 @@ class FallbackAssets:
                 meta={"cell": "A2", "isNeutral": False}
             ),
             TypeProfile(
-                name="Intuitive Pioneer",
+                name="Creative Pioneer",
                 description="感情と直感を大切にし、変化を恐れず新しい可能性に挑戦するタイプ。創造性と適応力が特徴です。",
                 keywords=["creative", "adaptable", "innovative", "empathetic"],
                 dominantAxes=["logic_emotion", "stability_change"],
@@ -208,7 +208,7 @@ class FallbackAssets:
                 meta={"cell": "B1", "isNeutral": False}
             ),
             TypeProfile(
-                name="Harmonious Supporter",
+                name="Team Supporter",
                 description="感情を重視し、安定した環境で他者をサポートすることを得意とするタイプ。協調性と共感力に優れています。",
                 keywords=["supportive", "empathetic", "collaborative", "stable"],
                 dominantAxes=["logic_emotion", "individual_group"],
@@ -216,7 +216,7 @@ class FallbackAssets:
                 meta={"cell": "B2", "isNeutral": False}
             ),
             TypeProfile(
-                name="Dynamic Innovator",
+                name="Fast Innovator",
                 description="迅速な行動力と変化への適応力を持つタイプ。新しいアイデアを素早く実現し、チームを活性化させます。",
                 keywords=["dynamic", "innovative", "energetic", "flexible"],
                 dominantAxes=["speed_caution", "stability_change"],
@@ -224,10 +224,10 @@ class FallbackAssets:
                 meta={"cell": "C1", "isNeutral": False}
             ),
             TypeProfile(
-                name="Balanced Mediator",
+                name="Wise Mediator",
                 description="バランス感覚に優れ、様々な観点を統合して最適解を見つけるタイプ。中庸を保ちながら調和を図ります。",
                 keywords=["balanced", "diplomatic", "versatile", "integrative"],
-                dominantAxes=["individual_group", "stability_change"], 
+                dominantAxes=["individual_group", "stability_change"],
                 polarity="Neutral-Neutral",
                 meta={"cell": "Center", "isNeutral": True}
             )

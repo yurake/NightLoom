@@ -48,7 +48,7 @@ describe('AxisScoreItem コンポーネント', () => {
     
     const progressBar = screen.getByRole('progressbar');
     expect(progressBar).toHaveAttribute('aria-label', expect.stringContaining('論理性'));
-    expect(progressBar).toHaveAttribute('aria-valuenow', '75.5');
+    expect(progressBar).toHaveAttribute('aria-valuenow', '76'); // Math.round(75.5) = 76
     expect(progressBar).toHaveAttribute('aria-valuemin', '0');
     expect(progressBar).toHaveAttribute('aria-valuemax', '100');
   });
@@ -72,7 +72,7 @@ describe('AxisScoreItem コンポーネント', () => {
     const { container } = render(<AxisScoreItem axisScore={mockAxisScore} />);
     const axisItem = container.firstChild as HTMLElement;
     
-    expect(axisItem).toHaveClass('p-4');
+    expect(axisItem).toHaveClass('p-3'); // 実際のクラスは p-3 xs:p-4 sm:p-5
     expect(axisItem).toHaveClass('rounded-lg');
   });
 

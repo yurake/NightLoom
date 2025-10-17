@@ -52,6 +52,7 @@ export const AxisScoreItem: React.FC<AxisScoreItemProps> = ({ axisScore }) => {
       role="group"
       aria-labelledby={`axis-name-${axisScore.id}`}
       aria-describedby={`axis-description-${axisScore.id} axis-direction-${axisScore.id}`}
+      data-testid={`axis-${axisScore.id}`}
     >
       {/* 軸名と方向性 */}
       <div className="mb-3 xs:mb-4">

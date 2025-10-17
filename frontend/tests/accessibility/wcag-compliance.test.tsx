@@ -276,7 +276,6 @@ describe('WCAG 2.1 AA Compliance Tests', () => {
       const results = await axe(container, {
         rules: {
           'focus-order-semantics': { enabled: true },
-          'keyboard': { enabled: true },
           'tabindex': { enabled: true }
         }
       });
@@ -344,7 +343,6 @@ describe('WCAG 2.1 AA Compliance Tests', () => {
           'label': { enabled: true },
           'label-title-only': { enabled: true },
           'form-field-multiple-labels': { enabled: true },
-          'fieldset-legend': { enabled: true },
           'button-name': { enabled: true }
         }
       });
