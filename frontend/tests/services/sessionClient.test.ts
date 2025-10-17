@@ -7,9 +7,6 @@ import { SessionClient, SessionAPIError, BootstrapResponse, SceneResponse, Choic
 import { performanceService } from '../../app/services/performance';
 
 // MSW setup
-import { setupServer } from 'msw/node';
-import { rest } from 'msw';
-
 // Mock performance service
 jest.mock('../../app/services/performance', () => ({
   performanceService: {
@@ -91,23 +88,34 @@ const mockResultResponse: ResultResponse = {
   fallbackFlags: []
 };
 
-// MSW server setup
-const server = setupServer();
+const createJsonResponse = <T>(
+  data: T,
+  init: { status?: number; statusText?: string } = {}
+): Response => {
+  const status = init.status ?? 200;
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    statusText: init.statusText ?? 'OK',
+    json: jest.fn().mockResolvedValue(data),
+  } as unknown as Response;
+};
 
 describe('SessionClient', () => {
   let sessionClient: SessionClient;
+  let fetchMock: jest.SpiedFunction<typeof fetch>;
 
   beforeAll(() => {
-    server.listen();
+    fetchMock = jest.spyOn(globalThis, 'fetch');
   });
 
   afterEach(() => {
-    server.resetHandlers();
+    fetchMock.mockReset();
     jest.clearAllMocks();
   });
 
   afterAll(() => {
-    server.close();
+    fetchMock.mockRestore();
   });
 
   beforeEach(() => {
@@ -141,11 +149,7 @@ describe('SessionClient', () => {
 
   describe('bootstrap()', () => {
     it('成功時に正しいレスポンスを返す', async () => {
-      server.use(
-        rest.post('/api/sessions/start', (req, res, ctx) => {
-          return res(ctx.json(mockBootstrapResponse));
-        })
-      );
+      fetchMock.mockResolvedValue(createJsonResponse(mockBootstrapResponse));
 
       const result = await sessionClient.bootstrap();
 
@@ -168,10 +172,8 @@ describe('SessionClient', () => {
     });
 
     it('HTTPエラー時にSessionAPIErrorを投げる', async () => {
-      server.use(
-        rest.post('/api/sessions/start', (req, res, ctx) => {
-          return res(ctx.status(500, 'Internal Server Error'));
-        })
+      fetchMock.mockResolvedValue(
+        createJsonResponse(null, { status: 500, statusText: 'Internal Server Error' })
       );
 
       await expect(sessionClient.bootstrap()).rejects.toThrow(SessionAPIError);
@@ -179,11 +181,7 @@ describe('SessionClient', () => {
     });
 
     it('ネットワークエラー時にSessionAPIErrorを投げる', async () => {
-      server.use(
-        rest.post('/api/sessions/start', (req, res, ctx) => {
-          return res.networkError('Network error during bootstrap');
-        })
-      );
+      fetchMock.mockRejectedValue(new Error('Network error during bootstrap'));
 
       await expect(sessionClient.bootstrap()).rejects.toThrow(SessionAPIError);
       await expect(sessionClient.bootstrap()).rejects.toThrow(/Network error during bootstrap/);
@@ -195,11 +193,7 @@ describe('SessionClient', () => {
     const keyword = 'テストキーワード';
 
     it('成功時に正しいレスポンスを返す', async () => {
-      server.use(
-        rest.post(`/api/sessions/${sessionId}/keyword`, (req, res, ctx) => {
-          return res(ctx.json(mockSceneResponse));
-        })
-      );
+      fetchMock.mockResolvedValue(createJsonResponse(mockSceneResponse));
 
       const result = await sessionClient.confirmKeyword(sessionId, keyword, 'suggestion');
 
@@ -213,10 +207,8 @@ describe('SessionClient', () => {
     });
 
     it('404エラー時に適切なエラーコードを設定', async () => {
-      server.use(
-        rest.post(`/api/sessions/${sessionId}/keyword`, (req, res, ctx) => {
-          return res(ctx.status(404));
-        })
+      fetchMock.mockResolvedValue(
+        createJsonResponse(null, { status: 404, statusText: 'Not Found' })
       );
 
       await expect(sessionClient.confirmKeyword(sessionId, keyword, 'suggestion'))
@@ -231,10 +223,8 @@ describe('SessionClient', () => {
     });
 
     it('400エラー時に適切なエラーコードを設定', async () => {
-      server.use(
-        rest.post(`/api/sessions/${sessionId}/keyword`, (req, res, ctx) => {
-          return res(ctx.status(400));
-        })
+      fetchMock.mockResolvedValue(
+        createJsonResponse(null, { status: 400, statusText: 'Bad Request' })
       );
 
       try {
@@ -251,11 +241,7 @@ describe('SessionClient', () => {
     const sceneIndex = 1;
 
     it('成功時に正しいレスポンスを返す', async () => {
-      server.use(
-        rest.get(`/api/sessions/${sessionId}/scenes/${sceneIndex}`, (req, res, ctx) => {
-          return res(ctx.json(mockSceneResponse));
-        })
-      );
+      fetchMock.mockResolvedValue(createJsonResponse(mockSceneResponse));
 
       const result = await sessionClient.getScene(sessionId, sceneIndex);
 
@@ -263,10 +249,8 @@ describe('SessionClient', () => {
     });
 
     it('404エラー時に適切なエラーを投げる', async () => {
-      server.use(
-        rest.get(`/api/sessions/${sessionId}/scenes/${sceneIndex}`, (req, res, ctx) => {
-          return res(ctx.status(404));
-        })
+      fetchMock.mockResolvedValue(
+        createJsonResponse(null, { status: 404, statusText: 'Not Found' })
       );
 
       try {
@@ -278,10 +262,8 @@ describe('SessionClient', () => {
     });
 
     it('400エラー時に適切なエラーを投げる', async () => {
-      server.use(
-        rest.get(`/api/sessions/${sessionId}/scenes/${sceneIndex}`, (req, res, ctx) => {
-          return res(ctx.status(400));
-        })
+      fetchMock.mockResolvedValue(
+        createJsonResponse(null, { status: 400, statusText: 'Bad Request' })
       );
 
       try {
@@ -299,11 +281,7 @@ describe('SessionClient', () => {
     const choiceId = 'choice_1_1';
 
     it('成功時に正しいレスポンスを返す', async () => {
-      server.use(
-        rest.post(`/api/sessions/${sessionId}/scenes/${sceneIndex}/choice`, (req, res, ctx) => {
-          return res(ctx.json(mockChoiceResponse));
-        })
-      );
+      fetchMock.mockResolvedValue(createJsonResponse(mockChoiceResponse));
 
       const result = await sessionClient.submitChoice(sessionId, sceneIndex, choiceId);
 
@@ -311,10 +289,8 @@ describe('SessionClient', () => {
     });
 
     it('404エラー時に適切なエラーを投げる', async () => {
-      server.use(
-        rest.post(`/api/sessions/${sessionId}/scenes/${sceneIndex}/choice`, (req, res, ctx) => {
-          return res(ctx.status(404));
-        })
+      fetchMock.mockResolvedValue(
+        createJsonResponse(null, { status: 404, statusText: 'Not Found' })
       );
 
       try {
@@ -326,10 +302,8 @@ describe('SessionClient', () => {
     });
 
     it('400エラー時に適切なエラーを投げる', async () => {
-      server.use(
-        rest.post(`/api/sessions/${sessionId}/scenes/${sceneIndex}/choice`, (req, res, ctx) => {
-          return res(ctx.status(400));
-        })
+      fetchMock.mockResolvedValue(
+        createJsonResponse(null, { status: 400, statusText: 'Bad Request' })
       );
 
       try {
@@ -345,11 +319,7 @@ describe('SessionClient', () => {
     const sessionId = 'test-session-123';
 
     it('成功時に正しいレスポンスを返す', async () => {
-      server.use(
-        rest.post(`/api/sessions/${sessionId}/result`, (req, res, ctx) => {
-          return res(ctx.json(mockResultResponse));
-        })
-      );
+      fetchMock.mockResolvedValue(createJsonResponse(mockResultResponse));
 
       const result = await sessionClient.getResult(sessionId);
 
@@ -374,10 +344,8 @@ describe('SessionClient', () => {
     });
 
     it('404エラー時に適切なエラーを投げる', async () => {
-      server.use(
-        rest.post(`/api/sessions/${sessionId}/result`, (req, res, ctx) => {
-          return res(ctx.status(404));
-        })
+      fetchMock.mockResolvedValue(
+        createJsonResponse(null, { status: 404, statusText: 'Not Found' })
       );
 
       try {
@@ -389,10 +357,8 @@ describe('SessionClient', () => {
     });
 
     it('400エラー時に適切なエラーを投げる', async () => {
-      server.use(
-        rest.post(`/api/sessions/${sessionId}/result`, (req, res, ctx) => {
-          return res(ctx.status(400));
-        })
+      fetchMock.mockResolvedValue(
+        createJsonResponse(null, { status: 400, statusText: 'Bad Request' })
       );
 
       try {

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
 import { adventureTokens } from "./tokens/adventure";
 import { sereneTokens } from "./tokens/serene";
 import { focusTokens } from "./tokens/focus";
@@ -15,9 +15,24 @@ const themeMap: Record<ThemeId, Record<string, string>> = {
   fallback: fallbackTokens,
 };
 
+type ThemePalette = {
+  primary: string;
+  secondary: string;
+  border: string;
+  background: string;
+  surface: string;
+  accent: string;
+  text: {
+    primary: string;
+    secondary: string;
+    muted: string;
+  };
+};
+
 type ThemeContextValue = {
   themeId: ThemeId;
   setThemeId: (value: ThemeId) => void;
+  currentTheme: ThemePalette;
 };
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
@@ -66,7 +81,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   }, [themeId]);
 
-  const setThemeId = (value: ThemeId) => {
+  const setThemeId = useCallback((value: ThemeId) => {
     // 有効なテーマIDかチェック
     if (value && themeMap[value]) {
       setThemeIdInternal(value);
@@ -74,9 +89,33 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       console.warn(`Invalid theme ID "${value}", falling back to fallback theme`);
       setThemeIdInternal("fallback");
     }
-  };
+  }, []);
 
-  const contextValue = useMemo(() => ({ themeId, setThemeId }), [themeId]);
+  const currentTheme = useMemo<ThemePalette>(() => {
+    const tokens = themeMap[themeId] ?? themeMap.fallback;
+    const primary = tokens.accent ?? themeMap.fallback.accent;
+    const surface = tokens.surface ?? themeMap.fallback.surface;
+    const textPrimary = tokens.text ?? themeMap.fallback.text;
+
+    return {
+      primary,
+      accent: primary,
+      secondary: `${primary}33`, // 20% opacity overlay
+      border: 'rgba(255, 255, 255, 0.24)',
+      background: surface,
+      surface,
+      text: {
+        primary: textPrimary,
+        secondary: 'rgba(255, 255, 255, 0.78)',
+        muted: 'rgba(255, 255, 255, 0.55)',
+      },
+    };
+  }, [themeId]);
+
+  const contextValue = useMemo(
+    () => ({ themeId, setThemeId, currentTheme }),
+    [themeId, setThemeId, currentTheme]
+  );
 
   return (
     <ThemeContext.Provider value={contextValue}>{children}</ThemeContext.Provider>

@@ -7,7 +7,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
+import { rest, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { SessionProvider } from '../../app/state/SessionContext';
 import { ThemeProvider } from '../../app/theme/ThemeProvider';
@@ -154,7 +154,7 @@ const server = {
 /*
 const server = setupServer(
   // Result retrieval endpoint
-  http.post('/api/sessions/:sessionId/result', async ({ request, params }: any) => {
+  rest.post('/api/sessions/:sessionId/result', async ({ request, params }: any) => {
     const { sessionId } = params;
     
     if (sessionId === mockResultData.sessionId) {
@@ -353,7 +353,7 @@ describe('Result Integration Tests', () => {
     it('should display loading state during result generation', async () => {
       // Delay the API response to test loading state
       server.use(
-        http.post('/api/sessions/:sessionId/result', async ({ request, params }: any) => {
+        rest.post('/api/sessions/:sessionId/result', async ({ request, params }: any) => {
           await new Promise(resolve => setTimeout(resolve, 1000));
           return HttpResponse.json(mockResultData);
         })
@@ -406,7 +406,7 @@ describe('Result Integration Tests', () => {
       };
 
       server.use(
-        http.post('/api/sessions/:sessionId/result', ({ request, params }: any) => {
+        rest.post('/api/sessions/:sessionId/result', ({ request, params }: any) => {
           return HttpResponse.json(extremeResultData);
         })
       );
@@ -438,7 +438,7 @@ describe('Result Integration Tests', () => {
       };
 
       server.use(
-        http.post('/api/sessions/:sessionId/result', ({ request, params }: any) => {
+        rest.post('/api/sessions/:sessionId/result', ({ request, params }: any) => {
           return HttpResponse.json(malformedResultData);
         })
       );
@@ -457,7 +457,7 @@ describe('Result Integration Tests', () => {
 
     it('should handle network timeouts during result fetch', async () => {
       server.use(
-        http.post('/api/sessions/:sessionId/result', async ({ request, params }: any) => {
+        rest.post('/api/sessions/:sessionId/result', async ({ request, params }: any) => {
           // Simulate timeout
           await new Promise(resolve => setTimeout(resolve, 10000));
           return HttpResponse.json(mockResultData);
@@ -581,7 +581,7 @@ describe('Result Integration Tests', () => {
 
     it('should handle session expiration during result display', async () => {
       server.use(
-        http.post('/api/sessions/:sessionId/result', ({ request, params }: any) => {
+        rest.post('/api/sessions/:sessionId/result', ({ request, params }: any) => {
           return HttpResponse.json({
             error_code: 'SESSION_NOT_FOUND',
             message: 'Session has expired',

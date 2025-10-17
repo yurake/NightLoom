@@ -6,7 +6,7 @@
 'use client';
 
 import React from 'react';
-import { useTheme } from '@/app/theme/ThemeProvider';
+import { useTheme } from '../../theme/ThemeProvider';
 
 interface LoadingStateProps {
   message?: string;
@@ -21,8 +21,6 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
   size = 'md',
   className = ''
 }) => {
-  const { currentTheme } = useTheme();
-
   const sizeClasses = {
     sm: 'h-4 w-4',
     md: 'h-8 w-8',
@@ -32,16 +30,14 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
   if (variant === 'spinner') {
     return (
       <div 
-        className={`loading-state flex flex-col items-center justify-center p-6 ${className}`}
+        className={`loading-state flex flex-col items-center justify-center p-6 text-white/80 ${className}`}
         data-testid="loading-indicator"
       >
         <div
-          className={`animate-spin rounded-full border-2 border-t-transparent ${sizeClasses[size]} mb-4`}
-          style={{ borderColor: `${currentTheme.border} transparent ${currentTheme.primary} transparent` }}
+          className={`animate-spin rounded-full border-2 border-t-transparent border-accent ${sizeClasses[size]} mb-4`}
         />
         <p 
-          className="text-center font-medium"
-          style={{ color: currentTheme.text.secondary }}
+          className="text-center font-medium text-white/80"
         >
           {message}
         </p>
@@ -56,16 +52,13 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
         data-testid="loading-skeleton"
       >
         <div 
-          className="skeleton-line h-4 rounded animate-pulse"
-          style={{ backgroundColor: `${currentTheme.border}40` }}
+          className="skeleton-line h-4 rounded animate-pulse bg-white/10"
         />
         <div 
-          className="skeleton-line h-4 rounded animate-pulse w-3/4"
-          style={{ backgroundColor: `${currentTheme.border}40` }}
+          className="skeleton-line h-4 rounded animate-pulse w-3/4 bg-white/10"
         />
         <div 
-          className="skeleton-line h-4 rounded animate-pulse w-1/2"
-          style={{ backgroundColor: `${currentTheme.border}40` }}
+          className="skeleton-line h-4 rounded animate-pulse w-1/2 bg-white/10"
         />
       </div>
     );
@@ -81,9 +74,8 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className="w-3 h-3 rounded-full animate-pulse"
-              style={{ 
-                backgroundColor: currentTheme.primary,
+              className="w-3 h-3 rounded-full animate-pulse bg-accent"
+              style={{
                 animationDelay: `${i * 0.2}s`,
                 animationDuration: '1s'
               }}
@@ -91,8 +83,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
           ))}
         </div>
         <p 
-          className="ml-4 font-medium"
-          style={{ color: currentTheme.text.secondary }}
+          className="ml-4 font-medium text-white/80"
         >
           {message}
         </p>
@@ -120,8 +111,6 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
   variant = 'error',
   className = ''
 }) => {
-  const { currentTheme } = useTheme();
-
   const getIcon = () => {
     switch (variant) {
       case 'warning':
@@ -157,15 +146,13 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
       </div>
       
       <h2 
-        className="error-title text-xl font-semibold mb-2"
-        style={{ color: currentTheme.text.primary }}
+        className="error-title text-xl font-semibold mb-2 text-white"
       >
         {title}
       </h2>
       
       <p 
-        className="error-message text-base mb-6 max-w-md leading-relaxed"
-        style={{ color: currentTheme.text.secondary }}
+        className="error-message text-base mb-6 max-w-md leading-relaxed text-white/80"
         data-testid="error-message"
       >
         {message}
@@ -174,11 +161,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
       {onRetry && (
         <button
           onClick={onRetry}
-          className="retry-button px-6 py-2 rounded-lg font-medium transition-colors hover:shadow-md"
-          style={{
-            backgroundColor: currentTheme.primary,
-            color: 'white'
-          }}
+          className="retry-button px-6 py-2 rounded-lg font-medium transition-colors hover:shadow-md bg-accent text-white"
           data-testid="retry-button"
         >
           {retryLabel}

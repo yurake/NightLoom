@@ -6,7 +6,7 @@
 'use client';
 
 import React from 'react';
-import { useTheme } from '@/app/theme/ThemeProvider';
+import { useTheme } from '../../theme/ThemeProvider';
 
 interface ProgressIndicatorProps {
   currentScene: number;

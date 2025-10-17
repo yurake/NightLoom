@@ -200,7 +200,7 @@ class FallbackAssets:
                 meta={"cell": "A2", "isNeutral": False}
             ),
             TypeProfile(
-                name="Creative Pioneer",
+                name="Creative Spark",
                 description="感情と直感を大切にし、変化を恐れず新しい可能性に挑戦するタイプ。創造性と適応力が特徴です。",
                 keywords=["creative", "adaptable", "innovative", "empathetic"],
                 dominantAxes=["logic_emotion", "stability_change"],

@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useTheme } from "../theme/ThemeProvider";
-import { useSession, sessionActions } from "../state/SessionContext";
-import { sessionClient, SessionAPIError } from "../services/sessionClient";
-import type { Session } from "../types/session";
-import SkipLinks from "../components/SkipLinks";
+import { useRouter } from "next/navigation";
+import { useTheme } from "../../theme/ThemeProvider";
+import { useSession, sessionActions } from "../../state/SessionContext";
+import { sessionClient, SessionAPIError } from "../../services/sessionClient";
+import type { Session } from "../../types/session";
+import SkipLinks from "../../components/SkipLinks";
 
 interface BootstrapData {
   sessionId: string;
@@ -22,6 +23,7 @@ interface BootstrapData {
 }
 
 export default function PlayPage() {
+  const router = useRouter();
   const { themeId, setThemeId } = useTheme();
   const { state, dispatch } = useSession();
   
@@ -34,11 +36,19 @@ export default function PlayPage() {
   const [customKeyword, setCustomKeyword] = useState("");
   const [isSubmittingKeyword, setIsSubmittingKeyword] = useState(false);
   const [keywordError, setKeywordError] = useState<string | null>(null);
+  const [sceneError, setSceneError] = useState<string | null>(null);
+  const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
+  const [isSubmittingChoice, setIsSubmittingChoice] = useState(false);
 
   // Start bootstrap on mount
   useEffect(() => {
     startBootstrap();
   }, []);
+
+  useEffect(() => {
+    setSelectedChoiceId(null);
+    setSceneError(null);
+  }, [state.currentScene?.sceneIndex]);
 
   const startBootstrap = async (retryCount = 0) => {
     const maxRetries = 3;
@@ -146,6 +156,48 @@ export default function PlayPage() {
   const handleCustomKeywordSubmit = () => {
     if (customKeyword.trim()) {
       handleKeywordSelection(customKeyword.trim(), 'manual');
+    }
+  };
+
+  const handleChoiceSelect = async (choiceId: string) => {
+    if (!state.session || !state.currentScene) return;
+    if (isSubmittingChoice) return;
+
+    setSelectedChoiceId(choiceId);
+    setSceneError(null);
+    setIsSubmittingChoice(true);
+    dispatch(sessionActions.setLoading(true));
+
+    try {
+      const response = await sessionClient.submitChoice(
+        state.session.id,
+        state.currentScene.sceneIndex,
+        choiceId
+      );
+      dispatch(
+        sessionActions.choiceSubmitted(
+          state.currentScene.sceneIndex,
+          choiceId,
+          response.nextScene || undefined
+        )
+      );
+
+      if (response.nextScene) {
+        setSelectedChoiceId(null);
+      } else {
+        router.push(`/play/result?sessionId=${state.session.id}`);
+      }
+    } catch (error) {
+      console.error('Choice submission failed:', error);
+      const message =
+        error instanceof SessionAPIError
+          ? error.message || '選択の送信に失敗しました'
+          : '選択の送信に失敗しました';
+      setSceneError(message);
+      dispatch(sessionActions.setError(message));
+    } finally {
+      setIsSubmittingChoice(false);
+      dispatch(sessionActions.setLoading(false));
     }
   };
 
@@ -313,16 +365,18 @@ export default function PlayPage() {
               {state.currentScene.choices.map((choice, index) => (
                 <button
                   key={choice.id}
-                  className="w-full rounded-xl border border-white/20 bg-white/10 p-4 text-left hover:bg-white/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
-                  disabled={state.isLoading}
-                  onClick={() => {
-                    // Handle choice selection - implement later
-                    console.log('Choice selected:', choice.id);
-                  }}
+                  className={`w-full rounded-xl border ${
+                    selectedChoiceId === choice.id
+                      ? 'border-accent bg-accent/20'
+                      : 'border-white/20 bg-white/10 hover:bg-white/20'
+                  } p-4 text-left transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2`}
+                  disabled={state.isLoading || isSubmittingChoice}
+                  onClick={() => handleChoiceSelect(choice.id)}
                   role="radio"
-                  aria-checked="false"
+                  aria-checked={selectedChoiceId === choice.id}
                   aria-label={`選択肢${index + 1}: ${choice.text}`}
                   aria-describedby={`choice-help-${choice.id}`}
+                  data-selected={selectedChoiceId === choice.id}
                   data-testid={`choice-${state.currentScene?.sceneIndex || 0}-${index + 1}`}
                 >
                   <span className="text-white">{choice.text}</span>
@@ -332,6 +386,17 @@ export default function PlayPage() {
                 </button>
               ))}
             </div>
+
+            {sceneError && (
+              <div
+                className="mt-4 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200"
+                role="alert"
+                aria-live="assertive"
+                data-testid="scene-error"
+              >
+                {sceneError}
+              </div>
+            )}
 
             {/* 操作説明 */}
             <div className="mt-6 text-center">
@@ -395,10 +460,8 @@ export default function PlayPage() {
                 aria-label={`頭文字: ${bootstrapData.initialCharacter}`}
               >
                 「{bootstrapData.initialCharacter}」
-              </div>
-              <p className="text-white/70">
                 で始まる単語を選んでください
-              </p>
+              </div>
               
               {/* スクリーンリーダー向けの詳細説明 */}
               <div className="sr-only">

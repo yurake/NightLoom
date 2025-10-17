@@ -6,13 +6,6 @@ import { SessionProvider } from "./state/SessionContext";
 export const metadata: Metadata = {
   title: "NightLoom",
   description: "Interactive persona exploration",
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 5,
-    userScalable: true,
-  },
-  themeColor: '#8ab4f8',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
@@ -22,6 +15,14 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  themeColor: '#8ab4f8',
 };
 
 export default function RootLayout({

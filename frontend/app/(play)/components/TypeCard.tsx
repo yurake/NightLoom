@@ -23,7 +23,7 @@ export interface TypeCardProps {
 export const TypeCard: React.FC<TypeCardProps> = ({ typeResult }) => {
   return (
     <section data-testid="type-profiles-section">
-      <h2 data-testid="types-title" className="sr-only">パーソナリティタイプ</h2>
+      <h2 data-testid="types-title" className="sr-only" aria-hidden="true">パーソナリティタイプ</h2>
       <article
         className="p-4 xs:p-5 sm:p-6 rounded-lg xs:rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 text-white shadow-lg mx-2 xs:mx-0"
         role="article"

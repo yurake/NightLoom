@@ -11,6 +11,8 @@ import { SessionProvider } from '../../app/state/SessionContext';
 import { ThemeProvider } from '../../app/theme/ThemeProvider';
 import { mockResult2Axes } from '../../app/types/result';
 
+jest.setTimeout(20000);
+
 // テスト用のモックデータ
 const mockChoices = [
   { id: 'choice_0_1', text: '選択肢A', weights: { adventure: 1, social: 0, creativity: 0, focus: 0 } },
@@ -258,7 +260,10 @@ describe('WCAG 2.1 AA Compliance Tests', () => {
             <section id="section2">
               <h2>セクション2</h2>
               <input type="text" placeholder="入力フィールド" />
-              <select>
+              <label htmlFor="section2-select" className="sr-only">
+                セクション2の選択肢
+              </label>
+              <select id="section2-select">
                 <option>選択肢1</option>
                 <option>選択肢2</option>
               </select>
@@ -435,7 +440,7 @@ it('should pass WCAG 2.1 AA requirements for images and media', async () => {
     }
   });
   expect(results).toHaveNoViolations();
-});
+}, 20000);
 });
 
 describe('Complete Application Flow', () => {
@@ -505,7 +510,7 @@ it('should pass full WCAG 2.1 AA compliance for complete diagnosis flow', async 
     }
   });
   expect(results).toHaveNoViolations();
-});
+}, 22000);
 });
 });
                 

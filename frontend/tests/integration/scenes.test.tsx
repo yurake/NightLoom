@@ -7,7 +7,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
+import { rest, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { SessionProvider } from '../../app/state/SessionContext';
 import { ThemeProvider } from '../../app/theme/ThemeProvider';
@@ -122,7 +122,7 @@ const server = {
 /*
 const server = setupServer(
   // Scene retrieval endpoints
-  http.get('/api/sessions/:sessionId/scenes/:sceneIndex', ({ params }: any) => {
+  rest.get('/api/sessions/:sessionId/scenes/:sceneIndex', ({ params }: any) => {
     const { sceneIndex } = params;
     const sceneNum = parseInt(sceneIndex as string);
     
@@ -141,7 +141,7 @@ const server = setupServer(
   }),
 
   // Choice submission endpoints
-  http.post('/api/sessions/:sessionId/scenes/:sceneIndex/choice', async ({ request, params }: any) => {
+  rest.post('/api/sessions/:sessionId/scenes/:sceneIndex/choice', async ({ request, params }: any) => {
     const { sceneIndex } = params;
     const sceneNum = parseInt(sceneIndex as string);
     const body = await request.json();
@@ -214,7 +214,7 @@ describe('Scene Progression Integration Tests', () => {
     it('should handle scene retrieval errors gracefully', async () => {
       // Override server to return error
       server.use(
-        http.get('/api/sessions/:sessionId/scenes/:sceneIndex', ({ params }: any) => {
+        rest.get('/api/sessions/:sessionId/scenes/:sceneIndex', ({ params }: any) => {
           return HttpResponse.json(
             {
               error_code: 'SESSION_NOT_FOUND',
@@ -240,7 +240,7 @@ describe('Scene Progression Integration Tests', () => {
     it('should enforce scene sequence restrictions', async () => {
       // Test accessing scene 3 before completing previous scenes
       server.use(
-        http.get('/api/sessions/:sessionId/scenes/3', ({ params }: any) => {
+        rest.get('/api/sessions/:sessionId/scenes/3', ({ params }: any) => {
           return HttpResponse.json(
             {
               error_code: 'BAD_REQUEST',
@@ -288,7 +288,7 @@ describe('Scene Progression Integration Tests', () => {
       
       // Override to return validation error
       server.use(
-        http.post('/api/sessions/:sessionId/scenes/:sceneIndex/choice', ({ params }: any) => {
+        rest.post('/api/sessions/:sessionId/scenes/:sceneIndex/choice', ({ params }: any) => {
           return HttpResponse.json(
             {
               error_code: 'VALIDATION_ERROR',
@@ -371,7 +371,7 @@ describe('Scene Progression Integration Tests', () => {
   describe('Error Handling & Resilience', () => {
     it('should handle network errors during scene retrieval', async () => {
       server.use(
-        http.get('/api/sessions/:sessionId/scenes/:sceneIndex', ({ params }: any) => {
+        rest.get('/api/sessions/:sessionId/scenes/:sceneIndex', ({ params }: any) => {
           return HttpResponse.error();
         })
       );
@@ -390,7 +390,7 @@ describe('Scene Progression Integration Tests', () => {
       const user = userEvent.setup();
       
       server.use(
-        http.post('/api/sessions/:sessionId/scenes/:sceneIndex/choice', ({ params }: any) => {
+        rest.post('/api/sessions/:sessionId/scenes/:sceneIndex/choice', ({ params }: any) => {
           return HttpResponse.error();
         })
       );
@@ -411,7 +411,7 @@ describe('Scene Progression Integration Tests', () => {
 
     it('should provide fallback content when LLM service fails', async () => {
       server.use(
-        http.get('/api/sessions/:sessionId/scenes/:sceneIndex', ({ params }: any) => {
+        rest.get('/api/sessions/:sessionId/scenes/:sceneIndex', ({ params }: any) => {
           return HttpResponse.json({
             ...(mockScenes as any)[1],
             fallbackUsed: true,

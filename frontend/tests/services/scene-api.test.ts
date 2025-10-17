@@ -24,9 +24,6 @@ import {
 import { SessionAPIError } from '../../app/services/sessionClient';
 
 // MSW setup
-import { setupServer } from 'msw/node';
-import { rest } from 'msw';
-
 // Mock data
 const mockSceneResponse = {
   sessionId: 'test-session-123',
@@ -80,23 +77,34 @@ const mockValidationResponse = {
   completedScenes: 0
 };
 
-// MSW server setup
-const server = setupServer();
+const createJsonResponse = <T>(
+  data: T,
+  init: { status?: number; statusText?: string } = {}
+): Response => {
+  const status = init.status ?? 200;
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    statusText: init.statusText ?? 'OK',
+    json: jest.fn().mockResolvedValue(data),
+  } as unknown as Response;
+};
 
 describe('SceneApiService', () => {
   let sceneApiService: SceneApiService;
+  let fetchMock: jest.SpiedFunction<typeof fetch>;
 
   beforeAll(() => {
-    server.listen();
+    fetchMock = jest.spyOn(globalThis, 'fetch');
   });
 
   afterEach(() => {
-    server.resetHandlers();
+    fetchMock.mockReset();
     jest.clearAllMocks();
   });
 
   afterAll(() => {
-    server.close();
+    fetchMock.mockRestore();
   });
 
   beforeEach(() => {
@@ -120,11 +128,7 @@ describe('SceneApiService', () => {
     const sceneIndex = 1;
 
     it('成功時に正しいレスポンスを返す', async () => {
-      server.use(
-        rest.get(`/api/sessions/${sessionId}/scenes/${sceneIndex}`, (req, res, ctx) => {
-          return res(ctx.json(mockSceneResponse));
-        })
-      );
+      fetchMock.mockResolvedValue(createJsonResponse(mockSceneResponse));
 
       const result = await sceneApiService.getScene(sessionId, sceneIndex);
 
@@ -132,13 +136,11 @@ describe('SceneApiService', () => {
     });
 
     it('APIエラー時に適切なエラーを投げる', async () => {
-      server.use(
-        rest.get(`/api/sessions/${sessionId}/scenes/${sceneIndex}`, (req, res, ctx) => {
-          return res(
-            ctx.status(404),
-            ctx.json({ error: { code: 'SESSION_NOT_FOUND', message: 'Session not found' } })
-          );
-        })
+      fetchMock.mockResolvedValue(
+        createJsonResponse(
+          { error: { code: 'SESSION_NOT_FOUND', message: 'Session not found' } },
+          { status: 404, statusText: 'Not Found' }
+        )
       );
 
       await expect(sceneApiService.getScene(sessionId, sceneIndex))
@@ -146,22 +148,19 @@ describe('SceneApiService', () => {
     });
 
     it('ネットワークエラー時にSessionAPIErrorを投げる', async () => {
-      server.use(
-        rest.get(`/api/sessions/${sessionId}/scenes/${sceneIndex}`, (req, res, ctx) => {
-          return res.networkError('Network error');
-        })
-      );
+      fetchMock.mockRejectedValue(new Error('Network error'));
 
       await expect(sceneApiService.getScene(sessionId, sceneIndex))
         .rejects.toThrow(SessionAPIError);
     });
 
     it('JSON解析エラー時にSessionAPIErrorを投げる', async () => {
-      server.use(
-        rest.get(`/api/sessions/${sessionId}/scenes/${sceneIndex}`, (req, res, ctx) => {
-          return res(ctx.status(500), ctx.text('invalid json'));
-        })
-      );
+      fetchMock.mockResolvedValue({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+        json: jest.fn().mockRejectedValue(new Error('invalid json')),
+      } as unknown as Response);
 
       await expect(sceneApiService.getScene(sessionId, sceneIndex))
         .rejects.toThrow(SessionAPIError);
@@ -174,11 +173,7 @@ describe('SceneApiService', () => {
     const choiceId = 'choice_1_1';
 
     it('成功時に正しいレスポンスを返す', async () => {
-      server.use(
-        rest.post(`/api/sessions/${sessionId}/scenes/${sceneIndex}/choice`, (req, res, ctx) => {
-          return res(ctx.json(mockChoiceResponse));
-        })
-      );
+      fetchMock.mockResolvedValue(createJsonResponse(mockChoiceResponse));
 
       const result = await sceneApiService.submitChoice(sessionId, sceneIndex, choiceId);
 
@@ -186,13 +181,11 @@ describe('SceneApiService', () => {
     });
 
     it('バリデーションエラー時に適切なエラーを投げる', async () => {
-      server.use(
-        rest.post(`/api/sessions/${sessionId}/scenes/${sceneIndex}/choice`, (req, res, ctx) => {
-          return res(
-            ctx.status(400),
-            ctx.json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid choice' } })
-          );
-        })
+      fetchMock.mockResolvedValue(
+        createJsonResponse(
+          { error: { code: 'VALIDATION_ERROR', message: 'Invalid choice' } },
+          { status: 400, statusText: 'Bad Request' }
+        )
       );
 
       await expect(sceneApiService.submitChoice(sessionId, sceneIndex, choiceId))
@@ -204,11 +197,7 @@ describe('SceneApiService', () => {
     const sessionId = 'test-session-123';
 
     it('成功時に正しいレスポンスを返す', async () => {
-      server.use(
-        rest.get(`/api/sessions/${sessionId}/progress`, (req, res, ctx) => {
-          return res(ctx.json(mockProgressResponse));
-        })
-      );
+      fetchMock.mockResolvedValue(createJsonResponse(mockProgressResponse));
 
       const result = await sceneApiService.getProgress(sessionId);
 
@@ -216,10 +205,8 @@ describe('SceneApiService', () => {
     });
 
     it('セッションが見つからない場合のエラーハンドリング', async () => {
-      server.use(
-        rest.get(`/api/sessions/${sessionId}/progress`, (req, res, ctx) => {
-          return res(ctx.status(404));
-        })
+      fetchMock.mockResolvedValue(
+        createJsonResponse({}, { status: 404, statusText: 'Not Found' })
       );
 
       await expect(sceneApiService.getProgress(sessionId))
@@ -232,11 +219,7 @@ describe('SceneApiService', () => {
     const sceneIndex = 1;
 
     it('成功時に正しいレスポンスを返す', async () => {
-      server.use(
-        rest.get(`/api/sessions/${sessionId}/scenes/${sceneIndex}/validate`, (req, res, ctx) => {
-          return res(ctx.json(mockValidationResponse));
-        })
-      );
+      fetchMock.mockResolvedValue(createJsonResponse(mockValidationResponse));
 
       const result = await sceneApiService.validateSceneAccess(sessionId, sceneIndex);
 
@@ -256,11 +239,7 @@ describe('SceneApiService', () => {
         choiceExists: true
       };
 
-      server.use(
-        rest.post(`/api/sessions/${sessionId}/scenes/${sceneIndex}/choice/validate`, (req, res, ctx) => {
-          return res(ctx.json(mockValidationResult));
-        })
-      );
+      fetchMock.mockResolvedValue(createJsonResponse(mockValidationResult));
 
       const result = await sceneApiService.validateChoice(sessionId, sceneIndex, choiceId);
 
