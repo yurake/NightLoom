@@ -1,3 +1,6 @@
+# 原則
+言語は日本語で統一
+
 # NightLoom_worktree1 Development Guidelines
 
 Auto-generated from feature plans. Last updated: 2025-10-15
