@@ -10,7 +10,7 @@ import hashlib
 from typing import Dict, List, Optional, Tuple
 from fastapi import Request, HTTPException, Depends
 from fastapi.security import HTTPBearer
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 import re
 from datetime import datetime, timedelta
 from collections import defaultdict, deque
@@ -207,9 +207,9 @@ def get_rate_limiter(request: Request):
 class SecureKeywordRequest(BaseModel):
     """Secure keyword request with validation."""
     keyword: str = Field(..., min_length=1, max_length=SecurityConfig.MAX_KEYWORD_LENGTH)
-    source: str = Field(..., regex=r'^(suggestion|manual)$')
+    source: str = Field(..., pattern=r'^(suggestion|manual)$')
     
-    @validator('keyword')
+    @field_validator('keyword')
     def validate_keyword(cls, v):
         return InputSanitizer.sanitize_keyword(v)
 
@@ -217,7 +217,7 @@ class SecureChoiceRequest(BaseModel):
     """Secure choice request with validation."""
     choiceId: str = Field(..., min_length=1, max_length=50)
     
-    @validator('choiceId')
+    @field_validator('choiceId')
     def validate_choice_id(cls, v):
         return InputSanitizer.sanitize_choice_id(v)
 

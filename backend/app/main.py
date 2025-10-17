@@ -27,7 +27,7 @@ app = FastAPI(
 # Security middleware
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=["localhost", "127.0.0.1", "*.nightloom.app"]  # Configure for production
+    allowed_hosts=["localhost", "127.0.0.1", "testserver", "*.nightloom.app"]  # Configure for production
 )
 
 # Custom error handler for validation errors to include error_code field
