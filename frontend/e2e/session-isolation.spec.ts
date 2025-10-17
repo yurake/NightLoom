@@ -204,7 +204,7 @@ test.describe('セッション分離・API整合性強化E2Eテスト', () => {
       });
 
       expect(tab1Variables.testVariable).toBe('tab1-data');
-      expect(tab1Variables.sessionContext).toEqual({ tab: 'tab1',  'sensitive' });
+      expect(tab1Variables.sessionContext).toEqual({ tab: 'tab1', data: 'sensitive' });
     });
   });
 
