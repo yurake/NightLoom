@@ -5,14 +5,26 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { Suspense, useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from '../../../state/SessionContext';
 import { useTheme } from '../../../theme/ThemeProvider';
 import { ResultScreen } from '../../components/ResultScreen';
 import type { ResultData } from '@/types/result';
 
-export default function ResultPage() {
+const LoadingFallback: React.FC = () => (
+  <main
+    className="result-page min-h-screen flex items-center justify-center p-8 bg-surface text-center text-white/80"
+    data-testid="result-loading-suspense"
+  >
+    <div className="space-y-4">
+      <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+      <p className="text-sm text-white/70">結果画面を読み込み中...</p>
+    </div>
+  </main>
+);
+
+function ResultPageContent() {
   const [resultData, setResultData] = useState<ResultData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -201,5 +213,13 @@ export default function ResultPage() {
         }}
       />
     </div>
+  );
+}
+
+export default function ResultPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <ResultPageContent />
+    </Suspense>
   );
 }
