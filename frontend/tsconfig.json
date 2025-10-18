@@ -24,7 +24,6 @@
       "@/types/*": ["./app/types/*"]
     },
     "types": [
-      "jest",
       "node"
     ],
     "incremental": true,
