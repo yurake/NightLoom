@@ -6,7 +6,7 @@ export default defineConfig({
   ...(shouldStartServer
     ? {
         webServer: {
-          command: "pnpm dev",
+          command: "pnpm test:e2e:web-server",
           url: "http://localhost:3000",
           timeout: 120_000,
           reuseExistingServer: !process.env.CI,

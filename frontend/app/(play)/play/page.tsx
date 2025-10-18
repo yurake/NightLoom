@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "../../theme/ThemeProvider";
 import { useSession, sessionActions } from "../../state/SessionContext";
@@ -40,6 +40,7 @@ export default function PlayPage() {
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
   const [isSubmittingChoice, setIsSubmittingChoice] = useState(false);
   const hasBootstrappedRef = useRef(false);
+  const keywordButtonsRef = useRef<Array<HTMLButtonElement | null>>([]);
 
   const startBootstrap = useCallback(async (retryCount = 0) => {
     const maxRetries = 3;
@@ -161,6 +162,40 @@ export default function PlayPage() {
   const handleCustomKeywordSubmit = () => {
     if (customKeyword.trim()) {
       handleKeywordSelection(customKeyword.trim(), 'manual');
+    }
+  };
+
+  const handleKeywordOptionKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    if (!keywordButtonsRef.current.length) {
+      return;
+    }
+
+    const buttons = keywordButtonsRef.current;
+    const lastIndex = buttons.length - 1;
+
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+      event.preventDefault();
+      const nextIndex = index === lastIndex ? 0 : index + 1;
+      buttons[nextIndex]?.focus();
+      return;
+    }
+
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      const prevIndex = index === 0 ? lastIndex : index - 1;
+      buttons[prevIndex]?.focus();
+      return;
+    }
+
+    if (event.key === 'Home') {
+      event.preventDefault();
+      buttons[0]?.focus();
+      return;
+    }
+
+    if (event.key === 'End') {
+      event.preventDefault();
+      buttons[lastIndex]?.focus();
     }
   };
 
@@ -495,6 +530,7 @@ export default function PlayPage() {
               role="radiogroup"
               aria-labelledby="suggested-keywords-heading"
               aria-describedby="suggested-keywords-help"
+              aria-label="提案キーワード候補"
             >
               <h3 id="suggested-keywords-heading" className="sr-only">
                 提案されたキーワード候補
@@ -515,6 +551,10 @@ export default function PlayPage() {
                   aria-label={`キーワード候補${index + 1}: ${keyword}`}
                   aria-describedby={`keyword-description-${index}`}
                   type="button"
+                  ref={(element) => {
+                    keywordButtonsRef.current[index] = element;
+                  }}
+                  onKeyDown={(event) => handleKeywordOptionKeyDown(event, index)}
                 >
                   <span className="text-white font-medium">{keyword}</span>
                   <div id={`keyword-description-${index}`} className="sr-only">
