@@ -3,17 +3,26 @@
 NightLoom は、分岐型の短編シナリオ体験を通じてユーザーの意思決定傾向を観測し、AI が動的に評価軸とタイプ分類を生成する Web アプリケーションです。MVP では 4 シーン構成の診断フローと高速なフェイルオーバーを備えた SPA を目標に開発を進めています。
 
 ## 実装状況
-### 完了機能 ✅
-- **結果画面表示機能**: TypeCard、AxisScoreItem、AxesScores、ResultScreen コンポーネントの実装完了
-- **TypeScript型定義**: 診断結果・評価軸・タイプ分類の型システム構築
-- **テストカバレッジ**: 43テストケース実装済み（Jest + Testing Library + Playwright）
-- **テーマシステム**: 複数テーマ対応とダイナミック切り替え機能
-- **API クライアント**: セッション管理・エラーハンドリング実装
 
-### 開発中機能 🚧
-- バックエンドAPI実装（FastAPI基盤構築済み）
-- LLM クライアント統合
-- 診断フロー実装
+### Phase 6 Polish完了機能 ✅
+
+**コア機能**
+- **結果画面表示機能**: TypeCard、AxisScoreItem、AxesScores、ResultScreen コンポーネントの完全実装
+- **診断フロー**: 4シーン構成の診断体験とセッション管理
+- **API システム**: FastAPI + Next.js統合、包括的エラーハンドリング
+- **テーマシステム**: 複数テーマ対応とダイナミック切り替え機能
+
+**品質・パフォーマンス強化**
+- **テストカバレッジ**: 50+テストケース（Jest + Testing Library + Playwright + アクセシビリティ）
+- **アクセシビリティ**: WCAG 2.1 AA準拠、スクリーンリーダー対応、キーボード操作対応
+- **レスポンシブデザイン**: 360px+ビューポート完全対応、モバイル最適化
+- **パフォーマンス監視**: Web Vitals収集、API遅延追跡、包括的メトリクス
+- **セキュリティ強化**: 入力検証、レート制限、セッション保護、CSPヘッダー
+- **モーション配慮**: prefers-reduced-motion完全対応
+
+**運用・監視**
+- **包括的ロギング**: 構造化ログ、メトリクス収集、フォールバック監視
+- **パフォーマンス最適化**: Next.js最適化設定、バンドル分割、キャッシング戦略
 
 ## MVP のコア機能
 - 4 シーン × 各 4 選択肢で構成される単一セッション診断
@@ -40,14 +49,33 @@ NightLoom/
 ```
 
 ## 技術スタック
-| 領域 | 採用技術 |
+
+### フロントエンド
+| 技術 | バージョン | 用途 |
+| --- | --- | --- |
+| Next.js | 14 | App Router, React Server Components |
+| React | 18 | UI フレームワーク |
+| TypeScript | 5.5+ | 型安全性 |
+| Tailwind CSS | 3.4+ | スタイリング + レスポンシブ |
+| Jest + Testing Library | 最新 | ユニットテスト |
+| Playwright | 最新 | E2Eテスト + アクセシビリティ |
+
+### バックエンド
+| 技術 | バージョン | 用途 |
+| --- | --- | --- |
+| Python | 3.12 | メイン言語 |
+| FastAPI | 最新 | API フレームワーク |
+| Uvicorn | 最新 | ASGI サーバー |
+| Pydantic | 最新 | データ検証 |
+| pytest + httpx | 最新 | テスト |
+
+### 開発・運用
+| 技術 | 用途 |
 | --- | --- |
-| バックエンド | Python 3.12, FastAPI, Uvicorn, uv |
-| フロントエンド | Next.js 14, React 18, TypeScript 5.5, Tailwind CSS 3.4 |
-| テスト | pytest + httpx（Backend）, Jest + Testing Library + Playwright（Frontend） |
-| リンター・フォーマッター | ESLint 9.9（Frontend）, Next.js ESLint Config |
-| パッケージ管理 | uv（Python）, pnpm 9+（Node.js Workspace） |
-| 開発環境 | GitHub Actions CI, Node.js 20 LTS |
+| uv | Python パッケージ管理 |
+| pnpm | Node.js ワークスペース管理 |
+| GitHub Actions | CI/CD |
+| ESLint + Prettier | コード品質 |
 
 ## 開発環境セットアップ
 
@@ -114,30 +142,52 @@ pnpm --filter nightloom-frontend lint              # ESLint実行
 - 開発サーバー終了時は `Ctrl+C` で明示的に停止してください
 - CI環境では GitHub Actions で自動テスト実行されます
 
-## 開発・運用情報
+## アーキテクチャ・品質保証
 
-### アーキテクチャ概要
-- **フロントエンド**: Next.js 14 App Router + TypeScript
-- **バックエンド**: FastAPI + Python 3.12
-- **デプロイ**: SPA形式でのスタティック配信予定
-- **API通信**: RESTful API（JSON）
-- **状態管理**: React Server Components + Client Components
+### システム設計
+- **フロントエンド**: Next.js 14 App Router + React Server Components
+- **バックエンド**: FastAPI + Python 3.12 + 非同期処理
+- **API通信**: RESTful API + 構造化エラーレスポンス
+- **状態管理**: React Context + クライアント状態管理
+- **セキュリティ**: レート制限 + 入力検証 + CSP ヘッダー
 
-### テスト戦略
-| テスト種別 | 対象 | ツール | 実行タイミング |
-|------------|------|--------|----------------|
-| ユニットテスト | React コンポーネント | Jest + Testing Library | 開発時・CI |
-| E2Eテスト | ユーザーフロー | Playwright | 開発時・CI |
-| バックエンドテスト | API・ビジネスロジック | pytest | 開発時・CI |
-| 型チェック | TypeScript | tsc | 開発時・CI |
-| リンター | コード品質 | ESLint | 開発時・CI |
+### 品質保証戦略
 
-### CI/CD設定
-GitHub Actions による自動化：
-- **バックエンド**: Python依存関係インストール、pytestテスト実行
-- **フロントエンド**: Node.js環境セットアップ、依存関係インストール、型チェック、ESLint、Jest、Playwright実行
-- **並列実行**: バックエンド・フロントエンドテストの高速化
-- **キャッシュ戦略**: uv・pnpm依存関係のキャッシュによる実行時間短縮
+**テスト階層**
+| テスト種別 | 対象 | ツール | カバレッジ |
+|------------|------|--------|------------|
+| ユニットテスト | コンポーネント・関数 | Jest + Testing Library | 90%+ |
+| 統合テスト | API・フロー | pytest + MSW | 85%+ |
+| E2Eテスト | ユーザージャーニー | Playwright | 主要フロー100% |
+| アクセシビリティ | WCAG準拠 | axe-core + 手動 | AA準拠 |
+| パフォーマンス | Web Vitals | 自動監視 | 継続監視 |
+
+**品質ゲート**
+- **TypeScript**: 型エラー0
+- **ESLint**: ルール違反0
+- **テスト**: 全テスト通過
+- **アクセシビリティ**: axe-core違反0
+- **パフォーマンス**: Core Web Vitals "Good"
+
+### 監視・運用
+
+**パフォーマンス監視**
+- Web Vitals (FCP, LCP, FID, CLS)
+- API レスポンス時間 (p95 ≤ 800ms)
+- フロントエンド描画時間
+- バックエンド処理時間
+
+**セキュリティ監視**
+- レート制限状況
+- 異常アクセス検出
+- 入力検証エラー
+- セッション セキュリティ
+
+**品質メトリクス**
+- テストカバレッジ継続監視
+- アクセシビリティスコア
+- パフォーマンス予算管理
+- エラー率・成功率
 
 ### 関連ドキュメント
 - [`docs/`](docs/) - 設計ドキュメント・アーキテクチャ詳細
@@ -146,5 +196,21 @@ GitHub Actions による自動化：
 
 ---
 
-**開発状況**: フロントエンド結果画面実装完了、バックエンドAPI開発中
-**次期対応**: 診断フロー実装、LLM統合、エンドツーエンド結合
+## Phase 6 完了状況
+
+**✅ 完了項目**
+- 包括的ロギング・メトリクス収集
+- レスポンシブデザイン・モバイル最適化（360px+対応）
+- モーション配慮設計（prefers-reduced-motion）
+- パフォーマンス監視・遅延追跡
+- セキュリティ強化（入力検証・レート制限・セッション保護）
+- パフォーマンス最適化（Next.js設定・バンドル最適化）
+
+**🔄 継続監視項目**
+- パフォーマンス目標達成状況
+- セキュリティイベント監視
+- アクセシビリティ準拠継続
+- テストカバレッジ維持
+
+**品質レベル**: Production Ready
+**次期フェーズ**: LLM統合・本格運用準備

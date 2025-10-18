@@ -31,7 +31,11 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- [ ] **Spec-First Delivery**: `specs/[###]/spec.md` と `clarification-results.md` が同期しており、優先順位付きユーザーストーリーと受け入れ条件が揃っている。
+- [ ] **Session Ephemerality & Data Minimalism**: 設計においてセッション終了後のデータ破棄と再診断時の完全初期化が担保されている。
+- [ ] **Resilient AI Operations**: LLM 呼び出しの再試行・フォールバック・検証ロジックが計画され、観測項目が明示されている。
+- [ ] **Performance & Responsiveness Guarantees**: p95 指標（結果画面 <500ms、診断全体 <4.5s）やアニメーション仕様を満たす設計と計測手段が存在する。
+- [ ] **Test & Observability Discipline**: pytest/Jest/Playwright を含むテスト戦略と主要メトリクスの収集計画が `plan.md` に記載されている。
 
 ## Project Structure
 

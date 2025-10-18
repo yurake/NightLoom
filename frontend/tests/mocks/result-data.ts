@@ -4,7 +4,7 @@
  * テストで使用するモックデータを提供します。
  */
 
-import type { ResultData } from '@/types/result';
+import type { ResultData } from '../../app/types/result';
 
 /**
  * 基本的な2軸結果のモックデータ
@@ -31,12 +31,12 @@ export const mockResult2Axes: ResultData = {
     }
   ],
   type: {
-    name: 'Logical Thinker',
+    name: 'Logic Thinker',
     description: '論理的思考を重視し、個人での内省を好む傾向があります。',
-    dominantAxes: ['axis_1', 'axis_2'],
+    dominantAxes: ['axis_1', 'axis_2'] as [string, string],
     polarity: 'Hi-Lo'
   },
-  completedAt: '2025-10-14T13:15:00Z'
+  completedAt: '2025-10-14T13:15:00.000Z'
 };
 
 /**
@@ -96,12 +96,12 @@ export const mockResult6Axes: ResultData = {
     }
   ],
   type: {
-    name: 'Creative Explorer',
+    name: 'Explorer',
     description: '創造性と探索心を兼ね備え、新しい挑戦を好む傾向があります。',
-    dominantAxes: ['axis_1', 'axis_6'],
+    dominantAxes: ['axis_1', 'axis_6'] as [string, string],
     polarity: 'Hi-Lo'
   },
-  completedAt: '2025-10-14T13:16:00Z'
+  completedAt: '2025-10-14T13:16:00.000Z'
 };
 
 /**

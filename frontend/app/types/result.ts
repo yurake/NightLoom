@@ -7,6 +7,8 @@
 
 // ===== Core Data Types =====
 
+import type { TypeProfile } from './session';
+
 /**
  * 診断結果データ
  * セッション完了後の全結果情報を含む最上位エンティティ
@@ -29,6 +31,9 @@ export interface ResultData {
   
   /** UIテーマ識別子（将来拡張） */
   themeId?: ThemeId;
+  
+  /** フォールバック履歴（任意） */
+  fallbackFlags?: string[];
 }
 
 /**
@@ -37,16 +42,19 @@ export interface ResultData {
  */
 export interface AxisScore {
   /** 軸識別子（axis_1, axis_2, ...） */
-  id: string;
+  id?: string;
+  
+  /** 旧スキーマ軸識別子 */
+  axisId?: string;
   
   /** 軸名称（日本語） */
-  name: string;
+  name?: string;
   
   /** 軸の詳細説明 */
-  description: string;
+  description?: string;
   
   /** 方向性表示（例：「論理的 ⟷ 感情的」） */
-  direction: string;
+  direction?: string;
   
   /** 正規化後スコア（0-100、小数第1位まで） */
   score: number;
@@ -61,16 +69,22 @@ export interface AxisScore {
  */
 export interface TypeResult {
   /** タイプ名（英語1-2語、最大14文字） */
-  name: string;
+  name?: string;
   
   /** タイプ説明（50文字以内） */
-  description: string;
+  description?: string;
   
-  /** 主軸ID配列（2要素固定） */
-  dominantAxes: [string, string];
+  /** 主軸ID配列 */
+  dominantAxes: string[];
   
   /** 極性パターン（主軸2つの高低組み合わせ） */
-  polarity: PolarityPattern;
+  polarity?: PolarityPattern;
+  
+  /** タイププロファイル配列（優先度付き） */
+  profiles?: TypeProfile[];
+  
+  /** フォールバック使用フラグ */
+  fallbackUsed?: boolean;
 }
 
 /**
@@ -196,19 +210,30 @@ export const isResultData = (obj: unknown): obj is ResultData => {
   
   const result = obj as ResultData;
   
+  const checks = {
+    sessionId: typeof result.sessionId === 'string',
+    sessionIdPattern: typeof result.sessionId === 'string' && SESSION_ID_PATTERN.test(result.sessionId),
+    keyword: typeof result.keyword === 'string',
+    keywordLength: typeof result.keyword === 'string' && result.keyword.length >= 1 && result.keyword.length <= 20,
+    axesArray: Array.isArray(result.axes),
+    axesLength: Array.isArray(result.axes) && result.axes.length >= 2 && result.axes.length <= 6,
+    axesEvery: Array.isArray(result.axes) && result.axes.every(isAxisScore),
+    typeResult: isTypeResult(result.type),
+    completedAt: typeof result.completedAt === 'string',
+    isoDate: typeof result.completedAt === 'string' && isValidISODate(result.completedAt)
+  };
+  
   return (
-    typeof result.sessionId === 'string' &&
-    SESSION_ID_PATTERN.test(result.sessionId) &&
-    typeof result.keyword === 'string' &&
-    result.keyword.length >= 1 &&
-    result.keyword.length <= 20 &&
-    Array.isArray(result.axes) &&
-    result.axes.length >= 2 &&
-    result.axes.length <= 6 &&
-    result.axes.every(isAxisScore) &&
-    isTypeResult(result.type) &&
-    typeof result.completedAt === 'string' &&
-    isValidISODate(result.completedAt)
+    checks.sessionId &&
+    checks.sessionIdPattern &&
+    checks.keyword &&
+    checks.keywordLength &&
+    checks.axesArray &&
+    checks.axesLength &&
+    checks.axesEvery &&
+    checks.typeResult &&
+    checks.completedAt &&
+    checks.isoDate
   );
 };
 
@@ -219,25 +244,17 @@ export const isAxisScore = (obj: unknown): obj is AxisScore => {
   if (!obj || typeof obj !== 'object') return false;
   
   const axis = obj as AxisScore;
+  const id = axis.id ?? axis.axisId;
   
-  return (
-    typeof axis.id === 'string' &&
-    AXIS_ID_PATTERN.test(axis.id) &&
-    typeof axis.name === 'string' &&
-    axis.name.length >= 1 &&
-    axis.name.length <= 20 &&
-    typeof axis.description === 'string' &&
-    axis.description.length >= 1 &&
-    axis.description.length <= 100 &&
-    typeof axis.direction === 'string' &&
-    DIRECTION_PATTERN.test(axis.direction) &&
-    typeof axis.score === 'number' &&
-    axis.score >= 0 &&
-    axis.score <= 100 &&
-    typeof axis.rawScore === 'number' &&
-    axis.rawScore >= -5.0 &&
-    axis.rawScore <= 5.0
-  );
+  const idValid = typeof id === 'string' && id.length > 0;
+  const scoreValid = typeof axis.score === 'number' && axis.score >= 0 && axis.score <= 100;
+  const rawScoreValid = typeof axis.rawScore === 'number' && axis.rawScore >= -5.0 && axis.rawScore <= 5.0;
+  
+  const nameValid = axis.name === undefined || (typeof axis.name === 'string' && axis.name.length >= 1 && axis.name.length <= 20);
+  const descriptionValid = axis.description === undefined || (typeof axis.description === 'string' && axis.description.length <= 120);
+  const directionValid = axis.direction === undefined || (typeof axis.direction === 'string' && DIRECTION_PATTERN.test(axis.direction));
+  
+  return idValid && scoreValid && rawScoreValid && nameValid && descriptionValid && directionValid;
 };
 
 /**
@@ -248,19 +265,15 @@ export const isTypeResult = (obj: unknown): obj is TypeResult => {
   
   const type = obj as TypeResult;
   
-  return (
-    typeof type.name === 'string' &&
-    type.name.length >= 1 &&
-    type.name.length <= 14 &&
-    TYPE_NAME_PATTERN.test(type.name) &&
-    typeof type.description === 'string' &&
-    type.description.length >= 1 &&
-    type.description.length <= 50 &&
-    Array.isArray(type.dominantAxes) &&
-    type.dominantAxes.length === 2 &&
-    type.dominantAxes.every(id => typeof id === 'string' && AXIS_ID_PATTERN.test(id)) &&
-    isPolarityPattern(type.polarity)
-  );
+  const checks = {
+    name: type.name === undefined || (typeof type.name === 'string' && type.name.length >= 1 && type.name.length <= 32 && TYPE_NAME_PATTERN.test(type.name)),
+    description: type.description === undefined || (typeof type.description === 'string' && type.description.length >= 1 && type.description.length <= 200),
+    dominantAxesArray: Array.isArray(type.dominantAxes) && type.dominantAxes.length >= 1 && type.dominantAxes.every(id => typeof id === 'string' && AXIS_ID_PATTERN.test(id)),
+    polarity: type.polarity === undefined || isPolarityPattern(type.polarity),
+    profiles: type.profiles === undefined || (Array.isArray(type.profiles) && type.profiles.every(profile => typeof profile === 'object'))
+  };
+  
+  return checks.name && checks.description && checks.dominantAxesArray && checks.polarity && checks.profiles;
 };
 
 /**
@@ -363,12 +376,12 @@ export const mockResult2Axes: ResultData = {
     }
   ],
   type: {
-    name: 'Logical Thinker',
+    name: 'Logic Thinker',
     description: '論理的思考を重視し、個人での内省を好む傾向があります。',
-    dominantAxes: ['axis_1', 'axis_2'],
+    dominantAxes: ['axis_1', 'axis_2'] as [string, string],
     polarity: 'Hi-Lo'
   },
-  completedAt: '2025-10-14T13:15:00Z'
+  completedAt: '2025-10-14T13:15:00.000Z'
 };
 
 /**
@@ -428,10 +441,10 @@ export const mockResult6Axes: ResultData = {
     }
   ],
   type: {
-    name: 'Creative Explorer',
+    name: 'Explorer',
     description: '創造性と探索心を兼ね備え、新しい挑戦を好む傾向があります。',
-    dominantAxes: ['axis_1', 'axis_6'],
+    dominantAxes: ['axis_1', 'axis_6'] as [string, string],
     polarity: 'Hi-Lo'
   },
-  completedAt: '2025-10-14T13:16:00Z'
+  completedAt: '2025-10-14T13:16:00.000Z'
 };

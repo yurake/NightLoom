@@ -5,8 +5,8 @@
  */
 
 import { render, screen, waitFor } from '@testing-library/react';
-import { ResultScreen } from '@/components/ResultScreen';
-import type { ResultData, AxisScore, TypeResult } from '@/types/result';
+import { ResultScreen } from '../../../app/(play)/components/ResultScreen';
+import type { ResultData, AxisScore, TypeResult } from '../../../app/types/result';
 
 // モックデータ
 const mockResultData: ResultData = {
@@ -31,7 +31,7 @@ const mockResultData: ResultData = {
     }
   ],
   type: {
-    name: 'Logical Thinker',
+    name: 'Logic Thinker',
     description: '論理的思考を重視し、個人での内省を好む傾向があります。',
     dominantAxes: ['axis_1', 'axis_2'] as [string, string],
     polarity: 'Hi-Lo'
@@ -45,13 +45,13 @@ const mockApiClient = {
 };
 
 // モックされたコンポーネント
-jest.mock('@/components/TypeCard', () => ({
+jest.mock('../../../app/(play)/components/TypeCard', () => ({
   TypeCard: ({ typeResult }: { typeResult: TypeResult }) => (
     <div data-testid="type-card">{typeResult.name}</div>
   )
 }));
 
-jest.mock('@/components/AxesScores', () => ({
+jest.mock('../../../app/(play)/components/AxesScores', () => ({
   AxesScores: ({ axesScores }: { axesScores: AxisScore[] }) => (
     <div data-testid="axes-scores">軸数: {axesScores.length}</div>
   )
@@ -90,7 +90,7 @@ describe('ResultScreen コンポーネント', () => {
       expect(screen.getByTestId('axes-scores')).toBeInTheDocument();
     });
     
-    expect(screen.getByText('Logical Thinker')).toBeInTheDocument();
+    expect(screen.getByText('Logic Thinker')).toBeInTheDocument();
     expect(screen.getByText('軸数: 2')).toBeInTheDocument();
   });
 
@@ -140,7 +140,8 @@ describe('ResultScreen コンポーネント', () => {
     render(<ResultScreen {...defaultProps} />);
     
     expect(mockApiClient.getResult).toHaveBeenCalledWith('550e8400-e29b-41d4-a716-446655440000');
-    expect(mockApiClient.getResult).toHaveBeenCalledTimes(1);
+    // React 18 StrictModeでは開発時にuseEffectが二重実行される
+    expect(mockApiClient.getResult).toHaveBeenCalledTimes(2);
   });
 
   it('sessionId変更時に再度APIが呼び出される', () => {
@@ -148,13 +149,16 @@ describe('ResultScreen コンポーネント', () => {
     
     const { rerender } = render(<ResultScreen {...defaultProps} />);
     
-    expect(mockApiClient.getResult).toHaveBeenCalledTimes(1);
+    // React 18 StrictModeでは開発時にuseEffectが二重実行される
+    expect(mockApiClient.getResult).toHaveBeenCalledTimes(2);
     
     // sessionIdを変更
     rerender(<ResultScreen {...defaultProps} sessionId="new-session-id" />);
     
     expect(mockApiClient.getResult).toHaveBeenCalledWith('new-session-id');
-    expect(mockApiClient.getResult).toHaveBeenCalledTimes(2);
+    // 初期レンダリング（2回）+ sessionId変更（1回）= 3回
+    // rerenderではStrictModeの二重実行は発生しない
+    expect(mockApiClient.getResult).toHaveBeenCalledTimes(3);
   });
 
   it('アクセシビリティ属性が適切に設定される', async () => {

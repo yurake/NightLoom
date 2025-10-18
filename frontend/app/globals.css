@@ -14,5 +14,159 @@ body {
   background-image: var(--background-image, none);
   color: var(--color-text);
   min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height for mobile browsers */
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* Improve text rendering on mobile */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Prevent zoom on input focus on iOS */
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Mobile-specific optimizations */
+@media (max-width: 640px) {
+  body {
+    /* Ensure proper spacing on mobile devices with notches */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* Responsive typography improvements */
+@layer base {
+  h1 {
+    @apply text-xl xs:text-2xl sm:text-3xl;
+  }
+  
+  h2 {
+    @apply text-lg xs:text-xl sm:text-2xl;
+  }
+  
+  h3 {
+    @apply text-base xs:text-lg sm:text-xl;
+  }
+  
+  /* Ensure minimum touch target sizes on mobile (44px minimum) */
+  @media (max-width: 640px) {
+    button, a, input, select, textarea {
+      min-height: 44px;
+    }
+    
+    button {
+      min-width: 44px;
+    }
+  }
+}
+
+/* Custom utilities for mobile optimization */
+@layer utilities {
+  .container-mobile {
+    @apply px-4 xs:px-6 sm:px-8;
+  }
+  
+  .text-mobile-body {
+    @apply text-sm xs:text-base;
+  }
+  
+  .spacing-mobile {
+    @apply space-y-4 xs:space-y-6 sm:space-y-8;
+  }
+  
+  /* Safe area utilities */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .pl-safe {
+    padding-left: env(safe-area-inset-left);
+  }
+  
+  .pr-safe {
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* Enhanced Animation preferences for T055 */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  /* Disable specific animations that might cause motion sensitivity */
+  .animate-spin {
+    animation: none !important;
+  }
+  
+  .animate-pulse {
+    animation: none !important;
+  }
+  
+  .animate-bounce {
+    animation: none !important;
+  }
+  
+  /* Progress bar animations should still show final state */
+  [role="progressbar"] * {
+    transition: none !important;
+    animation: none !important;
+  }
+  
+  /* Gradient animations */
+  .bg-gradient-to-r,
+  .bg-gradient-to-br,
+  .bg-gradient-to-l,
+  .bg-gradient-to-t,
+  .bg-gradient-to-b {
+    background-attachment: fixed;
+  }
+}
+
+/* Respect user's motion preferences with custom utilities */
+@layer utilities {
+  .motion-safe\:animate-spin {
+    animation: none;
+  }
+  
+  @media (prefers-reduced-motion: no-preference) {
+    .motion-safe\:animate-spin {
+      animation: spin 1s linear infinite;
+    }
+  }
+  
+  .motion-safe\:transition-all {
+    transition: none;
+  }
+  
+  @media (prefers-reduced-motion: no-preference) {
+    .motion-safe\:transition-all {
+      transition: all 0.3s ease;
+    }
+  }
+  
+  .motion-safe\:duration-1000 {
+    transition-duration: 0ms;
+  }
+  
+  @media (prefers-reduced-motion: no-preference) {
+    .motion-safe\:duration-1000 {
+      transition-duration: 1000ms;
+    }
+  }
+  
+  .motion-safe\:ease-out {
+    transition-timing-function: linear;
+  }
+  
+  @media (prefers-reduced-motion: no-preference) {
+    .motion-safe\:ease-out {
+      transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
+    }
+  }
 }
