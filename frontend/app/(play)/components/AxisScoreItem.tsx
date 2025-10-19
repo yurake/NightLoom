@@ -14,12 +14,52 @@ import type { AxisScore } from '@/types/result';
 export type { AxisScore };
 
 export interface AxisScoreItemProps {
-  /** 軸スコアデータ */
+  /**
+   * 軸スコアデータ
+   * @description 個別の評価軸のスコア情報（ID、名前、説明、方向性、スコア値）
+   */
   axisScore: AxisScore;
 }
 
 /**
  * AxisScoreItem コンポーネント
+ *
+ * @description 個別の軸スコアを視覚化するアイテムコンポーネント
+ *
+ * @features
+ * - プログレスバーによるスコア可視化（0-100%）
+ * - 1秒間のスムーズアニメーション（100ms遅延、ease-out）
+ * - 軸名・方向性・スコア数値の表示
+ * - レスポンシブデザイン（360px-1920px対応）
+ * - prefers-reduced-motion 対応（モーション無効化）
+ *
+ * @accessibility
+ * - ARIA progressbar 属性による適切なスクリーンリーダー対応
+ * - aria-label, aria-valuenow, aria-valuemin, aria-valuemax
+ * - live region による動的更新の通知
+ * - 詳細なスコア情報の提供（生スコア、正規化スコア）
+ *
+ * @animation
+ * - CSS transition: 1s ease-out
+ * - 100ms 遅延後のアニメーション開始
+ * - prefers-reduced-motion: reduce 時の即座表示
+ *
+ * @example
+ * ```tsx
+ * const axisData = {
+ *   id: "axis_1",
+ *   name: "論理性",
+ *   description: "論理的思考の傾向",
+ *   direction: "論理的 ← → 感情的",
+ *   score: 75.5,
+ *   rawScore: 2.1
+ * };
+ *
+ * <AxisScoreItem axisScore={axisData} />
+ * ```
+ *
+ * @param props - AxisScoreItemProps
+ * @returns JSX要素
  */
 export const AxisScoreItem: React.FC<AxisScoreItemProps> = ({ axisScore }) => {
   const [animatedWidth, setAnimatedWidth] = useState(0);

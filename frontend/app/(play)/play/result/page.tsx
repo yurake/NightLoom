@@ -5,12 +5,14 @@
 
 'use client';
 
-import React, { Suspense, useState, useEffect, useCallback } from 'react';
+import React, { Suspense, useState, useEffect, useCallback, lazy } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from '../../../state/SessionContext';
 import { useTheme } from '../../../theme/ThemeProvider';
-import { ResultScreen } from '../../components/ResultScreen';
 import type { ResultData } from '@/types/result';
+
+// Dynamic import for code splitting
+const ResultScreen = lazy(() => import('../../components/ResultScreen'));
 
 const LoadingFallback: React.FC = () => (
   <main
@@ -206,12 +208,14 @@ function ResultPageContent() {
 
   return (
     <div className="result-page min-h-screen bg-surface" data-testid="result-container">
-      <ResultScreen
-        sessionId={resultData.sessionId}
-        apiClient={{
-          getResult: async () => resultData
-        }}
-      />
+      <Suspense fallback={<LoadingFallback />}>
+        <ResultScreen
+          sessionId={resultData.sessionId}
+          apiClient={{
+            getResult: async () => resultData
+          }}
+        />
+      </Suspense>
     </div>
   );
 }

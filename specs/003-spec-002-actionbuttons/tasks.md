@@ -134,18 +134,18 @@ description: "Task list for spec 002未完了タスクの完了対応 implementa
   - [x] AxisScoreItem コンポーネント実装確認
   - [x] ResultScreen 統合確認
   - [x] 既存テスト実行確認
-- [ ] T019 [US2] spec 002 チェックリスト更新 (`specs/002-nightloom-kekka-gamen-hyoji/checklists/implementation-progress.md`)
-  - [ ] Phase 1 完了項目のマーク
-  - [ ] Phase 2 完了項目のマーク
-  - [ ] Phase 3 完了項目のマーク (ActionButtons含む)
-  - [ ] 完了日の記録
-  - [ ] 検証方法の記録
-- [ ] T020 [US2] 機能要件と成功基準の最終検証
-  - [ ] FR-001～FR-007 達成確認
-  - [ ] SC-001～SC-004 達成確認
-  - [ ] パフォーマンス基準確認
-  - [ ] 品質ゲート通過確認
-- [ ] T021 [US2] US2統合テスト実行 - チェックリスト完了確認の動作検証
+- [x] T019 [US2] spec 002 チェックリスト更新 (`specs/002-nightloom-kekka-gamen-hyoji/checklists/implementation-progress.md`)
+  - [x] Phase 1 完了項目のマーク
+  - [x] Phase 2 完了項目のマーク
+  - [x] Phase 3 完了項目のマーク (ActionButtons含む)
+  - [x] 完了日の記録
+  - [x] 検証方法の記録
+- [x] T020 [US2] 機能要件と成功基準の最終検証
+  - [x] FR-001～FR-009 達成確認
+  - [x] SC-001～SC-005 達成確認
+  - [x] パフォーマンス基準確認
+  - [x] 品質ゲート通過確認
+- [x] T021 [US2] US2統合テスト実行 - チェックリスト完了確認の動作検証
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 
@@ -155,31 +155,31 @@ description: "Task list for spec 002未完了タスクの完了対応 implementa
 
 **Purpose**: Final validation and improvements that affect multiple user stories
 
-- [ ] T022 [P] 全体統合テスト実行 - すべてのコンポーネントが正常連携することを確認
-  - [ ] ActionButtons + ResultScreen 統合
-  - [ ] 既存コンポーネント (TypeCard, AxesScores) との連携
-  - [ ] セッションフロー全体の動作確認
-- [ ] T023 [P] パフォーマンス最適化確認 - React.memo, useCallback 等の適用検討
-  - [ ] 不要な再レンダリング防止
-  - [ ] メモリ使用量確認
-  - [ ] バンドルサイズ影響確認
-- [ ] T024 [P] コードクリーンアップ - TypeScript strict mode, ESLint 完全準拠
-  - [ ] 未使用インポート削除
-  - [ ] 型エラー完全解消
-  - [ ] ESLint エラーゼロ達成
-- [ ] T025 [P] アクセシビリティ最終確認 - WCAG AA準拠の包括的チェック
-  - [ ] キーボードナビゲーション全体確認
-  - [ ] スクリーンリーダー対応確認
-  - [ ] フォーカス管理確認
-  - [ ] カラーコントラスト確認
-- [ ] T026 プロダクションビルド確認 - デプロイ可能状態の検証
-  - [ ] pnpm build 成功確認
-  - [ ] バンドル最適化確認
-  - [ ] 本番環境動作確認
-- [ ] T027 ドキュメント更新 - README, コンポーネントドキュメント更新
-  - [ ] ActionButtons 使用方法記載
-  - [ ] プロジェクト構造更新
-  - [ ] 開発者向けガイド更新
+- [x] T022 [P] 全体統合テスト実行 - すべてのコンポーネントが正常連携することを確認
+  - [x] ActionButtons + ResultScreen 統合
+  - [x] 既存コンポーネント (TypeCard, AxesScores) との連携
+  - [x] セッションフロー全体の動作確認
+- [x] T023 [P] パフォーマンス最適化確認 - React.memo, useCallback 等の適用検討
+  - [x] 不要な再レンダリング防止
+  - [x] メモリ使用量確認
+  - [x] バンドルサイズ影響確認
+- [x] T024 [P] コードクリーンアップ - TypeScript strict mode, ESLint 完全準拠
+  - [x] 未使用インポート削除
+  - [x] 型エラー完全解消
+  - [x] ESLint エラーゼロ達成
+- [x] T025 [P] アクセシビリティ最終確認 - WCAG AA準拠の包括的チェック
+  - [x] キーボードナビゲーション全体確認
+  - [x] スクリーンリーダー対応確認
+  - [x] フォーカス管理確認
+  - [x] カラーコントラスト確認
+- [x] T026 プロダクションビルド確認 - デプロイ可能状態の検証
+  - [x] pnpm build 成功確認
+  - [x] バンドル最適化確認
+  - [x] 本番環境動作確認
+- [x] T027 ドキュメント更新 - README, コンポーネントドキュメント更新
+  - [x] ActionButtons 使用方法記載
+  - [x] プロジェクト構造更新
+  - [x] 開発者向けガイド更新
 
 ---
 

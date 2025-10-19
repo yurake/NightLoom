@@ -11,12 +11,57 @@ import React from 'react';
 import { AxisScoreItem, type AxisScore } from './AxisScoreItem';
 
 export interface AxesScoresProps {
-  /** 軸スコア配列データ */
+  /**
+   * 軸スコア配列データ
+   * @description 複数の評価軸スコアの配列（2-6軸対応）
+   */
   axesScores: AxisScore[];
 }
 
 /**
  * AxesScores コンポーネント
+ *
+ * @description 複数の軸スコアを一覧表示するコンテナコンポーネント
+ *
+ * @features
+ * - 2-6軸の動的レンダリング対応
+ * - レスポンシブグリッドレイアウト（軸数に応じて自動調整）
+ * - AxisScoreItemコンポーネントの統合表示
+ * - 空状態の適切な表示
+ * - アクセシビリティ対応のセクション構造
+ *
+ * @layout
+ * - モバイル（360px-）: 1列表示
+ * - タブレット（640px-）: 2列表示
+ * - デスクトップ（1024px-）: 軸数に応じて2-3列表示
+ *
+ * @accessibility
+ * - region role による意味的なセクション定義
+ * - 軸数の明示的な表示とaria-label
+ * - 空状態の視覚的・音声的フィードバック
+ *
+ * @example
+ * ```tsx
+ * const axesData = [
+ *   {
+ *     id: "axis_1",
+ *     name: "論理性",
+ *     score: 75.5,
+ *     // ... other properties
+ *   },
+ *   {
+ *     id: "axis_2",
+ *     name: "社交性",
+ *     score: 42.3,
+ *     // ... other properties
+ *   }
+ * ];
+ *
+ * <AxesScores axesScores={axesData} />
+ * ```
+ *
+ * @param props - AxesScoresProps
+ * @returns JSX要素
  */
 export const AxesScores: React.FC<AxesScoresProps> = ({ axesScores }) => {
   // モバイル対応のグリッドレイアウトの決定

@@ -57,6 +57,27 @@ jest.mock('../../../app/(play)/components/AxesScores', () => ({
   )
 }));
 
+// ActionButtonsコンポーネントのモック
+jest.mock('../../../app/(play)/components/ActionButtons', () => ({
+  ActionButtons: ({ onRestart, isLoading, isDisabled, ariaDescribedBy }: any) => (
+    <div
+      data-testid="action-buttons"
+      data-loading={isLoading}
+      data-disabled={isDisabled}
+      aria-describedby={ariaDescribedBy}
+    >
+      <button
+        data-testid="restart-button"
+        onClick={onRestart}
+        disabled={isLoading || isDisabled}
+        aria-label="もう一度診断する"
+      >
+        {isLoading ? '処理中...' : 'もう一度診断する'}
+      </button>
+    </div>
+  )
+}));
+
 describe('ResultScreen コンポーネント', () => {
   const defaultProps = {
     sessionId: '550e8400-e29b-41d4-a716-446655440000',
@@ -88,6 +109,7 @@ describe('ResultScreen コンポーネント', () => {
     await waitFor(() => {
       expect(screen.getByTestId('type-card')).toBeInTheDocument();
       expect(screen.getByTestId('axes-scores')).toBeInTheDocument();
+      expect(screen.getByTestId('action-buttons')).toBeInTheDocument();
     });
     
     expect(screen.getByText('Logic Thinker')).toBeInTheDocument();
@@ -195,6 +217,117 @@ describe('ResultScreen コンポーネント', () => {
       
       await waitFor(() => {
         expect(screen.getByText('ネットワークエラーが発生しました')).toBeInTheDocument();
+      });
+    });
+  
+    describe('ActionButtons統合テスト', () => {
+      it('結果表示時にActionButtonsコンポーネントが表示される', async () => {
+        mockApiClient.getResult.mockResolvedValue(mockResultData);
+        
+        render(<ResultScreen {...defaultProps} />);
+        
+        await waitFor(() => {
+          const actionButtons = screen.getByTestId('action-buttons');
+          expect(actionButtons).toBeInTheDocument();
+          
+          // ActionButtonsがローディング状態でないことを確認
+          expect(actionButtons).toHaveAttribute('data-loading', 'false');
+          expect(actionButtons).toHaveAttribute('data-disabled', 'false');
+        });
+      });
+  
+      it('ローディング状態でActionButtonsが無効化される', () => {
+        mockApiClient.getResult.mockImplementation(() => new Promise(() => {})); // 永続的にpending
+        
+        render(<ResultScreen {...defaultProps} />);
+        
+        // ローディング中にActionButtonsは表示されない（結果表示時のみ表示）
+        expect(screen.queryByTestId('action-buttons')).not.toBeInTheDocument();
+      });
+  
+      it('エラー状態でActionButtonsが無効化される', async () => {
+        const mockError = new Error('API Error');
+        mockApiClient.getResult.mockRejectedValue(mockError);
+        
+        render(<ResultScreen {...defaultProps} />);
+        
+        await waitFor(() => {
+          expect(screen.getByTestId('error-message')).toBeInTheDocument();
+        });
+        
+        // エラー時にActionButtonsは表示されない（結果表示時のみ表示）
+        expect(screen.queryByTestId('action-buttons')).not.toBeInTheDocument();
+      });
+  
+      it('ActionButtonsのonRestartコールバックが正しく設定される', async () => {
+        mockApiClient.getResult.mockResolvedValue(mockResultData);
+        
+        // window.location.hrefの変更を監視
+        const originalHref = window.location.href;
+        const mockAssign = jest.fn();
+        
+        // locationオブジェクトの一部をモック化
+        delete (window as any).location;
+        (window as any).location = {
+          href: originalHref,
+          assign: mockAssign
+        };
+        
+        render(<ResultScreen {...defaultProps} />);
+        
+        await waitFor(() => {
+          const restartButton = screen.getByTestId('restart-button');
+          expect(restartButton).toBeInTheDocument();
+        });
+        
+        // ボタンクリック
+        const restartButton = screen.getByTestId('restart-button');
+        restartButton.click();
+        
+        // リダイレクトが実行されることを確認（JSDOMでは完全URLになる）
+        expect(window.location.href).toBe('http://localhost:3000/');
+      });
+  
+      it('ActionButtonsにaria-describedbyが適切に設定される', async () => {
+        mockApiClient.getResult.mockResolvedValue(mockResultData);
+        
+        render(<ResultScreen {...defaultProps} />);
+        
+        await waitFor(() => {
+          const actionButtons = screen.getByTestId('action-buttons');
+          expect(actionButtons).toHaveAttribute('aria-describedby', 'restart-help');
+        });
+        
+        // ヘルプテキストが存在することを確認
+        expect(screen.getByText('新しい診断セッションを開始します')).toBeInTheDocument();
+      });
+  
+      it('ActionButtonsの統合後も既存の機能が正常動作する', async () => {
+        mockApiClient.getResult.mockResolvedValue(mockResultData);
+        
+        render(<ResultScreen {...defaultProps} />);
+        
+        // 結果表示の確認
+        await waitFor(() => {
+          expect(screen.getByTestId('type-card')).toBeInTheDocument();
+          expect(screen.getByTestId('axes-scores')).toBeInTheDocument();
+          expect(screen.getByTestId('action-buttons')).toBeInTheDocument();
+        });
+        
+        // 各セクションが適切に表示されることを確認
+        expect(screen.getByText('あなたの診断結果')).toBeInTheDocument();
+        expect(screen.getByText('パーソナリティ分析が完了しました')).toBeInTheDocument();
+        expect(screen.getByText('診断キーワード: アート')).toBeInTheDocument();
+        
+        // ActionButtonsが正しい状態で表示される
+        const actionButtons = screen.getByTestId('action-buttons');
+        expect(actionButtons).toHaveAttribute('data-loading', 'false');
+        expect(actionButtons).toHaveAttribute('data-disabled', 'false');
+        
+        // 再診断ボタンが有効であることを確認
+        const restartButton = screen.getByTestId('restart-button');
+        expect(restartButton).not.toBeDisabled();
+        expect(restartButton).toHaveTextContent('もう一度診断する');
       });
     });
   });
