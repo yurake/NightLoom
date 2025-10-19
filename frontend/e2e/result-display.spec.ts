@@ -1,8 +1,9 @@
 
 /**
- * E2E Tests for Spec 002 - NightLoom結果画面表示機能
- * 
- * T038-T044 対応の包括的E2Eテストスイート
+ * E2E Tests for Result Display Feature - NightLoom結果画面表示機能
+ *
+ * 詳細な結果画面表示機能のE2Eテストスイート
+ * T038-T044 対応の包括的テスト（Spec 002実装）
  */
 
 import { test, expect } from '@playwright/test';
@@ -39,7 +40,7 @@ const mockApiResponse = {
   completedAt: new Date().toISOString()
 };
 
-test.describe('Spec 002: 結果画面表示機能', () => {
+test.describe('Result Display Feature: 結果画面表示機能', () => {
   test.beforeEach(async ({ page }) => {
     // API レスポンスのモック
     await page.route(`**/api/sessions/${mockSessionId}/result`, async route => {
