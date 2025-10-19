@@ -5,11 +5,12 @@
  */
 
 import { render, screen } from '@testing-library/react';
-import { TypeCard, type TypeResult } from '@/components/TypeCard';
+import { TypeCard } from '../../../app/(play)/components/TypeCard';
+import { type TypeResult } from '../../../app/types/result';
 
 describe('TypeCard コンポーネント', () => {
   const mockTypeResult: TypeResult = {
-    name: 'Logical Thinker',
+    name: 'Logic Thinker',
     description: '論理的思考を重視し、個人での内省を好む傾向があります。',
     dominantAxes: ['axis_1', 'axis_2'] as [string, string],
     polarity: 'Hi-Lo'
@@ -18,7 +19,7 @@ describe('TypeCard コンポーネント', () => {
   it('タイプ名が正しく表示される', () => {
     render(<TypeCard typeResult={mockTypeResult} />);
     
-    expect(screen.getByText('Logical Thinker')).toBeInTheDocument();
+    expect(screen.getByText('Logic Thinker')).toBeInTheDocument();
   });
 
   it('タイプ説明が正しく表示される', () => {
@@ -42,7 +43,8 @@ describe('TypeCard コンポーネント', () => {
 
   it('レスポンシブレイアウトのクラスが適用される', () => {
     const { container } = render(<TypeCard typeResult={mockTypeResult} />);
-    const typeCard = container.firstChild as HTMLElement;
+    const section = container.firstChild as HTMLElement;
+    const typeCard = section.querySelector('article') as HTMLElement;
     
     // Tailwind CSS のレスポンシブクラスが適用されることを確認
     expect(typeCard).toHaveClass('p-4');
@@ -51,7 +53,8 @@ describe('TypeCard コンポーネント', () => {
 
   it('グラデーション背景が適用される', () => {
     const { container } = render(<TypeCard typeResult={mockTypeResult} />);
-    const typeCard = container.firstChild as HTMLElement;
+    const section = container.firstChild as HTMLElement;
+    const typeCard = section.querySelector('article') as HTMLElement;
     
     expect(typeCard).toHaveClass('bg-gradient-to-br');
   });
@@ -60,7 +63,8 @@ describe('TypeCard コンポーネント', () => {
     render(<TypeCard typeResult={mockTypeResult} />);
     
     const typeCard = screen.getByRole('article');
-    expect(typeCard).toHaveAttribute('aria-label', expect.stringContaining('Logical Thinker'));
+    expect(typeCard).toHaveAttribute('aria-labelledby', 'type-name');
+    expect(typeCard).toHaveAttribute('aria-describedby', expect.stringContaining('type-description'));
   });
 
   describe('エッジケース', () => {

@@ -19,30 +19,34 @@ export interface AxesScoresProps {
  * AxesScores コンポーネント
  */
 export const AxesScores: React.FC<AxesScoresProps> = ({ axesScores }) => {
-  // グリッドレイアウトの決定
+  // モバイル対応のグリッドレイアウトの決定
   const getGridClasses = (axesCount: number) => {
     if (axesCount <= 2) {
-      return 'grid-cols-1';
+      return 'grid-cols-1 xs:grid-cols-1 sm:grid-cols-2';
     } else if (axesCount <= 4) {
-      return 'grid-cols-1 md:grid-cols-2';
+      return 'grid-cols-1 xs:grid-cols-1 sm:grid-cols-2 lg:grid-cols-2';
     } else {
-      return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3';
+      return 'grid-cols-1 xs:grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
     }
   };
 
   return (
     <section
-      className="w-full"
+      className="w-full px-2 xs:px-0"
       role="region"
       aria-label={`軸スコア一覧 (${axesScores.length}軸)`}
+      data-testid="axes-section"
     >
       {/* セクションタイトル */}
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">
+      <h2
+        className="text-base xs:text-lg sm:text-xl font-semibold text-gray-900 mb-3 xs:mb-4 sm:mb-6 text-center xs:text-left"
+        data-testid="axes-title"
+      >
         軸スコア ({axesScores.length}軸)
       </h2>
 
       {/* 軸スコア一覧グリッド */}
-      <div className={`grid gap-4 ${getGridClasses(axesScores.length)}`}>
+      <div className={`grid gap-3 xs:gap-4 sm:gap-6 ${getGridClasses(axesScores.length)}`}>
         {axesScores.map((axisScore) => (
           <AxisScoreItem
             key={axisScore.id}
@@ -53,8 +57,13 @@ export const AxesScores: React.FC<AxesScoresProps> = ({ axesScores }) => {
 
       {/* 空状態の表示 */}
       {axesScores.length === 0 && (
-        <div className="text-center text-gray-500 py-8">
-          <p>軸スコアデータがありません</p>
+        <div className="text-center text-gray-500 py-6 xs:py-8 sm:py-12">
+          <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+            <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </div>
+          <p className="text-sm xs:text-base">軸スコアデータがありません</p>
         </div>
       )}
     </section>

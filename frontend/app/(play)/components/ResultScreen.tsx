@@ -1,16 +1,16 @@
+'use client';
+
 /**
  * ResultScreen コンポーネント
- * 
- * 結果画面のメインコンテナコンポーネント
- * - API呼び出しと状態管理
- * - TypeCard + AxesScores の統合表示
- * - ローディング・エラー状態の管理
+ *
+ * 診断結果の表示・エラー処理を司るメインコンテナ。
+ * API から取得した生データを UI コンポーネント向けに整形して渡す。
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { TypeCard, type TypeResult } from './TypeCard';
 import { AxesScores, type AxesScoresProps } from './AxesScores';
-import type { ResultData, AxisScore } from '@/types/result';
+import type { ResultData } from '@/types/result';
 
 // APIクライアントインターフェース
 interface ApiClient {
@@ -24,28 +24,25 @@ export interface ResultScreenProps {
   apiClient: ApiClient;
 }
 
-/**
- * LoadingIndicator コンポーネント
- */
 const LoadingIndicator: React.FC = () => (
-  <div 
+  <div
     className="flex flex-col items-center justify-center py-12"
     data-testid="loading-indicator"
   >
-    <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+    <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full motion-safe:animate-spin mb-4" />
     <p className="text-gray-600">読み込み中...</p>
+    <div className="sr-only" aria-live="polite">
+      診断結果を読み込んでいます
+    </div>
   </div>
 );
 
-/**
- * ErrorMessage コンポーネント
- */
 interface ErrorMessageProps {
   error: any;
 }
 
 const ErrorMessage: React.FC<ErrorMessageProps> = ({ error }) => {
-  const getErrorMessage = (error: any): string => {
+  const getErrorMessage = (): string => {
     if (error?.code === 'SESSION_NOT_FOUND') {
       return 'セッションが見つかりません';
     }
@@ -56,7 +53,6 @@ const ErrorMessage: React.FC<ErrorMessageProps> = ({ error }) => {
       return 'ネットワークエラーが発生しました';
     }
     if (error?.message) {
-      // 一般的なエラーメッセージの場合、より親しみやすいメッセージに変換
       if (error.message === 'API Error') {
         return 'エラーが発生しました';
       }
@@ -66,28 +62,18 @@ const ErrorMessage: React.FC<ErrorMessageProps> = ({ error }) => {
   };
 
   return (
-    <div 
-      className="flex flex-col items-center justify-center py-12 text-center"
-      data-testid="error-message"
-    >
-      <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
-        <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <div className="flex flex-col items-center justify-center py-12 text-center" data-testid="error-message">
+      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+        <svg className="h-8 w-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 19.5c-.77.833.192 2.5 1.732 2.5z" />
         </svg>
       </div>
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">
-        {getErrorMessage(error)}
-      </h3>
-      <p className="text-gray-600">
-        しばらく待ってから再度お試しください
-      </p>
+      <h3 className="mb-2 text-lg font-semibold text-gray-900">{getErrorMessage()}</h3>
+      <p className="text-gray-600">しばらく待ってから再度お試しください</p>
     </div>
   );
 };
 
-/**
- * ResultScreen コンポーネント
- */
 export const ResultScreen: React.FC<ResultScreenProps> = ({ sessionId, apiClient }) => {
   const [result, setResult] = useState<ResultData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -98,12 +84,12 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({ sessionId, apiClient
       try {
         setIsLoading(true);
         setError(null);
-        
+
         const resultData = await apiClient.getResult(sessionId);
         setResult(resultData);
       } catch (err) {
-        setError(err);
         console.error('結果取得エラー:', err);
+        setError(err);
       } finally {
         setIsLoading(false);
       }
@@ -112,30 +98,147 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({ sessionId, apiClient
     fetchResult();
   }, [sessionId, apiClient]);
 
+  const typeCardData: TypeResult | null = useMemo(() => {
+    if (!result?.type) {
+      return null;
+    }
+
+    const { type } = result;
+    const profiles = Array.isArray(type.profiles) ? type.profiles : [];
+    const primaryProfile = profiles.find(profile => profile?.name);
+
+    const name = primaryProfile?.name ?? type.name;
+    if (!name) {
+      return null;
+    }
+
+    const description =
+      primaryProfile?.description ??
+      type.description ??
+      '診断タイプの説明を取得できませんでした。';
+
+    const dominantAxesSource = Array.isArray(primaryProfile?.dominantAxes) && primaryProfile!.dominantAxes.length > 0
+      ? primaryProfile!.dominantAxes
+      : Array.isArray(type.dominantAxes)
+        ? type.dominantAxes
+        : [];
+
+    const safeDominantAxes: string[] = [
+      dominantAxesSource[0] ?? 'axis_1',
+      dominantAxesSource[1] ?? dominantAxesSource[0] ?? 'axis_2'
+    ];
+
+    const polarity = (primaryProfile?.polarity ?? type.polarity ?? 'Mid-Mid') as TypeResult['polarity'];
+
+    return {
+      name,
+      description,
+      dominantAxes: safeDominantAxes,
+      polarity
+    };
+  }, [result]);
+
+  const axesScores: AxesScoresProps['axesScores'] = useMemo(() => {
+    if (!result?.axes) {
+      return [];
+    }
+
+    return result.axes.map((axis, index) => {
+      const fallbackId = `axis_${index + 1}`;
+      const rawId = (axis as any)?.axisId;
+
+      return {
+        id: axis.id ?? rawId ?? fallbackId,
+        name: axis.name ?? axis.id ?? rawId ?? `軸${index + 1}`,
+        description: axis.description ?? '',
+        direction: axis.direction ?? '',
+        score: axis.score ?? 0,
+        rawScore: axis.rawScore ?? 0,
+      };
+    });
+  }, [result]);
+
   return (
     <main
-      className="min-h-screen bg-gray-50 py-8"
+      className="min-h-screen min-h-dvh bg-gray-50 py-4 xs:py-6 sm:py-8 pb-safe"
       role="main"
       aria-label="診断結果画面"
     >
-      <div className="max-w-4xl mx-auto px-4">
+      <div className="container-mobile mx-auto max-w-4xl">
+        <div className="sr-only" role="status" aria-live="polite" data-testid="result-announcement">
+          {result && !isLoading && !error && '診断が完了しました。結果をご確認ください。'}
+        </div>
+
         {isLoading && <LoadingIndicator />}
-        
         {error && <ErrorMessage error={error} />}
-        
+
         {result && !isLoading && !error && (
-          <div className="space-y-8">
-            {/* タイプカード */}
-            <TypeCard typeResult={result.type} />
-            
-            {/* 軸スコア一覧 */}
-            <AxesScores axesScores={result.axes} />
-            
-            {/* 診断情報 */}
-            <div className="text-center text-sm text-gray-500">
-              <p>診断キーワード: {result.keyword}</p>
-              <p>完了日時: {new Date(result.completedAt).toLocaleString('ja-JP')}</p>
-            </div>
+          <div className="spacing-mobile">
+            <header className="mb-6 text-center xs:mb-8">
+              <h1 className="mb-2 text-xl font-bold text-gray-900 xs:text-2xl sm:text-3xl">
+                あなたの診断結果
+              </h1>
+              <p className="text-mobile-body text-gray-600">パーソナリティ分析が完了しました</p>
+            </header>
+
+            <section aria-labelledby="type-section-heading" role="region">
+              <h2 id="type-section-heading" className="sr-only">
+                パーソナリティタイプ
+              </h2>
+              {typeCardData ? (
+                <TypeCard typeResult={typeCardData} />
+              ) : (
+                <div className="rounded-xl border border-gray-200 bg-white p-6 text-center text-gray-600">
+                  タイプ情報を取得できませんでした。後でもう一度お試しください。
+                </div>
+              )}
+            </section>
+
+            <section aria-labelledby="scores-section-heading" role="region">
+              <h2 id="scores-section-heading" className="sr-only">
+                詳細スコア
+              </h2>
+              {axesScores.length > 0 ? (
+                <AxesScores axesScores={axesScores} />
+              ) : (
+                <p className="text-center text-gray-600">スコア情報を取得できませんでした。</p>
+              )}
+            </section>
+
+            <section
+              className="px-2 text-center text-xs text-gray-500 xs:text-sm"
+              aria-labelledby="session-info-heading"
+              role="complementary"
+            >
+              <h2 id="session-info-heading" className="sr-only">
+                診断セッション情報
+              </h2>
+              <dl className="space-y-1">
+                <div>
+                  <dt className="sr-only">診断キーワード</dt>
+                  <dd className="break-words">診断キーワード: {result.keyword}</dd>
+                </div>
+                <div>
+                  <dt className="sr-only">完了日時</dt>
+                  <dd className="break-words">
+                    完了日時: {new Date(result.completedAt).toLocaleString('ja-JP')}
+                  </dd>
+                </div>
+              </dl>
+            </section>
+
+            <section className="mt-8 pb-4 text-center xs:mt-10 sm:mt-12">
+              <button
+                onClick={() => window.location.href = '/'}
+                className="w-full min-h-[44px] rounded-lg bg-blue-600 px-6 py-3 font-medium text-white transition-colors hover:bg-blue-700 active:bg-blue-800 xs:w-auto xs:px-8 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                aria-describedby="restart-help"
+              >
+                もう一度診断する
+              </button>
+              <div id="restart-help" className="sr-only">
+                新しい診断セッションを開始します
+              </div>
+            </section>
           </div>
         )}
       </div>

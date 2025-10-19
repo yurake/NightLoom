@@ -17,5 +17,25 @@ __pycache__/
 *.log
 .cache/
 .pptxgen/
-node_modules
+node_modules/
 test-results/
+
+# Build outputs
+dist/
+build/
+out/
+
+# Environment files
+.env*
+
+# IDE files
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.swp
+*~
+
+# Windows
+Thumbs.db

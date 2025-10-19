@@ -43,9 +43,13 @@ export function validateResultData(data: unknown): { valid: true; data: ResultDa
   });
 
   // タイプの主軸検証
-  const axisIds = new Set(data.axes.map(a => a.id));
+  const axisIds = new Set(
+    data.axes
+      .map(axis => axis.id ?? axis.axisId)
+      .filter((axisId): axisId is string => typeof axisId === 'string' && axisId.length > 0)
+  );
   data.type.dominantAxes.forEach(axisId => {
-    if (!axisIds.has(axisId)) {
+    if (typeof axisId !== 'string' || axisId.length === 0 || !axisIds.has(axisId)) {
       errors.push(`主軸 ${axisId} が軸データに存在しません`);
     }
   });
