@@ -278,9 +278,13 @@ describe('Session Cleanup Utilities', () => {
 
   describe('debugSessionState', () => {
     it('開発環境でデバッグ情報を出力する', () => {
-      // Setup: 開発環境を設定
+      // Setup: 開発環境を設定（Object.definePropertyを使用）
       const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'development';
+      Object.defineProperty(process.env, 'NODE_ENV', {
+        value: 'development',
+        writable: true,
+        configurable: true
+      });
       
       const consoleGroupSpy = jest.spyOn(console, 'group').mockImplementation();
       const consoleGroupEndSpy = jest.spyOn(console, 'groupEnd').mockImplementation();
@@ -295,13 +299,21 @@ describe('Session Cleanup Utilities', () => {
       expect(consoleGroupEndSpy).toHaveBeenCalled();
 
       // Cleanup
-      process.env.NODE_ENV = originalEnv;
+      Object.defineProperty(process.env, 'NODE_ENV', {
+        value: originalEnv,
+        writable: true,
+        configurable: true
+      });
     });
 
     it('本番環境では何も出力しない', () => {
-      // Setup: 本番環境を設定
+      // Setup: 本番環境を設定（Object.definePropertyを使用）
       const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'production';
+      Object.defineProperty(process.env, 'NODE_ENV', {
+        value: 'production',
+        writable: true,
+        configurable: true
+      });
       
       const consoleGroupSpy = jest.spyOn(console, 'group').mockImplementation();
 
@@ -312,7 +324,11 @@ describe('Session Cleanup Utilities', () => {
       expect(consoleGroupSpy).not.toHaveBeenCalled();
 
       // Cleanup
-      process.env.NODE_ENV = originalEnv;
+      Object.defineProperty(process.env, 'NODE_ENV', {
+        value: originalEnv,
+        writable: true,
+        configurable: true
+      });
     });
   });
 });
