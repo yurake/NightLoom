@@ -251,12 +251,12 @@ export const ResultScreenWithMetrics: React.FC<ResultScreenProps> = ({ sessionId
       console.group('🎯 [T004] パフォーマンス基準値設定');
       console.log('📏 設定基準値:');
       console.log('  - 総レンダリング時間: < 1000ms');
-      console.log('  - データフェッチ: < 2000ms'); 
+      console.log('  - データフェッチ: < 2000ms');
       console.log('  - 計算処理: < 100ms');
       console.log('📈 T015での比較時の許容範囲: ±5%');
       console.groupEnd();
     }
-  }, [result, isLoading, error, componentMountTime]);
+  }, [result, isLoading, error, componentMountTime, sessionId]);
 
   // レンダリング全体の測定
   return measureSync('resultscreen_total_render', () => (
