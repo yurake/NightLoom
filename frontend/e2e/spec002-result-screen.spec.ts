@@ -311,4 +311,6 @@ test.describe('Spec 002: 結果画面表示機能', () => {
     const deviation = Math.abs(actualDuration - 1000);
     expect(deviation).toBeLessThan(50);
     
-    console.log(`🎬 Animation Duration: ${actualDuration}ms (target: 1000ms 
+    console.log(`🎬 Animation Duration: ${actualDuration}ms (target: 1000ms ±50ms)`);
+  });
+});
