@@ -13,12 +13,45 @@ import type { TypeResult } from '@/types/result';
 export type { TypeResult };
 
 export interface TypeCardProps {
-  /** タイプ分類結果データ */
+  /**
+   * タイプ分類結果データ
+   * @description 診断結果から得られるパーソナリティタイプの情報
+   */
   typeResult: TypeResult;
 }
 
 /**
  * TypeCard コンポーネント
+ *
+ * @description 診断結果のパーソナリティタイプを表示するカードコンポーネント
+ *
+ * @features
+ * - タイプ名の表示（レスポンシブフォントサイズ対応）
+ * - 極性パターンバッジの表示
+ * - タイプ説明の表示（改行・長文対応）
+ * - 主軸情報の表示（アクセシビリティ対応）
+ * - グラデーション背景による視覚的強調
+ * - 360px-1920px対応のレスポンシブデザイン
+ *
+ * @accessibility
+ * - ARIA labels と role 属性による構造化
+ * - スクリーンリーダー向けの詳細情報
+ * - キーボードナビゲーション対応
+ *
+ * @example
+ * ```tsx
+ * const typeData = {
+ *   name: "探求者タイプ",
+ *   description: "好奇心旺盛で新しいことに挑戦する...",
+ *   dominantAxes: ["axis_1", "axis_3"],
+ *   polarity: "High-Mid"
+ * };
+ *
+ * <TypeCard typeResult={typeData} />
+ * ```
+ *
+ * @param props - TypeCardProps
+ * @returns JSX要素
  */
 export const TypeCard: React.FC<TypeCardProps> = ({ typeResult }) => {
   const typeName = typeResult.name ?? '診断タイプ';

@@ -7,20 +7,10 @@
  * API から取得した生データを UI コンポーネント向けに整形して渡す。
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { TypeCard, type TypeResult } from './TypeCard';
 import { AxesScores, type AxesScoresProps } from './AxesScores';
-import { ActionButtons, type ActionButtonsProps } from './ActionButtons';
 import type { ResultData } from '@/types/result';
-import { performRestartCleanup, replaceHistoryForSessionIsolation } from '@/utils/session-cleanup';
-import {
-  startResultScreenMeasurement,
-  endResultScreenMeasurement,
-  startApiCallMeasurement,
-  endApiCallMeasurement,
-  logPerformanceSummary,
-  clearPerformanceMeasurements
-} from '@/utils/performance-measurement';
 
 // APIクライアントインターフェース
 interface ApiClient {
@@ -90,49 +80,23 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({ sessionId, apiClient
   const [error, setError] = useState<any>(null);
 
   useEffect(() => {
-    // パフォーマンス測定開始
-    startResultScreenMeasurement();
-    clearPerformanceMeasurements(); // 前回の測定をクリア
-
     const fetchResult = async () => {
       try {
         setIsLoading(true);
         setError(null);
 
-        // API呼び出し測定開始
-        startApiCallMeasurement();
         const resultData = await apiClient.getResult(sessionId);
-        endApiCallMeasurement();
-
         setResult(resultData);
       } catch (err) {
         console.error('結果取得エラー:', err);
         setError(err);
-        endApiCallMeasurement(); // エラー時も測定終了
       } finally {
         setIsLoading(false);
-        
-        // 500ms要件チェックのため少し遅延してから測定終了
-        setTimeout(() => {
-          const measurement = endResultScreenMeasurement();
-          if (measurement) {
-            console.log(`🚀 Result Screen Performance: ${measurement.duration.toFixed(2)}ms (Target: <500ms)`);
-            if (!measurement.meets500msRequirement) {
-              console.warn('⚠️ 500ms requirement not met!');
-            }
-          }
-          logPerformanceSummary();
-        }, 0);
       }
     };
 
     fetchResult();
   }, [sessionId, apiClient]);
-
-  // セッション独立性のため履歴を置換
-  useEffect(() => {
-    replaceHistoryForSessionIsolation();
-  }, []);
 
   const typeCardData: TypeResult | null = useMemo(() => {
     if (!result?.type) {
@@ -193,23 +157,6 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({ sessionId, apiClient
       };
     });
   }, [result]);
-
-  // ActionButtons用のonRestartハンドラー
-  const handleRestart = useCallback(() => {
-    // セッションクリーンアップを実行してからホームページへリダイレクト
-    performRestartCleanup();
-    window.location.href = '/';
-  }, []);
-
-  // ActionButtons用のprops
-  const actionButtonsProps: ActionButtonsProps = {
-    onRestart: handleRestart,
-    isLoading: isLoading,
-    isDisabled: !!error, // エラー時は無効化
-    variant: 'primary',
-    className: 'w-full min-h-[44px] xs:w-auto justify-center',
-    ariaDescribedBy: 'restart-help'
-  };
 
   return (
     <main
@@ -281,7 +228,13 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({ sessionId, apiClient
             </section>
 
             <section className="mt-8 pb-4 text-center xs:mt-10 sm:mt-12">
-              <ActionButtons {...actionButtonsProps} />
+              <button
+                onClick={() => window.location.href = '/'}
+                className="w-full min-h-[44px] rounded-lg bg-blue-600 px-6 py-3 font-medium text-white transition-colors hover:bg-blue-700 active:bg-blue-800 xs:w-auto xs:px-8 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                aria-describedby="restart-help"
+              >
+                もう一度診断する
+              </button>
               <div id="restart-help" className="sr-only">
                 新しい診断セッションを開始します
               </div>
