@@ -1,9 +1,11 @@
 /**
  * ActionButtons コンポーネント
- * 
+ *
  * @description 結果画面で使用されるアクションボタン群を提供
  * 再診断とリトライ機能を持つボタンコンポーネント
  */
+
+'use client';
 
 import React, { useState, useCallback } from 'react';
 
