@@ -1,0 +1,617 @@
+openapi: 3.0.3
+info:
+  title: NightLoom LLM Service API
+  description: External LLM service integration API for NightLoom diagnosis system
+  version: 1.0.0
+  contact:
+    name: NightLoom Development Team
+
+servers:
+  - url: http://localhost:8000/api
+    description: Local development server
+  - url: https://api.nightloom.app
+    description: Production server
+
+paths:
+  /llm/providers:
+    get:
+      summary: Get available LLM providers
+      description: Returns list of configured and available LLM providers
+      tags:
+        - LLM Management
+      responses:
+        '200':
+          description: List of available providers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  providers:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LLMProviderStatus'
+                  active_provider:
+                    type: string
+                    enum: [openai, anthropic, mock]
+                    example: openai
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /llm/providers/{provider}/health:
+    get:
+      summary: Check LLM provider health
+      description: Verify connectivity and availability of specific provider
+      tags:
+        - LLM Management
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [openai, anthropic, mock]
+      responses:
+        '200':
+          description: Provider is healthy and available
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  provider:
+                    type: string
+                    example: openai
+                  status:
+                    type: string
+                    enum: [healthy, degraded, unavailable]
+                  response_time_ms:
+                    type: number
+                    example: 234.5
+                  rate_limit_remaining:
+                    type: integer
+                    example: 85
+                  last_check:
+                    type: string
+                    format: date-time
+        '503':
+          description: Provider is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderError'
+
+  /llm/generate/keywords:
+    post:
+      summary: Generate keyword candidates
+      description: Generate 4 keyword candidates based on initial character using LLM
+      tags:
+        - LLM Generation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - session_id
+                - initial_character
+              properties:
+                session_id:
+                  type: string
+                  format: uuid
+                  example: "550e8400-e29b-41d4-a716-446655440000"
+                initial_character:
+                  type: string
+                  pattern: '^[あ-ん]$'
+                  example: "あ"
+                provider:
+                  type: string
+                  enum: [openai, anthropic, auto]
+                  default: auto
+                  example: openai
+      responses:
+        '200':
+          description: Keywords generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  session_id:
+                    type: string
+                    format: uuid
+                  keywords:
+                    type: array
+                    items:
+                      type: string
+                    minItems: 4
+                    maxItems: 4
+                    example: ["愛情", "冒険", "成長", "調和"]
+                  provider_used:
+                    type: string
+                    enum: [openai, anthropic, mock]
+                  fallback_used:
+                    type: boolean
+                  generation_time_ms:
+                    type: number
+                  cost_usd:
+                    type: number
+                    format: float
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/SessionNotFound'
+        '503':
+          $ref: '#/components/responses/LLMServiceUnavailable'
+
+  /llm/generate/axes:
+    post:
+      summary: Generate evaluation axes
+      description: Generate 2-6 evaluation axes based on selected keyword
+      tags:
+        - LLM Generation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - session_id
+                - keyword
+              properties:
+                session_id:
+                  type: string
+                  format: uuid
+                keyword:
+                  type: string
+                  minLength: 1
+                  maxLength: 20
+                  example: "愛情"
+                provider:
+                  type: string
+                  enum: [openai, anthropic, auto]
+                  default: auto
+      responses:
+        '200':
+          description: Axes generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  session_id:
+                    type: string
+                    format: uuid
+                  axes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GeneratedAxis'
+                    minItems: 2
+                    maxItems: 6
+                  provider_used:
+                    type: string
+                    enum: [openai, anthropic, mock]
+                  fallback_used:
+                    type: boolean
+                  generation_time_ms:
+                    type: number
+                  cost_usd:
+                    type: number
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/SessionNotFound'
+
+  /llm/generate/scenario:
+    post:
+      summary: Generate scene scenario
+      description: Generate scenario and choices for specific scene
+      tags:
+        - LLM Generation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - session_id
+                - scene_index
+                - keyword
+                - axes
+              properties:
+                session_id:
+                  type: string
+                  format: uuid
+                scene_index:
+                  type: integer
+                  minimum: 1
+                  maximum: 4
+                keyword:
+                  type: string
+                  example: "愛情"
+                axes:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/AxisReference'
+                previous_choices:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/PreviousChoice'
+                provider:
+                  type: string
+                  enum: [openai, anthropic, auto]
+                  default: auto
+      responses:
+        '200':
+          description: Scenario generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  session_id:
+                    type: string
+                    format: uuid
+                  scene:
+                    $ref: '#/components/schemas/GeneratedScene'
+                  provider_used:
+                    type: string
+                  fallback_used:
+                    type: boolean
+                  generation_time_ms:
+                    type: number
+                  cost_usd:
+                    type: number
+
+  /llm/generate/result:
+    post:
+      summary: Generate personality analysis
+      description: Generate personality type and insights based on user choices
+      tags:
+        - LLM Generation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - session_id
+                - keyword
+                - axes
+                - raw_scores
+              properties:
+                session_id:
+                  type: string
+                  format: uuid
+                keyword:
+                  type: string
+                axes:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/AxisReference'
+                raw_scores:
+                  type: object
+                  additionalProperties:
+                    type: number
+                  example:
+                    axis_1: 2.5
+                    axis_2: -1.2
+                normalized_scores:
+                  type: object
+                  additionalProperties:
+                    type: number
+                  example:
+                    axis_1: 75.0
+                    axis_2: 35.0
+                provider:
+                  type: string
+                  enum: [openai, anthropic, auto]
+                  default: auto
+      responses:
+        '200':
+          description: Analysis generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  session_id:
+                    type: string
+                    format: uuid
+                  type_profiles:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GeneratedTypeProfile'
+                  insights:
+                    type: array
+                    items:
+                      type: string
+                  provider_used:
+                    type: string
+                  fallback_used:
+                    type: boolean
+                  generation_time_ms:
+                    type: number
+                  cost_usd:
+                    type: number
+
+  /llm/usage/stats:
+    get:
+      summary: Get LLM usage statistics
+      description: Return current usage metrics and cost information
+      tags:
+        - LLM Management
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+            example: "2025-10-20"
+        - name: provider
+          in: query
+          schema:
+            type: string
+            enum: [openai, anthropic, all]
+            default: all
+      responses:
+        '200':
+          description: Usage statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsageStats'
+
+components:
+  schemas:
+    LLMProviderStatus:
+      type: object
+      properties:
+        provider_type:
+          type: string
+          enum: [openai, anthropic, mock]
+        is_available:
+          type: boolean
+        model_name:
+          type: string
+          example: "gpt-4-turbo"
+        rate_limit_percentage:
+          type: number
+          minimum: 0
+          maximum: 100
+        last_error:
+          type: string
+          nullable: true
+        last_check:
+          type: string
+          format: date-time
+
+    ProviderError:
+      type: object
+      properties:
+        provider:
+          type: string
+        error_code:
+          type: string
+          enum: [API_KEY_INVALID, RATE_LIMITED, TIMEOUT, NETWORK_ERROR, UNKNOWN]
+        message:
+          type: string
+        retry_after:
+          type: integer
+          description: Seconds to wait before retry
+
+    GeneratedAxis:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "axis_1"
+        name:
+          type: string
+          example: "感情表現"
+        description:
+          type: string
+          example: "感情を表現する傾向の強さ"
+        direction:
+          type: string
+          example: "表現的 ⟷ 内省的"
+
+    AxisReference:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+
+    PreviousChoice:
+      type: object
+      properties:
+        scene_index:
+          type: integer
+        choice_id:
+          type: string
+        choice_text:
+          type: string
+
+    GeneratedScene:
+      type: object
+      properties:
+        scene_index:
+          type: integer
+        narrative:
+          type: string
+        choices:
+          type: array
+          items:
+            $ref: '#/components/schemas/GeneratedChoice'
+          minItems: 4
+          maxItems: 4
+
+    GeneratedChoice:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "choice_1_1"
+        text:
+          type: string
+          example: "感情を率直に伝える"
+        weights:
+          type: object
+          additionalProperties:
+            type: number
+          example:
+            axis_1: 1.0
+            axis_2: -0.5
+
+    GeneratedTypeProfile:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Empathetic Communicator"
+        description:
+          type: string
+        keywords:
+          type: array
+          items:
+            type: string
+        dominant_axes:
+          type: array
+          items:
+            type: string
+        polarity:
+          type: string
+          enum: [Hi-Hi, Hi-Lo, Lo-Hi, Lo-Lo, Mid-Mid]
+
+    UsageStats:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        total_requests:
+          type: integer
+        successful_requests:
+          type: integer
+        failed_requests:
+          type: integer
+        fallback_requests:
+          type: integer
+        total_tokens:
+          type: integer
+        total_cost_usd:
+          type: number
+        avg_response_time_ms:
+          type: number
+        p95_response_time_ms:
+          type: number
+        providers:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              requests:
+                type: integer
+              tokens:
+                type: integer
+              cost_usd:
+                type: number
+
+  responses:
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error_code:
+                type: string
+                example: "VALIDATION_ERROR"
+              message:
+                type: string
+              details:
+                type: object
+                properties:
+                  field:
+                    type: string
+                  errors:
+                    type: array
+                    items:
+                      type: string
+
+    SessionNotFound:
+      description: Session not found or expired
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error_code:
+                type: string
+                example: "SESSION_NOT_FOUND"
+              message:
+                type: string
+              details:
+                type: object
+                properties:
+                  session_id:
+                    type: string
+
+    LLMServiceUnavailable:
+      description: LLM service temporarily unavailable
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error_code:
+                type: string
+                example: "LLM_SERVICE_UNAVAILABLE"
+              message:
+                type: string
+              details:
+                type: object
+                properties:
+                  provider:
+                    type: string
+                  fallback_used:
+                    type: boolean
+                  retry_after:
+                    type: integer
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error_code:
+                type: string
+                example: "INTERNAL_ERROR"
+              message:
+                type: string
+              details:
+                type: object
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+security:
+  - ApiKeyAuth: []
+
+tags:
+  - name: LLM Management
+    description: LLM provider management and monitoring
+  - name: LLM Generation
+    description: Content generation using LLM services
