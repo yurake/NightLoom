@@ -45,22 +45,23 @@ class FallbackAssets:
     @staticmethod
     def get_keyword_candidates(initial_character: str) -> List[str]:
         """Return fallback keyword candidates based on initial character."""
-        # Fallback keywords organized by hiragana initial
+        # Updated fallback keywords with natural Japanese expressions (2-4 characters)
         fallback_map = {
-            "あ": ["愛", "冒険", "挑戦", "成長"],
-            "か": ["希望", "感謝", "革新", "協力"],
-            "さ": ["成功", "創造", "信念", "探求"],
-            "た": ["挑戦", "達成", "団結", "努力"],
-            "な": ["夢", "成長", "情熱", "発見"],
-            "は": ["発見", "変化", "平和", "勇気"],
-            "ま": ["魅力", "未来", "満足", "目標"],
-            "や": ["優雅", "勇気", "喜び", "約束"],
-            "ら": ["理想", "冒険", "良心", "連帯"],
-            "わ": ["和", "笑顔", "輪", "若さ"]
+            "あ": ["愛情", "明るい", "新しい", "温かい"],
+            "か": ["輝く", "感謝", "可愛い", "活気"],
+            "く": ["輝く", "暮らし", "雲海", "工夫"],
+            "さ": ["爽やか", "創造", "素晴らしい", "澄んだ"],
+            "た": ["楽しい", "大切", "頼もしい", "確か"],
+            "な": ["懐かしい", "仲良し", "内面", "納得"],
+            "は": ["花咲く", "春らしい", "晴れやか", "博愛"],
+            "ま": ["真心", "眩しい", "満足", "学び"],
+            "や": ["優しい", "安らぎ", "柔らか", "約束"],
+            "ら": ["楽観的", "立派", "理想", "凛とした"],
+            "わ": ["和やか", "輪になる", "若々しい", "忘れない"]
         }
         
         # Return specific candidates or default set
-        return fallback_map.get(initial_character, ["希望", "挑戦", "成長", "発見"])
+        return fallback_map.get(initial_character, ["輝く", "新しい", "明るい", "温かい"])
     
     @staticmethod
     def get_fallback_scenes(theme_id: str, selected_keyword: str) -> List[Scene]:

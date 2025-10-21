@@ -12,6 +12,7 @@ from uuid import UUID
 
 from app.models.session import Session, SessionState, ChoiceRecord, Axis, Scene, AxisScore, TypeProfile
 from app.services.session_store import session_store, SessionGuard
+from app.services.external_llm import ExternalLLMService, get_llm_service
 from app.clients.llm import LLMService, default_llm_service
 from app.services.scoring import ScoringService
 from app.services.typing import TypingService
@@ -38,51 +39,78 @@ class SessionService:
     def __init__(
         self,
         llm_service: Optional[LLMService] = None,
+        external_llm_service: Optional[ExternalLLMService] = None,
         scoring_service: Optional[ScoringService] = None,
         typing_service: Optional[TypingService] = None
     ):
         self.llm_service = llm_service or default_llm_service
+        self.external_llm_service = external_llm_service or get_llm_service()
         self.scoring_service = scoring_service or ScoringService()
         self.typing_service = typing_service or TypingService()
     
     async def start_session(self, initial_character: Optional[str] = None) -> Session:
         """
-        Start a new diagnosis session.
+        Start a new diagnosis session with LLM-generated keywords.
         
         Args:
             initial_character: Optional hiragana character for keyword generation
             
         Returns:
-            New session in INIT state with bootstrap data
+            New session in INIT state with bootstrap data including dynamic keywords
         """
-        # Generate bootstrap data from LLM service
         if initial_character is None:
             initial_character = "あ"  # Default fallback
         
-        fallback_used = False
-        try:
-            axes, keywords, theme_id, fallback_used = await self.llm_service.generate_bootstrap_data(
-                initial_character
-            )
-        except Exception as e:
-            # Use fallback when LLM service fails
-            from app.services.fallback_assets import get_fallback_axes, get_fallback_keywords
-            axes = get_fallback_axes()
-            keywords = get_fallback_keywords(initial_character)
-            theme_id = "fallback"
-            fallback_used = True
-        
-        # Create new session
+        # Create initial session for LLM service
         session = Session(
             id=uuid.uuid4(),
             state=SessionState.INIT,
             initialCharacter=initial_character,
-            keywordCandidates=keywords,
-            themeId=theme_id,
-            axes=axes,
-            fallbackFlags=["BOOTSTRAP_FALLBACK"] if fallback_used else [],
+            themeId="adventure",  # Default theme, could be dynamically chosen later
+            fallbackFlags=[],
             createdAt=datetime.now(timezone.utc)
         )
+        
+        # Generate keywords using external LLM service
+        try:
+            keywords = await self.external_llm_service.generate_keywords(session)
+        except Exception as e:
+            # Log the specific error for debugging
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"[SESSION] External LLM keyword generation failed: {type(e).__name__}: {str(e)}")
+            logger.debug(f"[SESSION] Full exception details:", exc_info=True)
+            
+            # Fallback to legacy LLM service or static keywords
+            try:
+                axes, keywords, theme_id, fallback_used = await self.llm_service.generate_bootstrap_data(
+                    initial_character
+                )
+                if fallback_used:
+                    session.fallbackFlags.append("BOOTSTRAP_FALLBACK")
+            except Exception as fallback_error:
+                # Final fallback to static keywords
+                from app.services.fallback_assets import get_fallback_keywords
+                keywords = get_fallback_keywords(initial_character)
+                session.fallbackFlags.append("KEYWORD_GENERATION_FALLBACK")
+        
+        # Get default axes (will be dynamic in Phase 4)
+        try:
+            axes, _, theme_id, axes_fallback_used = await self.llm_service.generate_bootstrap_data(
+                initial_character
+            )
+            if axes_fallback_used:
+                session.fallbackFlags.append("AXES_FALLBACK")
+        except Exception:
+            from app.services.fallback_assets import get_fallback_axes
+            axes = get_fallback_axes()
+            session.fallbackFlags.append("AXES_FALLBACK")
+            theme_id = "adventure"
+        
+        # Update session with generated data
+        session.keywordCandidates = keywords
+        session.axes = axes
+        session.themeId = theme_id
         
         # Store session
         session_store.create_session(session)

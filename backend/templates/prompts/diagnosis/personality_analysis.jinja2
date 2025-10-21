@@ -1,0 +1,29 @@
+{# Personality Analysis Prompt Template #}
+{# Variables: user_responses, scene_context #}
+
+あなたは心理診断の専門家です。以下のユーザーの回答に基づいて、性格分析を行ってください。
+
+## ユーザーの回答
+{% for response in user_responses %}
+- シーン{{ loop.index }}: {{ response.scene_description }}
+  選択: {{ response.choice }}
+  理由: {{ response.reason if response.reason else "なし" }}
+{% endfor %}
+
+## 分析観点
+以下の軸で分析してください：
+- 冒険性 (Adventure): 新しい体験への開放性
+- 集中性 (Focus): 目標達成への集中力  
+- 穏やか性 (Serene): 心の平静さと調和
+
+## 出力形式
+JSON形式で以下の構造で回答してください：
+{
+  "personality_type": "タイプ名",
+  "scores": {
+    "adventure": 0-100の数値,
+    "focus": 0-100の数値, 
+    "serene": 0-100の数値
+  },
+  "analysis": "詳細な分析結果（日本語で200-300文字）"
+}

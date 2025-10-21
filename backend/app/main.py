@@ -6,6 +6,8 @@ phase we will flesh out the bootstrap/keyword endpoints and connect
 LLM clients.
 """
 
+import logging
+import os
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
@@ -16,6 +18,101 @@ from pydantic import ValidationError
 from .api import bootstrap, keyword, scenes, choices, results
 from .services.observability import observability_service
 from .middleware.security import get_security_headers, cleanup_expired_data
+
+# Configure logging
+def setup_logging():
+    """
+    Setup logging configuration for the application.
+    
+    ログレベル環境変数設定:
+
+    基本設定:
+    - LOG_LEVEL: 全体のログレベル (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+
+    個別モジュール設定:
+    - OPENAI_LOG_LEVEL: OpenAIクライアントのログレベル
+    - LLM_SERVICE_LOG_LEVEL: LLMサービスのログレベル
+    - PROMPT_LOG_LEVEL: プロンプトテンプレートのログレベル
+
+    使用例:
+      # 開発環境（詳細ログ）
+      LOG_LEVEL=DEBUG OPENAI_LOG_LEVEL=DEBUG uvicorn app.main:app --reload
+      
+      # 本番環境（エラーのみ）
+      LOG_LEVEL=ERROR OPENAI_LOG_LEVEL=ERROR uvicorn app.main:app
+      
+      # 混合設定（OpenAIのみ詳細）
+      LOG_LEVEL=INFO OPENAI_LOG_LEVEL=DEBUG uvicorn app.main:app
+    """
+    # 環境変数からログレベルを取得（デフォルトはINFO）
+    log_level = os.getenv("LOG_LEVEL", "INFO").upper()
+    log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    
+    # ログレベルの検証
+    valid_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+    if log_level not in valid_levels:
+        log_level = 'INFO'
+    
+    # Configure root logger with file output
+    log_file = os.getenv("LOG_FILE", "logs/nightloom.log")
+    
+    # Create logs directory if it doesn't exist
+    os.makedirs(os.path.dirname(log_file), exist_ok=True)
+    
+    # Configure logging with both console and file output
+    logging.basicConfig(
+        level=getattr(logging, log_level, logging.INFO),
+        format=log_format,
+        datefmt="%Y-%m-%d %H:%M:%S",
+        handlers=[
+            logging.StreamHandler(),  # Console output
+            logging.FileHandler(log_file, mode='a', encoding='utf-8')  # File output
+        ]
+    )
+    
+    # Log the configuration
+    logger = logging.getLogger(__name__)
+    logger.info(f"Logging configured: level={log_level}, file={log_file}")
+    
+    # 個別モジュールのログレベル設定（環境変数で制御）
+    openai_log_level = os.getenv('OPENAI_LOG_LEVEL', log_level).upper()
+    llm_service_log_level = os.getenv('LLM_SERVICE_LOG_LEVEL', log_level).upper()
+    prompt_log_level = os.getenv('PROMPT_LOG_LEVEL', log_level).upper()
+    
+    # Configure specific loggers with environment variable support
+    if openai_log_level in valid_levels:
+        logging.getLogger('app.clients.openai_client').setLevel(getattr(logging, openai_log_level))
+    else:
+        logging.getLogger('app.clients.openai_client').setLevel(logging.DEBUG)
+    
+    if llm_service_log_level in valid_levels:
+        logging.getLogger('app.services.external_llm').setLevel(getattr(logging, llm_service_log_level))
+    else:
+        logging.getLogger('app.services.external_llm').setLevel(logging.INFO)
+    
+    if prompt_log_level in valid_levels:
+        logging.getLogger('app.services.prompt_template').setLevel(getattr(logging, prompt_log_level))
+    else:
+        logging.getLogger('app.services.prompt_template').setLevel(logging.DEBUG)
+    
+    # Keep existing bootstrap logger configuration
+    logging.getLogger('app.api.bootstrap').setLevel(logging.INFO)
+    
+    # Reduce noise from third-party libraries
+    logging.getLogger('httpx').setLevel(logging.WARNING)
+    logging.getLogger('openai').setLevel(logging.WARNING)
+    logging.getLogger('uvicorn.access').setLevel(logging.WARNING)
+    
+    # 設定されたログレベルを表示
+    logger = logging.getLogger(__name__)
+    logger.info(f"Log level configuration:")
+    logger.info(f"  Global: {log_level}")
+    logger.info(f"  OpenAI Client: {openai_log_level}")
+    logger.info(f"  LLM Service: {llm_service_log_level}")
+    logger.info(f"  Prompt Template: {prompt_log_level}")
+
+# Initialize logging
+setup_logging()
 
 app = FastAPI(
     title="NightLoom Backend",

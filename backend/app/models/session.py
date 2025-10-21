@@ -7,7 +7,7 @@ All models follow the ephemeral session design with state transitions: INIT -> P
 
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field, ConfigDict
@@ -111,6 +111,31 @@ class AxisScore(BaseModel):
     })
 
 
+class LLMGeneration(BaseModel):
+    """LLM generation metadata and tracking."""
+    provider: str = Field(..., description="LLM provider used (openai, anthropic, mock)")
+    model_name: str = Field(..., description="Specific model used")
+    tokens_used: Optional[int] = Field(None, description="Tokens consumed for generation")
+    latency_ms: Optional[float] = Field(None, description="Generation latency in milliseconds")
+    cost_estimate: Optional[float] = Field(None, description="Estimated cost in USD")
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    fallback_used: bool = Field(default=False, description="Whether fallback was triggered")
+    retry_count: int = Field(default=0, description="Number of retries before success")
+
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "provider": "openai",
+            "model_name": "gpt-4",
+            "tokens_used": 150,
+            "latency_ms": 1200.5,
+            "cost_estimate": 0.0045,
+            "generated_at": "2025-10-20T17:30:00Z",
+            "fallback_used": False,
+            "retry_count": 0
+        }
+    })
+
+
 class TypeProfile(BaseModel):
     """Generated type profile for user's decision-making pattern."""
     name: str = Field(..., max_length=14, description="Type name in 1-2 English words")
@@ -147,7 +172,7 @@ class Session(BaseModel):
     
     # Bootstrap phase
     initialCharacter: str = Field(..., max_length=1, description="Initial hiragana character")
-    keywordCandidates: List[str] = Field(..., min_length=4, max_length=4, description="4 keyword suggestions")
+    keywordCandidates: List[str] = Field(default_factory=list, min_length=4, max_length=4, description="4 keyword suggestions")
     selectedKeyword: Optional[str] = Field(None, max_length=20, description="User-confirmed keyword")
     themeId: str = Field(..., description="UI theme for entire session")
     axes: List[Axis] = Field(default_factory=list, description="Evaluation axes for this session")
@@ -161,6 +186,19 @@ class Session(BaseModel):
     normalizedScores: Dict[str, float] = Field(default_factory=dict, description="Normalized 0-100 scores")
     typeProfiles: List[TypeProfile] = Field(default_factory=list, description="Generated type profiles")
     fallbackFlags: List[str] = Field(default_factory=list, description="Activated fallback types")
+    
+    # LLM Integration fields
+    llmProvider: Optional[str] = Field(None, description="Primary LLM provider for this session")
+    llmGenerations: Dict[str, LLMGeneration] = Field(
+        default_factory=dict,
+        description="LLM generation metadata keyed by operation type"
+    )
+    totalTokensUsed: int = Field(default=0, description="Total tokens used across all LLM calls")
+    totalCostEstimate: float = Field(default=0.0, description="Total estimated cost in USD")
+    llmErrors: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="Record of LLM errors and fallbacks"
+    )
     
     # Timestamps
     createdAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -196,3 +234,106 @@ class Session(BaseModel):
     def is_completed(self) -> bool:
         """Check if session has been completed with results generated."""
         return self.state == SessionState.RESULT and self.completedAt is not None
+    
+    def record_llm_generation(
+        self,
+        operation_type: str,
+        provider: str,
+        model_name: str,
+        tokens_used: Optional[int] = None,
+        latency_ms: Optional[float] = None,
+        cost_estimate: Optional[float] = None,
+        fallback_used: bool = False,
+        retry_count: int = 0
+    ) -> None:
+        """Record LLM generation metadata for tracking."""
+        generation = LLMGeneration(
+            provider=provider,
+            model_name=model_name,
+            tokens_used=tokens_used,
+            latency_ms=latency_ms,
+            cost_estimate=cost_estimate,
+            fallback_used=fallback_used,
+            retry_count=retry_count
+        )
+        
+        self.llmGenerations[operation_type] = generation
+        
+        # Update session totals
+        if tokens_used:
+            self.totalTokensUsed += tokens_used
+        if cost_estimate:
+            self.totalCostEstimate += cost_estimate
+        
+        # Set primary provider if not set
+        if not self.llmProvider:
+            self.llmProvider = provider
+    
+    def record_llm_error(
+        self,
+        operation_type: str,
+        provider: str,
+        error_type: str,
+        error_message: str,
+        retry_count: int = 0
+    ) -> None:
+        """Record LLM error for monitoring and debugging."""
+        error_record = {
+            "operation_type": operation_type,
+            "provider": provider,
+            "error_type": error_type,
+            "error_message": error_message,
+            "retry_count": retry_count,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        
+        self.llmErrors.append(error_record)
+    
+    def get_llm_usage_summary(self) -> Dict[str, Any]:
+        """Get summary of LLM usage for this session."""
+        provider_breakdown = {}
+        operation_breakdown = {}
+        
+        for operation, generation in self.llmGenerations.items():
+            # Provider breakdown
+            if generation.provider not in provider_breakdown:
+                provider_breakdown[generation.provider] = {
+                    "tokens": 0, "cost": 0.0, "operations": 0, "fallbacks": 0
+                }
+            
+            provider_stats = provider_breakdown[generation.provider]
+            provider_stats["operations"] += 1
+            if generation.tokens_used:
+                provider_stats["tokens"] += generation.tokens_used
+            if generation.cost_estimate:
+                provider_stats["cost"] += generation.cost_estimate
+            if generation.fallback_used:
+                provider_stats["fallbacks"] += 1
+            
+            # Operation breakdown
+            operation_breakdown[operation] = {
+                "provider": generation.provider,
+                "model": generation.model_name,
+                "tokens": generation.tokens_used or 0,
+                "cost": generation.cost_estimate or 0.0,
+                "latency_ms": generation.latency_ms,
+                "fallback_used": generation.fallback_used,
+                "retry_count": generation.retry_count,
+                "generated_at": generation.generated_at.isoformat()
+            }
+        
+        return {
+            "primary_provider": self.llmProvider,
+            "total_tokens": self.totalTokensUsed,
+            "total_cost": self.totalCostEstimate,
+            "total_operations": len(self.llmGenerations),
+            "total_errors": len(self.llmErrors),
+            "provider_breakdown": provider_breakdown,
+            "operation_breakdown": operation_breakdown,
+            "has_fallbacks": any(g.fallback_used for g in self.llmGenerations.values()),
+            "session_duration": (
+                (self.completedAt - self.createdAt).total_seconds()
+                if self.completedAt else
+                (datetime.now(timezone.utc) - self.createdAt).total_seconds()
+            )
+        }

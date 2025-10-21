@@ -23,11 +23,11 @@
 
 **Purpose**: Project initialization and LLM service dependencies
 
-- [ ] T001 Add OpenAI SDK dependency to backend/pyproject.toml with `uv add openai`
-- [ ] T002 Add Anthropic SDK dependency to backend/pyproject.toml with `uv add anthropic`
-- [ ] T003 [P] Add Jinja2 template engine to backend/pyproject.toml with `uv add jinja2`
-- [ ] T004 [P] Create prompt template directories: backend/app/templates/prompts/
-- [ ] T005 [P] Update environment configuration to include LLM_PROVIDER, OPENAI_API_KEY, ANTHROPIC_API_KEY variables
+- [x] T001 Add OpenAI SDK dependency to backend/pyproject.toml with `uv add openai`
+- [x] T002 Add Anthropic SDK dependency to backend/pyproject.toml with `uv add anthropic`
+- [x] T003 [P] Add Jinja2 template engine to backend/pyproject.toml with `uv add jinja2`
+- [x] T004 [P] Create prompt template directories: backend/app/templates/prompts/
+- [x] T005 [P] Update environment configuration to include LLM_PROVIDER, OPENAI_API_KEY, ANTHROPIC_API_KEY variables
 
 ---
 
@@ -37,14 +37,14 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T006 Create LLMProvider configuration system in backend/app/config/llm_config.py
-- [ ] T007 Create base LLM client interface in backend/app/clients/base.py (extend existing)
-- [ ] T008 [P] Create PromptTemplate management system in backend/app/services/prompt_manager.py
-- [ ] T009 [P] Create APIUsageMetrics tracking in backend/app/services/usage_monitor.py
-- [ ] T010 [P] Extend Session model with LLM integration fields in backend/app/models/session.py
-- [ ] T011 Create ExternalLLMService base class in backend/app/clients/llm.py (extend existing MockLLMService)
-- [ ] T012 [P] Create fallback content management in backend/app/services/fallback_assets.py (extend existing)
-- [ ] T013 Setup LLM request logging and monitoring in backend/app/services/observability.py (extend existing)
+- [x] T006 Create LLMProvider configuration system in backend/app/models/llm_config.py
+- [x] T007 Create base LLM client interface in backend/app/clients/llm_client.py
+- [x] T008 [P] Create PromptTemplate management system in backend/app/services/prompt_template.py
+- [x] T009 [P] Create APIUsageMetrics tracking in backend/app/services/llm_metrics.py
+- [x] T010 [P] Extend Session model with LLM integration fields in backend/app/models/session.py
+- [x] T011 Create ExternalLLMService base class in backend/app/services/external_llm.py
+- [x] T012 [P] Create fallback content management in backend/app/services/fallback_manager.py
+- [x] T013 Setup LLM request logging and monitoring in backend/app/middleware/llm_monitoring.py
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -60,18 +60,18 @@
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T014 [P] [US1] Contract test for /api/llm/generate/keywords endpoint in backend/tests/integration/test_llm_keywords.py
-- [ ] T015 [P] [US1] OpenAI client unit test with mock responses in backend/tests/unit/test_openai_client.py
-- [ ] T016 [P] [US1] Keyword generation fallback test in backend/tests/integration/test_keyword_fallback.py
+- [x] T014 [P] [US1] Contract test for /api/llm/generate/keywords endpoint in backend/tests/integration/test_llm_keywords.py
+- [x] T015 [P] [US1] OpenAI client unit test with mock responses in backend/tests/unit/test_openai_client.py
+- [x] T016 [P] [US1] Keyword generation fallback test in backend/tests/integration/test_keyword_fallback.py
 
 ### Implementation for User Story 1
 
-- [ ] T017 [P] [US1] Create OpenAI client implementation in backend/app/clients/openai_client.py
-- [ ] T018 [P] [US1] Create keyword generation prompt template in backend/app/templates/prompts/keyword_generation.j2
-- [ ] T019 [US1] Implement keyword generation service method in backend/app/services/session.py (extend existing)
-- [ ] T020 [US1] Update bootstrap API endpoint to use LLM keyword generation in backend/app/api/bootstrap.py
-- [ ] T021 [US1] Add error handling and fallback for keyword generation failures
-- [ ] T022 [US1] Add performance monitoring for keyword generation requests
+- [x] T017 [P] [US1] Create OpenAI client implementation in backend/app/clients/openai_client.py
+- [x] T018 [P] [US1] Create keyword generation prompt template in backend/app/templates/prompts/keyword_generation.j2
+- [x] T019 [US1] Implement keyword generation service method in backend/app/services/session.py (extend existing)
+- [x] T020 [US1] Update bootstrap API endpoint to use LLM keyword generation in backend/app/api/bootstrap.py
+- [x] T021 [US1] Add error handling and fallback for keyword generation failures
+- [x] T022 [US1] Add performance monitoring for keyword generation requests
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 

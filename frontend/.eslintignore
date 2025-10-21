@@ -3,6 +3,7 @@ node_modules/
 
 # Build outputs
 .next/
+.swc/
 out/
 dist/
 build/

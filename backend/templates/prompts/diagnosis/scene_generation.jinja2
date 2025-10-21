@@ -1,0 +1,52 @@
+{# Scene Generation Prompt Template #}
+{# Variables: theme, previous_scenes, user_profile #}
+
+あなたはインタラクティブな心理診断シナリオの作成者です。
+以下の条件に基づいて、新しいシーンを生成してください。
+
+## テーマ
+{{ theme }}
+
+## これまでのシーン
+{% if previous_scenes %}
+{% for scene in previous_scenes %}
+- シーン{{ loop.index }}: {{ scene.description }}
+  ユーザーの選択: {{ scene.user_choice }}
+{% endfor %}
+{% endif %}
+
+## ユーザープロフィール
+{% if user_profile %}
+- 年齢層: {{ user_profile.age_group if user_profile.age_group else "未設定" }}
+- 興味分野: {{ user_profile.interests if user_profile.interests else "未設定" }}
+{% endif %}
+
+## 要件
+- 日常的で共感しやすいシチュエーション
+- 3つの選択肢を提供
+- 冒険性、集中性、穏やか性の軸で差別化された選択肢
+- 200-300文字程度の簡潔な描写
+
+## 出力形式
+JSON形式で以下の構造で回答してください：
+{
+  "scene_id": "ユニークなID",
+  "description": "シーンの描写",
+  "choices": [
+    {
+      "id": "choice_1",
+      "text": "選択肢1の内容",
+      "personality_tendency": "adventure/focus/serene"
+    },
+    {
+      "id": "choice_2", 
+      "text": "選択肢2の内容",
+      "personality_tendency": "adventure/focus/serene"
+    },
+    {
+      "id": "choice_3",
+      "text": "選択肢3の内容", 
+      "personality_tendency": "adventure/focus/serene"
+    }
+  ]
+}
