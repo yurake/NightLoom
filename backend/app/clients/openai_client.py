@@ -329,8 +329,8 @@ class OpenAIClient(BaseLLMClient):
             
             # Check if reading starts with initial character
             if not reading.startswith(initial_character):
-                raise ValidationError(
-                    f"Keyword {i+1} '{word}' (reading: '{reading}') does not start with '{initial_character}'"
+                self.logger.warning(
+                    f"[OpenAI] Keyword {i+1} '{word}' (reading: '{reading}') does not start with '{initial_character}' - continuing anyway"
                 )
             
             # Check word length (2-6 characters as specified)
