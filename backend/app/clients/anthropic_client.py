@@ -31,6 +31,16 @@ class AnthropicClientError(LLMClientError):
     pass
 
 
+class AnthropicCreditError(LLMClientError):
+    """Raised when Anthropic account has insufficient credits."""
+    pass
+
+
+class AnthropicAccountError(LLMClientError):
+    """Raised when there's an Anthropic account-related issue (auth, billing, etc)."""
+    pass
+
+
 class AnthropicClient(BaseLLMClient):
     """Anthropic client implementation for NightLoom."""
     
@@ -198,7 +208,18 @@ class AnthropicClient(BaseLLMClient):
         except anthropic.AuthenticationError as e:
             self.logger.error(f"[Anthropic] Authentication error: {type(e).__name__}: {str(e)}")
             self._update_metrics("generate_keywords", error=True)
-            raise AnthropicClientError(f"Anthropic authentication error: {e}")
+            raise AnthropicAccountError(f"Anthropic authentication error: {e}")
+        except anthropic.BadRequestError as e:
+            # Check if this is a credit/billing issue
+            error_message = str(e).lower()
+            if "credit balance is too low" in error_message or "billing" in error_message:
+                self.logger.warning(f"[Anthropic] Credit insufficient - not a technical error: {str(e)}")
+                self._update_metrics("generate_keywords", error=True)
+                raise AnthropicCreditError(f"Anthropic credit insufficient: {e}")
+            else:
+                self.logger.error(f"[Anthropic] Bad request error: {type(e).__name__}: {str(e)}")
+                self._update_metrics("generate_keywords", error=True)
+                raise AnthropicClientError(f"Anthropic bad request: {e}")
         except ValidationError as e:
             self.logger.error(f"[Anthropic] Validation error: {type(e).__name__}: {str(e)}")
             self._update_metrics("generate_keywords", error=True)
@@ -226,17 +247,42 @@ class AnthropicClient(BaseLLMClient):
         Check if Anthropic API is accessible and healthy.
         
         Returns:
-            True if API is healthy, False otherwise
+            True if API is healthy and has sufficient credits, False otherwise
         """
         try:
-            # Simple test call with minimal token usage
+            # Simple test call with minimal token usage and proper system parameter
             test_response = await self.client.messages.create(
                 model="claude-3-haiku-20240307",  # Use faster model for health check
                 max_tokens=1,
-                messages=[{"role": "user", "content": "ping"}]
+                system="Health check test.",  # Required system parameter
+                messages=[{"role": "user", "content": "ok"}]
             )
+            self.logger.debug(f"[Anthropic Health Check] ✓ Healthy")
             return test_response is not None
-        except Exception:
+        except anthropic.BadRequestError as e:
+            # Check if this is a credit/billing issue
+            error_message = str(e).lower()
+            if "credit balance is too low" in error_message or "billing" in error_message:
+                self.logger.info(f"[Anthropic Health Check] Credit insufficient - provider unavailable: {str(e)}")
+                return False  # Provider unavailable due to credits, not unhealthy
+            else:
+                self.logger.warning(f"[Anthropic Health Check] Bad request error: {str(e)}")
+                return False
+        except anthropic.AuthenticationError as e:
+            self.logger.warning(f"[Anthropic Health Check] Authentication error: {str(e)}")
+            return False
+        except anthropic.RateLimitError as e:
+            self.logger.info(f"[Anthropic Health Check] Rate limited: {str(e)}")
+            return False  # Temporary unavailability
+        except anthropic.APIConnectionError as e:
+            self.logger.warning(f"[Anthropic Health Check] Connection error: {str(e)}")
+            return False
+        except anthropic.APITimeoutError as e:
+            self.logger.warning(f"[Anthropic Health Check] Timeout error: {str(e)}")
+            return False
+        except Exception as e:
+            # Log unexpected errors for debugging
+            self.logger.debug(f"[Anthropic Health Check] Unexpected error: {type(e).__name__}: {e}")
             return False
     
     async def _check_rate_limit(self) -> None:

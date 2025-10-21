@@ -16,6 +16,7 @@ from ..clients.llm_client import (BaseLLMClient, LLMClientError, LLMRequest,
                                   LLMResponse, LLMTaskType,
                                   ProviderUnavailableError, RateLimitError,
                                   ValidationError)
+from ..clients.anthropic_client import AnthropicCreditError, AnthropicAccountError
 from ..models.llm_config import LLMConfig, LLMProvider, get_llm_config
 from ..models.session import (Axis, Choice, Scene, Session, SessionState,
                               TypeProfile)
@@ -183,6 +184,13 @@ class ExternalLLMService:
                     retry_count=attempt
                 )
 
+                # Add fallback flag if not using primary provider
+                if attempt > 0:
+                    fallback_flag = f"{operation_type}_fallback_provider"
+                    if fallback_flag not in session.fallbackFlags:
+                        session.fallbackFlags.append(fallback_flag)
+                        self.logger.info(f"[Provider Chain] Added fallback flag: {fallback_flag}")
+
                 self.logger.info(f"[Provider Chain] ✓ Success with {provider.value} (attempt {attempt + 1})")
                 return response
 
@@ -191,6 +199,22 @@ class ExternalLLMService:
                 last_error = e
                 self._client_health[provider] = False
                 self.logger.warning(f"[Provider Chain] ✗ {provider.value} failed: {type(e).__name__}: {e}")
+
+                session.record_llm_error(
+                    operation_type=operation_type,
+                    provider=provider.value,
+                    error_type=type(e).__name__,
+                    error_message=str(e),
+                    retry_count=attempt
+                )
+
+                continue
+
+            except (AnthropicCreditError, AnthropicAccountError) as e:
+                # Account-level errors (credit/auth) - try next provider immediately
+                last_error = e
+                self._client_health[provider] = False
+                self.logger.info(f"[Provider Chain] ✗ {provider.value} account issue - switching to next provider: {type(e).__name__}: {e}")
 
                 session.record_llm_error(
                     operation_type=operation_type,
