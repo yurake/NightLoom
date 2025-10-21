@@ -5,6 +5,7 @@ and fallback support.
 """
 
 import logging
+import random
 from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -16,6 +17,20 @@ router = APIRouter()
 
 # Initialize logger
 logger = logging.getLogger(__name__)
+
+# ひらがな候補リスト（一般的なひらがな文字）
+HIRAGANA_CANDIDATES = [
+    'あ', 'い', 'う', 'え', 'お',
+    'か', 'き', 'く', 'け', 'こ', 'が', 'ぎ', 'ぐ', 'げ', 'ご',
+    'さ', 'し', 'す', 'せ', 'そ', 'ざ', 'じ', 'ず', 'ぜ', 'ぞ',
+    'た', 'ち', 'つ', 'て', 'と', 'だ', 'ぢ', 'づ', 'で', 'ど',
+    'な', 'に', 'ぬ', 'ね', 'の',
+    'は', 'ひ', 'ふ', 'へ', 'ほ', 'ば', 'び', 'ぶ', 'べ', 'ぼ', 'ぱ', 'ぴ', 'ぷ', 'ぺ', 'ぽ',
+    'ま', 'み', 'む', 'め', 'も',
+    'や', 'ゆ', 'よ',
+    'ら', 'り', 'る', 'れ', 'ろ',
+    'わ', 'を', 'ん'
+]
 
 class BootstrapRequest(BaseModel):
     initial_character: Optional[str] = None
@@ -32,6 +47,9 @@ async def start_session(request: Optional[BootstrapRequest] = None) -> dict[str,
                 initial_character = "あ"  # Use fallback for invalid character
             else:
                 initial_character = request.initial_character
+        else:
+            # initial_character が None または未指定の場合、ランダムにひらがな文字を選択
+            initial_character = random.choice(HIRAGANA_CANDIDATES)
         
         logger.info(f"[API] Starting session with initial_character: {initial_character}")
         

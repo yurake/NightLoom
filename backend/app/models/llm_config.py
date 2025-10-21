@@ -99,11 +99,28 @@ def load_config_from_env() -> LLMConfig:
     load_dotenv(dotenv_path="../.env")  # Project root
     load_dotenv(dotenv_path=".env")     # Current directory (backend/)
     
-    # Determine primary provider
-    primary_provider_name = os.getenv("LLM_PROVIDER", "openai").lower()
+    # Debug: Log environment variable values
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    llm_provider = os.getenv("LLM_PROVIDER")
+    llm_default_provider = os.getenv("LLM_DEFAULT_PROVIDER")
+    logger.debug(f"[Config Debug] LLM_PROVIDER env var: {llm_provider}")
+    logger.debug(f"[Config Debug] LLM_DEFAULT_PROVIDER env var: {llm_default_provider}")
+    
+    # Determine primary provider - check LLM_PROVIDER first, then LLM_DEFAULT_PROVIDER
+    primary_provider_name = os.getenv("LLM_PROVIDER")
+    if not primary_provider_name:
+        primary_provider_name = os.getenv("LLM_DEFAULT_PROVIDER", "openai")
+    
+    logger.debug(f"[Config Debug] Using primary provider name: {primary_provider_name}")
+    
+    primary_provider_name = primary_provider_name.lower()
     try:
         primary_provider = LLMProvider(primary_provider_name)
+        logger.debug(f"[Config Debug] Primary provider enum: {primary_provider}")
     except ValueError:
+        logger.warning(f"[Config Debug] Invalid provider '{primary_provider_name}', falling back to OpenAI")
         primary_provider = LLMProvider.OPENAI
 
     # Configure providers
