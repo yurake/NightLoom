@@ -38,7 +38,7 @@ class TestKeywordGenerationPerformance:
             state=SessionState.INIT,
             initialCharacter="あ",
             themeId="adventure",
-            keywordCandidates=[],
+            keywordCandidates=["テスト1", "テスト2", "テスト3", "テスト4"],
             axes=[],
             scenes=[],
             choices=[],
@@ -46,7 +46,7 @@ class TestKeywordGenerationPerformance:
             normalizedScores={},
             typeProfiles=[],
             fallbackFlags=[],
-            llmGenerations=[],
+            llmGenerations={},
             llmErrors=[]
         )
     
@@ -90,7 +90,8 @@ class TestKeywordGenerationPerformance:
                 id=uuid.uuid4(),
                 state=SessionState.INIT,
                 initialCharacter="あ",
-                themeId="adventure"
+                themeId="adventure",
+                keywordCandidates=["テストA", "テストB", "テストC", "テストD"]
             )
             
             # Mock 95% success rate (fail 5% of the time)
@@ -119,7 +120,7 @@ class TestKeywordGenerationPerformance:
                 with patch.object(llm_service, '_execute_with_fallback', new_callable=AsyncMock) as mock_execute:
                     mock_execute.side_effect = AllProvidersFailedError("Provider failed")
                     
-                    with patch.object(llm_service.fallback_manager, 'get_keywords_for_character', new_callable=AsyncMock) as mock_fallback:
+                    with patch.object(llm_service.fallback_manager, 'get_keyword_candidates') as mock_fallback:
                         mock_fallback.return_value = fallback_keywords
                         
                         try:
@@ -146,7 +147,8 @@ class TestKeywordGenerationPerformance:
                 id=uuid.uuid4(),
                 state=SessionState.INIT,
                 initialCharacter="あ",
-                themeId="adventure"
+                themeId="adventure",
+                keywordCandidates=["並行A", "並行B", "並行C", "並行D"]
             )
             sessions.append(session)
         
@@ -195,7 +197,8 @@ class TestKeywordGenerationPerformance:
             id=uuid.uuid4(),
             state=SessionState.INIT,
             initialCharacter="あ",
-            themeId="adventure"
+            themeId="adventure",
+            keywordCandidates=["メモリA", "メモリB", "メモリC", "メモリD"]
         )
         
         mock_keywords = ["メモリ1", "メモリ2", "メモリ3", "メモリ4"]
@@ -237,7 +240,7 @@ class TestKeywordGenerationPerformance:
         with patch.object(llm_service, '_execute_with_fallback', new_callable=AsyncMock) as mock_execute:
             mock_execute.side_effect = AllProvidersFailedError("All providers failed")
             
-            with patch.object(llm_service.fallback_manager, 'get_keywords_for_character', new_callable=AsyncMock) as mock_fallback:
+            with patch.object(llm_service.fallback_manager, 'get_keyword_candidates') as mock_fallback:
                 mock_fallback.return_value = fallback_keywords
                 
                 # Measure fallback recovery time
@@ -272,7 +275,8 @@ class TestKeywordGenerationStressTest:
                 id=uuid.uuid4(),
                 state=SessionState.INIT,
                 initialCharacter="あ",
-                themeId="adventure"
+                themeId="adventure",
+                keywordCandidates=["高頻度A", "高頻度B", "高頻度C", "高頻度D"]
             )
             sessions.append(session)
         
@@ -340,7 +344,8 @@ class TestKeywordGenerationStressTest:
                     id=uuid.uuid4(),
                     state=SessionState.INIT,
                     initialCharacter="あ",
-                    themeId="adventure"
+                    themeId="adventure",
+                    keywordCandidates=["持続A", "持続B", "持続C", "持続D"]
                 )
                 
                 try:
