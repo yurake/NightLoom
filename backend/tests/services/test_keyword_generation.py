@@ -102,7 +102,7 @@ class TestKeywordGeneration:
     
     @pytest.mark.asyncio
     async def test_generate_keywords_validation_error(self, llm_service, mock_session):
-        """Test keyword generation with validation error (wrong count)."""
+        """Test keyword generation with validation error falls back to static keywords."""
         # Mock response with wrong number of keywords
         mock_response = LLMResponse(
             task_type=LLMTaskType.KEYWORD_GENERATION,
@@ -120,8 +120,12 @@ class TestKeywordGeneration:
         with patch.object(llm_service, '_execute_with_fallback', new_callable=AsyncMock) as mock_execute:
             mock_execute.return_value = mock_response
             
-            with pytest.raises(ValidationError, match="Expected 4 keywords, got 2"):
-                await llm_service.generate_keywords(mock_session)
+            # ValidationError should trigger fallback, not raise
+            keywords = await llm_service.generate_keywords(mock_session)
+            
+            # Should get fallback keywords
+            assert len(keywords) == 4
+            assert "keyword_generation_error" in mock_session.fallbackFlags
     
     @pytest.mark.asyncio
     async def test_generate_keywords_fallback_on_failure(self, llm_service, mock_session):
@@ -135,7 +139,7 @@ class TestKeywordGeneration:
             # Mock all providers failing
             mock_execute.side_effect = AllProvidersFailedError("All providers failed")
             
-            with patch.object(llm_service.fallback_manager, 'get_keywords_for_character', new_callable=AsyncMock) as mock_fallback:
+            with patch.object(llm_service.fallback_manager, 'get_keyword_candidates') as mock_fallback:
                 mock_fallback.return_value = fallback_keywords
                 
                 # Execute keyword generation
@@ -242,21 +246,29 @@ class TestKeywordGeneration:
             cost_estimate=0.01
         )
         
-        with patch.object(llm_service, '_execute_with_fallback', new_callable=AsyncMock) as mock_execute:
-            mock_execute.return_value = mock_response
+        # モックしないで実際のメソッドを呼び出す必要がある
+        with patch.object(llm_service, '_get_client') as mock_get_client:
+            mock_client = AsyncMock()
+            mock_client.generate_keywords.return_value = mock_response
+            mock_get_client.return_value = mock_client
             
-            keywords = await llm_service.generate_keywords(mock_session)
-            
-            # Verify session recorded the generation
-            assert len(mock_session.llmGenerations) == 1
-            generation = mock_session.llmGenerations["keyword_generation"]
-            assert generation.provider == "openai"
-            assert generation.model_name == "gpt-4"
-            assert generation.tokens_used == 50
-            assert generation.latency_ms == 250.0
-            assert generation.cost_estimate == 0.01
-            assert not generation.fallback_used
-            assert generation.retry_count == 0
+            with patch.object(llm_service, '_check_provider_health', return_value=True):
+                keywords = await llm_service.generate_keywords(mock_session)
+                
+                # Verify keywords are correct
+                assert keywords == expected_keywords
+                
+                # Verify session recorded the generation
+                assert len(mock_session.llmGenerations) == 1
+                generation = mock_session.llmGenerations["keyword_generation"]
+                assert generation.provider == "openai"
+                assert generation.model_name == "gpt-4"
+                assert generation.tokens_used == 50
+                # latency_ms は実際の実行時間になるので、範囲チェックに変更
+                assert generation.latency_ms > 0.0
+                assert generation.cost_estimate == 0.01
+                assert not generation.fallback_used
+                assert generation.retry_count == 0
 
 
 class TestKeywordGenerationIntegration:
@@ -309,9 +321,8 @@ class TestKeywordGenerationIntegration:
         # This test documents the expected flow but will FAIL until implemented
         from app.services.session import default_session_service
         
-        # Create session
-        session_id = uuid.uuid4()
-        initial_session = await default_session_service.create_session()
+        # Create session using start_session method
+        initial_session = await default_session_service.start_session("あ")
         
         # Mock LLM service to return dynamic keywords
         with patch('app.services.external_llm.get_llm_service') as mock_get_service:
