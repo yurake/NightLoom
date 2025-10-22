@@ -18,12 +18,20 @@ venv/
 
 # Logs and caches
 *.log
+logs/
 .cache/
+.pytest_cache/
 .pptxgen/
 node_modules/
 .next/
 .swc/
 test-results/
+playwright-report/
+coverage/
+
+# LLM service specific
+templates/cache/
+llm_metrics/
 
 # Build outputs
 dist/

@@ -50,13 +50,13 @@
 
 ---
 
-## Phase 3: User Story 1 - OpenAI API統合による動的キーワード生成 (Priority: P1) 🎯 MVP
+## Phase 3: User Story 1 - OpenAI API統合による動的キーワード生成 (Priority: P1) 🎯 MVP ✅
 
 **Goal**: ユーザーの初期文字入力に基づいてGPT-4が関連性の高いキーワード候補4つを動的生成
 
 **Independent Test**: OpenAI APIキーを設定してセッション開始時に、初期文字「あ」から生成されるキーワードが固定候補と異なる動的な候補であることを確認
 
-### Tests for User Story 1 (必須: Fail First) ⚠️
+### Tests for User Story 1 (必須: Fail First) ⚠️ ✅
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
@@ -64,16 +64,16 @@
 - [x] T015 [P] [US1] OpenAI client unit test with mock responses in backend/tests/unit/test_openai_client.py
 - [x] T016 [P] [US1] Keyword generation fallback test in backend/tests/integration/test_keyword_fallback.py
 
-### Implementation for User Story 1
+### Implementation for User Story 1 ✅
 
 - [x] T017 [P] [US1] Create OpenAI client implementation in backend/app/clients/openai_client.py
-- [x] T018 [P] [US1] Create keyword generation prompt template in backend/app/templates/prompts/keyword_generation.j2
-- [x] T019 [US1] Implement keyword generation service method in backend/app/services/session.py (extend existing)
-- [x] T020 [US1] Update bootstrap API endpoint to use LLM keyword generation in backend/app/api/bootstrap.py
+- [x] T018 [P] [US1] Create keyword generation prompt template in backend/templates/prompts/keyword_generation.jinja2
+- [x] T019 [US1] Implement keyword generation service method in backend/app/services/external_llm.py (integrated)
+- [x] T020 [US1] Update bootstrap API endpoint to use LLM keyword generation (integrated via service)
 - [x] T021 [US1] Add error handling and fallback for keyword generation failures
 - [x] T022 [US1] Add performance monitoring for keyword generation requests
 
-**Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
+**Checkpoint**: ✅ User Story 1 is fully functional and testable independently
 
 ---
 
