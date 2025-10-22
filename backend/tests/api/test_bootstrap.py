@@ -219,16 +219,39 @@ class TestBootstrapEdgeCases:
         assert response.status_code == 200
         data = response.json()
         
-        # Should use default initial character
-        assert data["initialCharacter"] in ["あ", "か", "さ", "た", "な"]  # Common defaults
+        # Should use random hiragana character from HIRAGANA_CANDIDATES
+        # Import the same candidates list to verify against
+        from app.api.bootstrap import HIRAGANA_CANDIDATES
+        assert data["initialCharacter"] in HIRAGANA_CANDIDATES
     
-    def test_bootstrap_concurrent_requests(self):
+    @patch('app.api.bootstrap.default_session_service')
+    def test_bootstrap_concurrent_requests(self, mock_session_service):
         """Test handling of concurrent bootstrap requests."""
         import threading
         import time
+        from app.models.session import Session, SessionState
+        from app.services.fallback_assets import get_fallback_axes
+        from datetime import datetime, timezone
+        import uuid
         
         results = []
         errors = []
+        
+        def create_mock_session(initial_character="あ"):
+            """Create a unique mock session for each request."""
+            return Session(
+                id=uuid.uuid4(),
+                state=SessionState.INIT,
+                initialCharacter=initial_character,
+                keywordCandidates=["希望", "挑戦", "成長", "発見"],
+                themeId="adventure",
+                axes=get_fallback_axes(),
+                fallbackFlags=[],
+                createdAt=datetime.now(timezone.utc)
+            )
+        
+        # Mock the start_session method to return quickly with unique sessions
+        mock_session_service.start_session = AsyncMock(side_effect=create_mock_session)
         
         def make_request():
             try:
@@ -247,17 +270,19 @@ class TestBootstrapEdgeCases:
             threads.append(thread)
             thread.start()
         
-        # Wait for all threads to complete
+        # Wait for all threads to complete with timeout
         for thread in threads:
-            thread.join()
+            thread.join(timeout=30.0)  # 30 second timeout per thread
+            if thread.is_alive():
+                errors.append(f"Thread timeout - request did not complete within 30 seconds")
         
         # Verify all requests succeeded
         assert len(errors) == 0, f"Errors occurred: {errors}"
-        assert len(results) == 5
+        assert len(results) == 5, f"Expected 5 results, got {len(results)}"
         
         # Verify all session IDs are unique
         session_ids = [r["sessionId"] for r in results]
-        assert len(set(session_ids)) == 5
+        assert len(set(session_ids)) == 5, f"Expected 5 unique session IDs, got {len(set(session_ids))}"
     
     def test_bootstrap_memory_usage(self):
         """Test that bootstrap doesn't cause memory leaks."""
