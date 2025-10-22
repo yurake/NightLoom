@@ -85,18 +85,18 @@
 
 ### Tests for User Story 2 (必須: Fail First) ⚠️
 
-- [ ] T023 [P] [US2] Contract test for /api/llm/generate/axes endpoint in backend/tests/integration/test_llm_axes.py
-- [ ] T024 [P] [US2] Evaluation axis generation validation test in backend/tests/unit/test_axis_validation.py
-- [ ] T025 [P] [US2] Axis generation fallback test in backend/tests/integration/test_axis_fallback.py
+- [x] T023 [P] [US2] Contract test for /api/llm/generate/axes endpoint in backend/tests/integration/test_llm_axes.py
+- [x] T024 [P] [US2] Evaluation axis generation validation test in backend/tests/unit/test_axis_validation.py
+- [x] T025 [P] [US2] Axis generation fallback test in backend/tests/integration/test_axis_fallback.py
 
 ### Implementation for User Story 2
 
-- [ ] T026 [P] [US2] Create axis generation prompt template in backend/app/templates/prompts/axis_creation.j2
-- [ ] T027 [US2] Implement axis generation service method in backend/app/services/session.py
-- [ ] T028 [US2] Create /api/llm/generate/axes API endpoint in backend/app/api/bootstrap.py
-- [ ] T029 [US2] Add axis validation and normalization (2-6 axes constraint)
-- [ ] T030 [US2] Integrate dynamic axes with existing session flow
-- [ ] T031 [US2] Add axis generation performance monitoring
+- [x] T026 [P] [US2] Create axis generation prompt template in backend/templates/prompts/axis_creation.jinja2
+- [x] T027 [US2] Implement axis generation service method in backend/app/services/external_llm.py (integrated)
+- [x] T028 [US2] Create /api/llm/generate/axes API endpoint in backend/app/api/bootstrap.py
+- [x] T029 [US2] Add axis validation and normalization (2-6 axes constraint)
+- [x] T030 [US2] Integrate dynamic axes with existing session flow
+- [x] T031 [US2] Add axis generation performance monitoring
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 

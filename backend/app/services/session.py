@@ -142,7 +142,36 @@ class SessionService:
         if len(keyword) >= 20:
             raise SessionServiceError("Invalid keyword length: exceeds maximum allowed length")
         
-        # Generate scenes using LLM service with existing axes
+        # Update session with selected keyword first
+        session.selectedKeyword = keyword
+        
+        # Generate dynamic axes based on selected keyword using external LLM service
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"[SESSION] Generating dynamic axes for keyword: {keyword}")
+        
+        try:
+            dynamic_axes = await self.external_llm_service.generate_axes(session)
+            session.axes = dynamic_axes
+            logger.info(f"[SESSION] Generated {len(dynamic_axes)} dynamic axes for keyword '{keyword}'")
+        except Exception as e:
+            logger.error(f"[SESSION] Dynamic axis generation failed: {type(e).__name__}: {str(e)}")
+            logger.debug(f"[SESSION] Full exception details:", exc_info=True)
+            
+            # Fallback to static axes if dynamic generation fails
+            try:
+                axes, _, _, axes_fallback_used = await self.llm_service.generate_bootstrap_data(keyword)
+                session.axes = axes
+                if axes_fallback_used:
+                    session.fallbackFlags.append("AXES_FALLBACK")
+                logger.info(f"[SESSION] Used fallback axes for keyword '{keyword}'")
+            except Exception as fallback_error:
+                from app.services.fallback_assets import get_fallback_axes
+                session.axes = get_fallback_axes()
+                session.fallbackFlags.append("AXES_FALLBACK")
+                logger.warning(f"[SESSION] Used static fallback axes for keyword '{keyword}'")
+        
+        # Generate scenes using LLM service with dynamic axes
         try:
             scenes, fallback_used = await self.llm_service.generate_scenes(
                 session.axes, keyword, session.themeId
@@ -151,7 +180,6 @@ class SessionService:
             raise SessionServiceError(f"Failed to generate scenes: {str(e)}")
         
         # Update session
-        session.selectedKeyword = keyword
         session.state = SessionState.PLAY
         session.scenes = scenes
         

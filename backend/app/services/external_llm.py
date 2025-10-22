@@ -632,6 +632,65 @@ def get_llm_service() -> ExternalLLMService:
     return _llm_service
 
 
+class AxisValidator:
+    """Axis validation utility class."""
+    
+    def validate_axis(self, axis: Dict[str, Any], index: int) -> None:
+        """Validate single axis structure and content."""
+        if not isinstance(axis, dict):
+            raise ValidationError(f"Axis {index} must be an object")
+        
+        # Check required fields
+        required_fields = ["id", "name", "description", "direction"]
+        for field in required_fields:
+            if field not in axis:
+                raise ValidationError(f"Axis {index} missing required field: {field}")
+            
+            if not isinstance(axis[field], str):
+                raise ValidationError(f"Axis {index} field '{field}' must be a string")
+            
+            if not axis[field].strip():
+                raise ValidationError(f"Axis {index} field '{field}' cannot be empty")
+        
+        # Validate ID format (alphanumeric + underscore)
+        axis_id = axis["id"]
+        if not axis_id.replace("_", "").replace("-", "").isalnum():
+            if not all(c.isalnum() or c == "_" for c in axis_id):
+                raise ValidationError(f"Axis {index} ID contains invalid characters")
+        
+        # Validate direction format (must contain ⟷)
+        direction = axis["direction"]
+        if "⟷" not in direction:
+            raise ValidationError(f"Axis {index} direction must contain '⟷' separator")
+        
+        # Validate length constraints
+        if len(axis["name"]) > 50:
+            raise ValidationError(f"Axis {index} name too long (max 50 characters)")
+        
+        if len(axis["description"]) > 200:
+            raise ValidationError(f"Axis {index} description too long (max 200 characters)")
+    
+    def validate_axes_collection(self, axes: List[Dict[str, Any]]) -> None:
+        """Validate collection of axes."""
+        if not isinstance(axes, list):
+            raise ValidationError("Axes must be a list")
+        
+        # Check count constraints
+        if len(axes) < 2 or len(axes) > 6:
+            raise ValidationError(f"Expected 2-6 axes, got {len(axes)}")
+        
+        # Validate each axis
+        axis_ids = set()
+        for i, axis in enumerate(axes):
+            self.validate_axis(axis, i + 1)
+            
+            # Check for duplicate IDs
+            axis_id = axis["id"]
+            if axis_id in axis_ids:
+                raise ValidationError(f"Duplicate axis ID: {axis_id}")
+            axis_ids.add(axis_id)
+
+
 async def initialize_llm_service(config: Optional[LLMConfig] = None) -> ExternalLLMService:
     """Initialize and return LLM service with optional custom config."""
     global _llm_service

@@ -216,8 +216,149 @@ class OpenAIClient(BaseLLMClient):
             raise OpenAIClientError(f"OpenAI API error: {e}")
     
     async def generate_axes(self, request: LLMRequest) -> LLMResponse:
-        """Generate evaluation axes (placeholder - will be implemented in Phase 4)."""
-        raise NotImplementedError("Axis generation will be implemented in Phase 4 (US2)")
+        """
+        Generate evaluation axes using OpenAI GPT.
+        
+        Args:
+            request: LLM request with template data containing keyword
+            
+        Returns:
+            LLMResponse with generated axes
+            
+        Raises:
+            ValidationError: If request validation fails
+            RateLimitError: If rate limit exceeded
+            OpenAIClientError: If OpenAI API call fails
+        """
+        await self._check_rate_limit()
+        
+        try:
+            # API呼び出し前の検証
+            if not self.client:
+                raise OpenAIClientError("OpenAI client not initialized")
+            
+            # Log request start
+            keyword = request.template_data.get("keyword", "unknown")
+            self.logger.info(f"[OpenAI] Starting axis generation for keyword: {keyword}")
+            
+            # Render prompt template
+            prompt = await self.template_manager.render_template(
+                task_type=LLMTaskType.AXIS_GENERATION,
+                template_data=request.template_data
+            )
+            
+            # Log prompt content
+            self.logger.debug(f"[OpenAI] Prompt content: {prompt}")
+            
+            # Prepare OpenAI request
+            messages = [
+                {
+                    "role": "system",
+                    "content": "あなたは日本語の性格診断システムの専門家です。キーワードに基づいて適切な評価軸を生成してください。"
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
+            
+            # Log API call preparation
+            self.logger.info(f"[OpenAI] Sending axis generation request to model: {self.default_model}")
+            
+            # Execute OpenAI API call
+            start_time = datetime.now(timezone.utc)
+            
+            response = await self.client.chat.completions.create(
+                model="gpt-4o-mini" if self.default_model == "gpt-4" else self.default_model,
+                messages=messages,
+                temperature=self.default_temperature,
+                max_tokens=self.default_max_tokens,
+                timeout=self.request_timeout,
+                response_format={"type": "json_object"}
+            )
+            
+            end_time = datetime.now(timezone.utc)
+            latency_ms = (end_time - start_time).total_seconds() * 1000
+            
+            # Log response received
+            self.logger.info(f"[OpenAI] Axis response received in {latency_ms:.1f}ms")
+            self.logger.debug(f"[OpenAI] Full response object: {response}")
+            
+            # Parse response
+            content_text = response.choices[0].message.content
+            if not content_text:
+                raise OpenAIClientError("Empty response from OpenAI")
+            
+            # Log response content
+            self.logger.info(f"[OpenAI] Raw axis response content: {content_text}")
+            
+            try:
+                content = json.loads(content_text)
+                self.logger.info(f"[OpenAI] Parsed axis JSON content: {content}")
+            except json.JSONDecodeError as e:
+                self.logger.error(f"[OpenAI] Axis JSON parsing failed: {e}")
+                raise ValidationError(f"Invalid JSON response: {e}")
+            
+            # Validate axis response format
+            await self._validate_axis_response(content, request.template_data)
+            
+            # Calculate cost estimate (rough GPT-4 pricing)
+            prompt_tokens = response.usage.prompt_tokens if response.usage else 0
+            completion_tokens = response.usage.completion_tokens if response.usage else 0
+            total_tokens = prompt_tokens + completion_tokens
+            cost_estimate = (prompt_tokens * 0.03 + completion_tokens * 0.06) / 1000  # USD per 1K tokens
+            
+            # Log usage information
+            self.logger.info(f"[OpenAI] Axis token usage - Prompt: {prompt_tokens}, Completion: {completion_tokens}, Total: {total_tokens}")
+            self.logger.info(f"[OpenAI] Axis estimated cost: ${cost_estimate:.4f}")
+            
+            # Create response object
+            llm_response = LLMResponse(
+                task_type=request.task_type,
+                session_id=request.session_id,
+                content=content,
+                provider=LLMProvider.OPENAI,
+                model_name=response.model,
+                tokens_used=total_tokens,
+                latency_ms=latency_ms,
+                cost_estimate=cost_estimate,
+                timestamp=end_time
+            )
+            
+            # Validate response (general validation)
+            await self._validate_response(llm_response)
+            
+            # Update metrics
+            self._update_metrics("generate_axes", latency_ms=latency_ms, tokens_used=total_tokens)
+            
+            self.logger.info(f"[OpenAI] Axis generation completed successfully")
+            return llm_response
+            
+        except openai.RateLimitError as e:
+            self.logger.error(f"[OpenAI] Rate limit exceeded (axes): {type(e).__name__}: {str(e)}")
+            self._update_metrics("generate_axes", error=True)
+            raise RateLimitError(f"OpenAI rate limit exceeded: {e}")
+        except openai.APITimeoutError as e:
+            self.logger.error(f"[OpenAI] API timeout (axes): {type(e).__name__}: {str(e)}")
+            self._update_metrics("generate_axes", error=True)
+            raise ProviderUnavailableError(f"OpenAI timeout: {e}")
+        except openai.APIConnectionError as e:
+            self.logger.error(f"[OpenAI] Connection error (axes): {type(e).__name__}: {str(e)}")
+            self._update_metrics("generate_axes", error=True)
+            raise ProviderUnavailableError(f"OpenAI connection error: {e}")
+        except openai.AuthenticationError as e:
+            self.logger.error(f"[OpenAI] Authentication error (axes): {type(e).__name__}: {str(e)}")
+            self._update_metrics("generate_axes", error=True)
+            raise OpenAIClientError(f"OpenAI authentication error: {e}")
+        except ValidationError as e:
+            self.logger.error(f"[OpenAI] Validation error (axes): {type(e).__name__}: {str(e)}")
+            self._update_metrics("generate_axes", error=True)
+            raise e  # Re-raise validation errors as-is
+        except Exception as e:
+            self.logger.error(f"[OpenAI] Unexpected error (axes): {type(e).__name__}: {str(e)}")
+            self.logger.debug(f"[OpenAI] Full exception details:", exc_info=True)
+            self._update_metrics("generate_axes", error=True)
+            raise OpenAIClientError(f"OpenAI API error: {e}")
     
     async def generate_scenario(self, request: LLMRequest) -> LLMResponse:
         """Generate scenario (placeholder - will be implemented in Phase 5)."""
@@ -340,3 +481,66 @@ class OpenAIClient(BaseLLMClient):
             # Check reading length (reasonable bounds)
             if len(reading) < 1 or len(reading) > 10:
                 raise ValidationError(f"Keyword {i+1} reading '{reading}' length must be 1-10 characters")
+    
+    async def _validate_axis_response(self, content: Dict[str, Any], template_data: Dict[str, Any]) -> None:
+        """
+        Validate axis response format and content.
+        
+        Args:
+            content: Parsed JSON response from OpenAI
+            template_data: Original template data used for request
+            
+        Raises:
+            ValidationError: If response format is invalid
+        """
+        if not isinstance(content, dict):
+            raise ValidationError("Response must be a JSON object")
+        
+        if "axes" not in content:
+            raise ValidationError("Response must contain 'axes' field")
+        
+        axes = content["axes"]
+        if not isinstance(axes, list):
+            raise ValidationError("'axes' must be an array")
+        
+        min_axes = template_data.get("min_axes", 2)
+        max_axes = template_data.get("max_axes", 6)
+        
+        if not (min_axes <= len(axes) <= max_axes):
+            raise ValidationError(f"Expected {min_axes}-{max_axes} axes, got {len(axes)}")
+        
+        # Validate each axis
+        axis_ids = set()
+        for i, axis in enumerate(axes):
+            if not isinstance(axis, dict):
+                raise ValidationError(f"Axis {i+1} must be an object")
+            
+            # Check required fields
+            required_fields = ["id", "name", "description", "direction"]
+            for field in required_fields:
+                if field not in axis:
+                    raise ValidationError(f"Axis {i+1} missing required field: {field}")
+                
+                if not isinstance(axis[field], str):
+                    raise ValidationError(f"Axis {i+1} field '{field}' must be a string")
+                
+                if not axis[field].strip():
+                    raise ValidationError(f"Axis {i+1} field '{field}' cannot be empty")
+            
+            # Validate ID format (must be unique)
+            axis_id = axis["id"]
+            if axis_id in axis_ids:
+                raise ValidationError(f"Duplicate axis ID: {axis_id}")
+            axis_ids.add(axis_id)
+            
+            # Validate direction format (must contain ⟷)
+            direction = axis["direction"]
+            if "⟷" not in direction:
+                raise ValidationError(f"Axis {i+1} direction must contain '⟷' separator")
+            
+            # Validate length constraints
+            if len(axis["name"]) > 50:
+                raise ValidationError(f"Axis {i+1} name too long (max 50 characters)")
+            
+            if len(axis["description"]) > 200:
+                raise ValidationError(f"Axis {i+1} description too long (max 200 characters)")

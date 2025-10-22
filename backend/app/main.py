@@ -193,6 +193,9 @@ app.include_router(scenes.router, prefix="/api/sessions", tags=["scenes"])
 app.include_router(choices.router, prefix="/api/sessions", tags=["choices"])
 app.include_router(results.router, prefix="/api/sessions", tags=["results"])
 
+# LLM service endpoints (from bootstrap router)
+app.include_router(bootstrap.router, prefix="/api", tags=["llm"])
+
 
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):

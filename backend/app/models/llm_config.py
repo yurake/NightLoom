@@ -27,7 +27,7 @@ class ProviderConfig(BaseModel):
     model_name: str
     max_tokens: int = Field(default=1000, ge=100, le=4000)
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)
-    timeout_seconds: float = Field(default=5.0, ge=1.0, le=30.0)
+    timeout_seconds: float = Field(default=15.0, ge=1.0, le=30.0)
     max_retries: int = Field(default=1, ge=0, le=3)
     enabled: bool = Field(default=True)
 
@@ -135,7 +135,7 @@ def load_config_from_env() -> LLMConfig:
             model_name=os.getenv("OPENAI_MODEL", "gpt-4"),
             max_tokens=int(os.getenv("OPENAI_MAX_TOKENS", "1000")),
             temperature=float(os.getenv("OPENAI_TEMPERATURE", "0.7")),
-            timeout_seconds=float(os.getenv("OPENAI_TIMEOUT", "5.0")),
+            timeout_seconds=float(os.getenv("OPENAI_TIMEOUT", "15.0")),
         )
     
     # Anthropic configuration
@@ -147,7 +147,7 @@ def load_config_from_env() -> LLMConfig:
             model_name=os.getenv("ANTHROPIC_MODEL", "claude-3-sonnet-20240229"),
             max_tokens=int(os.getenv("ANTHROPIC_MAX_TOKENS", "1000")),
             temperature=float(os.getenv("ANTHROPIC_TEMPERATURE", "0.7")),
-            timeout_seconds=float(os.getenv("ANTHROPIC_TIMEOUT", "5.0")),
+            timeout_seconds=float(os.getenv("ANTHROPIC_TIMEOUT", "15.0")),
         )
     
     # Mock provider (always available for fallback)

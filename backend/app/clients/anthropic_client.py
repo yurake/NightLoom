@@ -231,8 +231,155 @@ class AnthropicClient(BaseLLMClient):
             raise AnthropicClientError(f"Anthropic API error: {e}")
     
     async def generate_axes(self, request: LLMRequest) -> LLMResponse:
-        """Generate evaluation axes (placeholder - will be implemented in Phase 4)."""
-        raise NotImplementedError("Axis generation will be implemented in Phase 4 (US2)")
+        """
+        Generate evaluation axes using Anthropic Claude.
+        
+        Args:
+            request: LLM request with template data containing keyword
+            
+        Returns:
+            LLMResponse with generated axes
+            
+        Raises:
+            ValidationError: If request validation fails
+            RateLimitError: If rate limit exceeded
+            AnthropicClientError: If Anthropic API call fails
+        """
+        await self._check_rate_limit()
+        
+        try:
+            # API呼び出し前の検証
+            if not self.client:
+                raise AnthropicClientError("Anthropic client not initialized")
+            
+            # Log request start
+            keyword = request.template_data.get("keyword", "unknown")
+            self.logger.info(f"[Anthropic] Starting axis generation for keyword: {keyword}")
+            
+            # Render prompt template
+            prompt = await self.template_manager.render_template(
+                task_type=LLMTaskType.AXIS_GENERATION,
+                template_data=request.template_data
+            )
+            
+            # Log prompt content
+            self.logger.debug(f"[Anthropic] Prompt content: {prompt}")
+            
+            # Prepare Anthropic request
+            system_message = "あなたは日本語の性格診断システムの専門家です。キーワードに基づいて適切な評価軸を生成してください。"
+            
+            # Log API call preparation
+            self.logger.info(f"[Anthropic] Sending axis generation request to model: {self.default_model}")
+            
+            # Execute Anthropic API call
+            start_time = datetime.now(timezone.utc)
+            
+            response = await self.client.messages.create(
+                model=self.default_model,
+                max_tokens=self.default_max_tokens,
+                temperature=self.default_temperature,
+                system=system_message,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ]
+            )
+            
+            end_time = datetime.now(timezone.utc)
+            latency_ms = (end_time - start_time).total_seconds() * 1000
+            
+            # Log response received
+            self.logger.info(f"[Anthropic] Axis response received in {latency_ms:.1f}ms")
+            self.logger.debug(f"[Anthropic] Full response object: {response}")
+            
+            # Parse response
+            content_text = response.content[0].text if response.content else None
+            if not content_text:
+                raise AnthropicClientError("Empty response from Anthropic")
+            
+            # Log response content
+            self.logger.info(f"[Anthropic] Raw axis response content: {content_text}")
+            
+            try:
+                content = json.loads(content_text)
+                self.logger.info(f"[Anthropic] Parsed axis JSON content: {content}")
+            except json.JSONDecodeError as e:
+                self.logger.error(f"[Anthropic] Axis JSON parsing failed: {e}")
+                raise ValidationError(f"Invalid JSON response: {e}")
+            
+            # Validate axis response format
+            await self._validate_axis_response(content, request.template_data)
+            
+            # Calculate cost estimate (rough Claude pricing)
+            input_tokens = response.usage.input_tokens if response.usage else 0
+            output_tokens = response.usage.output_tokens if response.usage else 0
+            total_tokens = input_tokens + output_tokens
+            cost_estimate = (input_tokens * 0.00025 + output_tokens * 0.00125) / 1000  # USD per 1K tokens for Haiku
+            
+            # Log usage information
+            self.logger.info(f"[Anthropic] Axis token usage - Input: {input_tokens}, Output: {output_tokens}, Total: {total_tokens}")
+            self.logger.info(f"[Anthropic] Axis estimated cost: ${cost_estimate:.4f}")
+            
+            # Create response object
+            llm_response = LLMResponse(
+                task_type=request.task_type,
+                session_id=request.session_id,
+                content=content,
+                provider=LLMProvider.ANTHROPIC,
+                model_name=response.model,
+                tokens_used=total_tokens,
+                latency_ms=latency_ms,
+                cost_estimate=cost_estimate,
+                timestamp=end_time
+            )
+            
+            # Validate response (general validation)
+            await self._validate_response(llm_response)
+            
+            # Update metrics
+            self._update_metrics("generate_axes", latency_ms=latency_ms, tokens_used=total_tokens)
+            
+            self.logger.info(f"[Anthropic] Axis generation completed successfully")
+            return llm_response
+            
+        except anthropic.RateLimitError as e:
+            self.logger.error(f"[Anthropic] Rate limit exceeded (axes): {type(e).__name__}: {str(e)}")
+            self._update_metrics("generate_axes", error=True)
+            raise RateLimitError(f"Anthropic rate limit exceeded: {e}")
+        except anthropic.APITimeoutError as e:
+            self.logger.error(f"[Anthropic] API timeout (axes): {type(e).__name__}: {str(e)}")
+            self._update_metrics("generate_axes", error=True)
+            raise ProviderUnavailableError(f"Anthropic timeout: {e}")
+        except anthropic.APIConnectionError as e:
+            self.logger.error(f"[Anthropic] Connection error (axes): {type(e).__name__}: {str(e)}")
+            self._update_metrics("generate_axes", error=True)
+            raise ProviderUnavailableError(f"Anthropic connection error: {e}")
+        except anthropic.AuthenticationError as e:
+            self.logger.error(f"[Anthropic] Authentication error (axes): {type(e).__name__}: {str(e)}")
+            self._update_metrics("generate_axes", error=True)
+            raise AnthropicAccountError(f"Anthropic authentication error: {e}")
+        except anthropic.BadRequestError as e:
+            # Check if this is a credit/billing issue
+            error_message = str(e).lower()
+            if "credit balance is too low" in error_message or "billing" in error_message:
+                self.logger.warning(f"[Anthropic] Credit insufficient (axes) - not a technical error: {str(e)}")
+                self._update_metrics("generate_axes", error=True)
+                raise AnthropicCreditError(f"Anthropic credit insufficient: {e}")
+            else:
+                self.logger.error(f"[Anthropic] Bad request error (axes): {type(e).__name__}: {str(e)}")
+                self._update_metrics("generate_axes", error=True)
+                raise AnthropicClientError(f"Anthropic bad request: {e}")
+        except ValidationError as e:
+            self.logger.error(f"[Anthropic] Validation error (axes): {type(e).__name__}: {str(e)}")
+            self._update_metrics("generate_axes", error=True)
+            raise e  # Re-raise validation errors as-is
+        except Exception as e:
+            self.logger.error(f"[Anthropic] Unexpected error (axes): {type(e).__name__}: {str(e)}")
+            self.logger.debug(f"[Anthropic] Full exception details:", exc_info=True)
+            self._update_metrics("generate_axes", error=True)
+            raise AnthropicClientError(f"Anthropic API error: {e}")
     
     async def generate_scenario(self, request: LLMRequest) -> LLMResponse:
         """Generate scenario (placeholder - will be implemented in Phase 5)."""
@@ -379,3 +526,66 @@ class AnthropicClient(BaseLLMClient):
             # Check reading length (reasonable bounds)
             if len(reading) < 1 or len(reading) > 10:
                 raise ValidationError(f"Keyword {i+1} reading '{reading}' length must be 1-10 characters")
+
+    async def _validate_axis_response(self, content: Dict[str, Any], template_data: Dict[str, Any]) -> None:
+        """
+        Validate axis response format and content.
+        
+        Args:
+            content: Parsed JSON response from Anthropic
+            template_ Original template data used for request
+            
+        Raises:
+            ValidationError: If response format is invalid
+        """
+        if not isinstance(content, dict):
+            raise ValidationError("Response must be a JSON object")
+        
+        if "axes" not in content:
+            raise ValidationError("Response must contain 'axes' field")
+        
+        axes = content["axes"]
+        if not isinstance(axes, list):
+            raise ValidationError("'axes' must be an array")
+        
+        min_axes = template_data.get("min_axes", 2)
+        max_axes = template_data.get("max_axes", 6)
+        
+        if not (min_axes <= len(axes) <= max_axes):
+            raise ValidationError(f"Expected {min_axes}-{max_axes} axes, got {len(axes)}")
+        
+        # Validate each axis
+        axis_ids = set()
+        for i, axis in enumerate(axes):
+            if not isinstance(axis, dict):
+                raise ValidationError(f"Axis {i+1} must be an object")
+            
+            # Check required fields
+            required_fields = ["id", "name", "description", "direction"]
+            for field in required_fields:
+                if field not in axis:
+                    raise ValidationError(f"Axis {i+1} missing required field: {field}")
+                
+                if not isinstance(axis[field], str):
+                    raise ValidationError(f"Axis {i+1} field '{field}' must be a string")
+                
+                if not axis[field].strip():
+                    raise ValidationError(f"Axis {i+1} field '{field}' cannot be empty")
+            
+            # Validate ID format (must be unique)
+            axis_id = axis["id"]
+            if axis_id in axis_ids:
+                raise ValidationError(f"Duplicate axis ID: {axis_id}")
+            axis_ids.add(axis_id)
+            
+            # Validate direction format (must contain ⟷)
+            direction = axis["direction"]
+            if "⟷" not in direction:
+                raise ValidationError(f"Axis {i+1} direction must contain '⟷' separator")
+            
+            # Validate length constraints
+            if len(axis["name"]) > 50:
+                raise ValidationError(f"Axis {i+1} name too long (max 50 characters)")
+            
+            if len(axis["description"]) > 200:
+                raise ValidationError(f"Axis {i+1} description too long (max 200 characters)")

@@ -9,8 +9,10 @@ import random
 from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from uuid import UUID
 
 from ..services.session import default_session_service
+from ..services.external_llm import get_llm_service
 from ..services.observability import observability
 
 router = APIRouter()
@@ -34,6 +36,12 @@ HIRAGANA_CANDIDATES = [
 
 class BootstrapRequest(BaseModel):
     initial_character: Optional[str] = None
+
+
+class AxisGenerationRequest(BaseModel):
+    session_id: str
+    keyword: str
+    provider: Optional[str] = None
 
 
 @router.post("/start")
@@ -75,3 +83,48 @@ async def start_session(request: Optional[BootstrapRequest] = None) -> dict[str,
     except Exception as e:
         logger.error(f"[API] Session start failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to create session: {str(e)}")
+
+
+@router.post("/llm/generate/axes")
+async def generate_axes(request: AxisGenerationRequest) -> dict[str, object]:
+    """Generate evaluation axes based on selected keyword using LLM."""
+    try:
+        # Validate session exists
+        session_store = default_session_service.session_store
+        session = session_store.get_session(UUID(request.session_id))
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        # Update session with selected keyword
+        session.selectedKeyword = request.keyword
+        
+        logger.info(f"[API] Generating axes for session {request.session_id}, keyword: {request.keyword}")
+        
+        # Get LLM service and generate axes
+        llm_service = get_llm_service()
+        axes = await llm_service.generate_axes(session)
+        
+        # Update session with generated axes
+        session.axes = axes
+        
+        # Prepare response
+        axis_gen = session.llmGenerations.get("axis_generation")
+        result = {
+            "session_id": request.session_id,
+            "axes": [axis.model_dump() for axis in axes],
+            "provider_used": axis_gen.provider if axis_gen else "mock",
+            "fallback_used": "axis_generation" in session.fallbackFlags,
+            "generation_time_ms": axis_gen.latency_ms if axis_gen else 0,
+            "cost_usd": axis_gen.cost_estimate if axis_gen else 0.0
+        }
+        
+        logger.info(f"[API] Axes generation completed for session {request.session_id}, count: {len(axes)}")
+        
+        return result
+        
+    except ValueError as e:
+        logger.error(f"[API] Axis generation validation error: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"[API] Axis generation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate axes: {str(e)}")

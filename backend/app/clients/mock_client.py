@@ -66,7 +66,56 @@ class MockLLMClient(BaseLLMClient):
     
     async def generate_axes(self, request: LLMRequest) -> LLMResponse:
         """Generate mock axes."""
-        raise NotImplementedError("Mock axes generation not implemented")
+        await asyncio.sleep(0.1)  # Simulate network delay
+        
+        keyword = request.template_data.get("keyword", "愛情")
+        self.logger.info(f"[Mock] Generating axes for keyword: {keyword}")
+        
+        # Mock axis generation based on keyword
+        mock_axes = [
+            {
+                "id": "axis_1",
+                "name": "感情表現",
+                "description": "感情を表現する傾向の強さ",
+                "direction": "表現的 ⟷ 内省的"
+            },
+            {
+                "id": "axis_2",
+                "name": "行動力",
+                "description": "積極的に行動を起こす傾向",
+                "direction": "能動的 ⟷ 受動的"
+            },
+            {
+                "id": "axis_3",
+                "name": "共感性",
+                "description": "他者の感情に共感する度合い",
+                "direction": "共感的 ⟷ 客観的"
+            },
+            {
+                "id": "axis_4",
+                "name": "コミット度",
+                "description": "関係に対する献身的な姿勢",
+                "direction": "献身的 ⟷ 自立的"
+            }
+        ]
+        
+        response = LLMResponse(
+            task_type=request.task_type,
+            session_id=request.session_id,
+            content={"axes": mock_axes},
+            provider=LLMProvider.MOCK,
+            model_name="mock-model",
+            tokens_used=120,
+            latency_ms=100.0,
+            cost_estimate=0.0,
+            timestamp=datetime.now(timezone.utc)
+        )
+        
+        # Update metrics
+        self._update_metrics("generate_axes", latency_ms=100.0, tokens_used=120)
+        
+        self.logger.info(f"[Mock] Generated {len(mock_axes)} axes for keyword '{keyword}'")
+        return response
     
     async def generate_scenario(self, request: LLMRequest) -> LLMResponse:
         """Generate mock scenario.""" 
