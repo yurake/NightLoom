@@ -33,7 +33,7 @@ class TestKeywordFallbackMechanisms:
             state=SessionState.INIT,
             initialCharacter="あ",
             themeId="adventure",
-            keywordCandidates=[],
+            keywordCandidates=["愛情", "明るい", "新しい", "温かい"],  # 最小4個必要
             axes=[],
             scenes=[],
             choices=[],
@@ -41,7 +41,7 @@ class TestKeywordFallbackMechanisms:
             normalizedScores={},
             typeProfiles=[],
             fallbackFlags=[],
-            llmGenerations=[],
+            llmGenerations={},  # Dictに変更
             llmErrors=[]
         )
     
@@ -60,7 +60,7 @@ class TestKeywordFallbackMechanisms:
             mock_execute.side_effect = AllProvidersFailedError("All providers failed")
             
             # Mock fallback manager
-            with patch.object(llm_service.fallback_manager, 'get_keywords_for_character', new_callable=AsyncMock) as mock_fallback:
+            with patch.object(llm_service.fallback_manager, 'get_keyword_candidates') as mock_fallback:
                 mock_fallback.return_value = fallback_keywords
                 
                 # Execute keyword generation
@@ -82,13 +82,13 @@ class TestKeywordFallbackMechanisms:
         with patch.object(llm_service, '_execute_with_fallback', new_callable=AsyncMock) as mock_execute:
             mock_execute.side_effect = ValidationError("Response validation failed")
             
-            with patch.object(llm_service.fallback_manager, 'get_keywords_for_character', new_callable=AsyncMock) as mock_fallback:
+            with patch.object(llm_service.fallback_manager, 'get_keyword_candidates') as mock_fallback:
                 mock_fallback.return_value = fallback_keywords
                 
                 keywords = await llm_service.generate_keywords(mock_session)
                 
                 assert keywords == fallback_keywords
-                assert "keyword_generation" in mock_session.fallbackFlags
+                assert "keyword_generation_error" in mock_session.fallbackFlags
     
     @pytest.mark.asyncio
     async def test_fallback_on_rate_limit_error(self, llm_service, mock_session):
@@ -99,7 +99,7 @@ class TestKeywordFallbackMechanisms:
         with patch.object(llm_service, '_execute_with_fallback', new_callable=AsyncMock) as mock_execute:
             mock_execute.side_effect = AllProvidersFailedError("Rate limit exceeded")
             
-            with patch.object(llm_service.fallback_manager, 'get_keywords_for_character', new_callable=AsyncMock) as mock_fallback:
+            with patch.object(llm_service.fallback_manager, 'get_keyword_candidates') as mock_fallback:
                 mock_fallback.return_value = fallback_keywords
                 
                 keywords = await llm_service.generate_keywords(mock_session)
@@ -116,7 +116,7 @@ class TestKeywordFallbackMechanisms:
         with patch.object(llm_service, '_execute_with_fallback', new_callable=AsyncMock) as mock_execute:
             mock_execute.side_effect = AllProvidersFailedError("Provider failed")
             
-            with patch.object(llm_service.fallback_manager, 'get_keywords_for_character', new_callable=AsyncMock) as mock_fallback:
+            with patch.object(llm_service.fallback_manager, 'get_keyword_candidates') as mock_fallback:
                 mock_fallback.return_value = excess_keywords
                 
                 keywords = await llm_service.generate_keywords(mock_session)
@@ -137,6 +137,7 @@ class TestKeywordFallbackMechanisms:
                 state=SessionState.INIT,
                 initialCharacter=char,
                 themeId="adventure",
+                keywordCandidates=["愛情", "明るい", "新しい", "温かい"],
                 fallbackFlags=[]
             )
             
@@ -145,7 +146,7 @@ class TestKeywordFallbackMechanisms:
             with patch.object(llm_service, '_execute_with_fallback', new_callable=AsyncMock) as mock_execute:
                 mock_execute.side_effect = AllProvidersFailedError("Provider failed")
                 
-                with patch.object(llm_service.fallback_manager, 'get_keywords_for_character', new_callable=AsyncMock) as mock_fallback:
+                with patch.object(llm_service.fallback_manager, 'get_keyword_candidates') as mock_fallback:
                     mock_fallback.return_value = expected_keywords
                     
                     keywords = await llm_service.generate_keywords(session)
@@ -171,7 +172,7 @@ class TestKeywordFallbackMechanisms:
             mock_execute.return_value = mock_response
             
             # Ensure fallback manager is not called
-            with patch.object(llm_service.fallback_manager, 'get_keywords_for_character', new_callable=AsyncMock) as mock_fallback:
+            with patch.object(llm_service.fallback_manager, 'get_keyword_candidates') as mock_fallback:
                 keywords = await llm_service.generate_keywords(mock_session)
                 
                 assert keywords == successful_keywords
@@ -194,6 +195,7 @@ class TestKeywordFallbackQuality:
             state=SessionState.INIT,
             initialCharacter="あ",
             themeId="adventure",
+            keywordCandidates=["愛情", "明るい", "新しい", "温かい"],
             fallbackFlags=[]
         )
         
@@ -202,7 +204,7 @@ class TestKeywordFallbackQuality:
         with patch.object(llm_service, '_execute_with_fallback', new_callable=AsyncMock) as mock_execute:
             mock_execute.side_effect = AllProvidersFailedError("Provider failed")
             
-            with patch.object(llm_service.fallback_manager, 'get_keywords_for_character', new_callable=AsyncMock) as mock_fallback:
+            with patch.object(llm_service.fallback_manager, 'get_keyword_candidates') as mock_fallback:
                 mock_fallback.return_value = fallback_keywords
                 
                 keywords = await llm_service.generate_keywords(session)
@@ -222,6 +224,7 @@ class TestKeywordFallbackQuality:
             state=SessionState.INIT,
             initialCharacter="あ",
             themeId="adventure",
+            keywordCandidates=["愛情", "明るい", "新しい", "温かい"],
             fallbackFlags=[]
         )
         
@@ -230,7 +233,7 @@ class TestKeywordFallbackQuality:
         with patch.object(llm_service, '_execute_with_fallback', new_callable=AsyncMock) as mock_execute:
             mock_execute.side_effect = AllProvidersFailedError("Provider failed")
             
-            with patch.object(llm_service.fallback_manager, 'get_keywords_for_character', new_callable=AsyncMock) as mock_fallback:
+            with patch.object(llm_service.fallback_manager, 'get_keyword_candidates') as mock_fallback:
                 mock_fallback.return_value = japanese_keywords
                 
                 keywords = await llm_service.generate_keywords(session)
@@ -248,6 +251,7 @@ class TestKeywordFallbackQuality:
             state=SessionState.INIT,
             initialCharacter="あ",
             themeId="adventure",
+            keywordCandidates=["愛情", "明るい", "新しい", "温かい"],
             fallbackFlags=[]
         )
         
@@ -256,7 +260,7 @@ class TestKeywordFallbackQuality:
         with patch.object(llm_service, '_execute_with_fallback', new_callable=AsyncMock) as mock_execute:
             mock_execute.side_effect = AllProvidersFailedError("Provider failed")
             
-            with patch.object(llm_service.fallback_manager, 'get_keywords_for_character', new_callable=AsyncMock) as mock_fallback:
+            with patch.object(llm_service.fallback_manager, 'get_keyword_candidates') as mock_fallback:
                 mock_fallback.return_value = unique_keywords
                 
                 keywords = await llm_service.generate_keywords(session)
@@ -280,6 +284,7 @@ class TestKeywordFallbackErrorRecording:
             state=SessionState.INIT,
             initialCharacter="あ",
             themeId="adventure",
+            keywordCandidates=["愛情", "明るい", "新しい", "温かい"],
             fallbackFlags=[],
             llmErrors=[]
         )
@@ -290,7 +295,7 @@ class TestKeywordFallbackErrorRecording:
         with patch.object(llm_service, '_execute_with_fallback', new_callable=AsyncMock) as mock_execute:
             mock_execute.side_effect = original_error
             
-            with patch.object(llm_service.fallback_manager, 'get_keywords_for_character', new_callable=AsyncMock) as mock_fallback:
+            with patch.object(llm_service.fallback_manager, 'get_keyword_candidates') as mock_fallback:
                 mock_fallback.return_value = fallback_keywords
                 
                 keywords = await llm_service.generate_keywords(session)
@@ -307,8 +312,9 @@ class TestKeywordFallbackErrorRecording:
             state=SessionState.INIT,
             initialCharacter="あ",
             themeId="adventure",
+            keywordCandidates=["愛情", "明るい", "新しい", "温かい"],
             fallbackFlags=[],
-            llmGenerations=[],
+            llmGenerations={},
             llmErrors=[]
         )
         
@@ -322,7 +328,7 @@ class TestKeywordFallbackErrorRecording:
         with patch.object(llm_service, '_execute_with_fallback', new_callable=AsyncMock) as mock_execute:
             mock_execute.side_effect = AllProvidersFailedError("Provider failed")
             
-            with patch.object(llm_service.fallback_manager, 'get_keywords_for_character', new_callable=AsyncMock) as mock_fallback:
+            with patch.object(llm_service.fallback_manager, 'get_keyword_candidates') as mock_fallback:
                 mock_fallback.return_value = fallback_keywords
                 
                 keywords = await llm_service.generate_keywords(session)
@@ -355,6 +361,7 @@ class TestKeywordFallbackPerformance:
             state=SessionState.INIT,
             initialCharacter="あ",
             themeId="adventure",
+            keywordCandidates=["愛情", "明るい", "新しい", "温かい"],
             fallbackFlags=[]
         )
         
@@ -363,7 +370,7 @@ class TestKeywordFallbackPerformance:
         with patch.object(llm_service, '_execute_with_fallback', new_callable=AsyncMock) as mock_execute:
             mock_execute.side_effect = AllProvidersFailedError("Provider failed")
             
-            with patch.object(llm_service.fallback_manager, 'get_keywords_for_character', new_callable=AsyncMock) as mock_fallback:
+            with patch.object(llm_service.fallback_manager, 'get_keyword_candidates') as mock_fallback:
                 mock_fallback.return_value = fallback_keywords
                 
                 start_time = time.time()
