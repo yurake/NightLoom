@@ -4,14 +4,7 @@ Simple test script to verify logging functionality.
 """
 
 import logging
-import sys
-
-# Configure logging to console
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler(sys.stdout)]
-)
+import pytest
 
 def test_basic_logging():
     """Test basic logging functionality"""
@@ -41,5 +34,4 @@ def test_basic_logging():
     
     print("=== Logging test completed ===")
 
-if __name__ == "__main__":
-    test_basic_logging()
+# Remove main execution block as this is now a pytest test

@@ -2,18 +2,14 @@
 """Test OpenAI configuration and API connectivity."""
 
 import os
-import asyncio
-import logging
+import pytest
 from dotenv import load_dotenv
 
 # Load environment variables from the correct path
 load_dotenv(dotenv_path=".env")  # Current directory (backend/)
 load_dotenv(dotenv_path="../.env")  # Parent directory (project root)
 
-# Configure logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
-
+@pytest.mark.asyncio
 async def test_openai_config():
     """Test OpenAI configuration and basic connectivity."""
     
@@ -72,6 +68,4 @@ async def test_openai_config():
         print(f"❌ OpenAI API test failed: {e}")
         return False
 
-if __name__ == "__main__":
-    success = asyncio.run(test_openai_config())
-    exit(0 if success else 1)
+# Remove main execution block as this is now a pytest test

@@ -1,24 +1,11 @@
 #!/usr/bin/env python3
 """
 ログレベル設定のテストスクリプト
-
-使用例:
-  # デフォルト設定
-  uv run python test_logging_configuration.py
-  
-  # 環境変数指定
-  LOG_LEVEL=DEBUG uv run python test_logging_configuration.py
-  
-  # 個別モジュール指定
-  LOG_LEVEL=INFO OPENAI_LOG_LEVEL=DEBUG uv run python test_logging_configuration.py
 """
 
 import os
-import sys
 import logging
-
-# アプリケーションのログ設定を使用
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import pytest
 from app.main import setup_logging
 
 def test_logging_levels():
@@ -51,5 +38,4 @@ def test_logging_levels():
     print(f"LLM_SERVICE_LOG_LEVEL: {os.getenv('LLM_SERVICE_LOG_LEVEL', 'default(INFO)')}")
     print(f"PROMPT_LOG_LEVEL: {os.getenv('PROMPT_LOG_LEVEL', 'default(INFO)')}")
 
-if __name__ == "__main__":
-    test_logging_levels()
+# Remove main execution block as this is now a pytest test

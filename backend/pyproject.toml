@@ -27,3 +27,5 @@ dev = [
 [tool.pytest.ini_options]
 pythonpath = ["app"]
 asyncio_mode = "auto"
+testpaths = ["tests"]
+norecursedirs = ["scripts", "logs", "templates"]

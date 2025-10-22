@@ -303,4 +303,13 @@ class TestLLMProviderFailures:
                 assert "keyword_generation" in mock_session.fallbackFlags
 
     @pytest.mark.asyncio
-    async def test_health_check_failure_skip(self, mock_session
+    async def test_health_check_failure_skip(self, mock_session, llm_config_openai_only):
+        """ヘルスチェック失敗時のプロバイダースキップ"""
+        service = ExternalLLMService(config=llm_config_openai_only)
+        
+        with patch.object(service, '_check_provider_health', return_value=False):
+            keywords = await service.generate_keywords(mock_session)
+            
+            # ヘルスチェック失敗でフォールバックが実行される
+            assert len(keywords) == 4
+            assert "keyword_generation" in mock_session.fallbackFlags

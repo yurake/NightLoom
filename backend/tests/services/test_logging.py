@@ -3,7 +3,7 @@
 Test script to verify logging functionality for OpenAI integration.
 """
 
-import asyncio
+import pytest
 import logging
 import os
 from app.main import setup_logging
@@ -11,6 +11,7 @@ from app.services.external_llm import get_llm_service
 from app.models.session import Session
 from app.models.llm_config import get_llm_config
 
+@pytest.mark.asyncio
 async def test_logging():
     """Test logging functionality"""
     # Setup logging
@@ -43,5 +44,4 @@ async def test_logging():
         logger.error(f"Test failed: {e}")
         print(f"Test failed: {e}")
 
-if __name__ == "__main__":
-    asyncio.run(test_logging())
+# Remove main execution block as this is now a pytest test
