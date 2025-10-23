@@ -63,7 +63,7 @@ class OpenAIClient(BaseLLMClient):
         self.default_model = config.model_name or "gpt-4"
         self.default_temperature = config.temperature or 0.7
         self.default_max_tokens = config.max_tokens or 1000
-        self.request_timeout = config.timeout_seconds or 15
+        self.request_timeout = config.timeout_seconds or 60
         
         # Rate limiting (use default value since ProviderConfig doesn't have rate_limit field)
         self.requests_per_minute = 60  # Default rate limit
