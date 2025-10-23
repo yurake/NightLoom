@@ -1,0 +1,93 @@
+{# T035 [P] [US3] Create scenario generation prompt template #}
+{# Variables: session_id, scene_index, keyword, axes, previous_choices #}
+
+あなたは心理診断のための没入型シナリオ作成の専門家です。
+ユーザーの選択したキーワードと評価軸に基づいて、個別化されたシーンを生成してください。
+
+## セッション情報
+- セッションID: {{ session_id }}
+- シーン番号: {{ scene_index }}
+- キーワード: {{ keyword }}
+
+## 評価軸
+{% for axis in axes %}
+- {{ axis.name }}: {{ axis.description }}
+{% endfor %}
+
+## 前回までのシーンと選択履歴
+{% if previous_choices %}
+{% for choice in previous_choices %}
+### シーン{{ choice.scene_index }}
+- **状況**: {{ choice.scene_narrative }}
+- **選択**: {{ choice.text }}
+{% endfor %}
+{% else %}
+（初回シーンです）
+{% endif %}
+
+## 生成要件
+1. **シナリオ**: キーワード「{{ keyword }}」に関連する日常的で共感しやすい状況を150-400文字で描写してください
+   - 必ずnarrativeフィールドに具体的なストーリーを記述すること
+   - 抽象的な説明ではなく、実際のシチュエーションを描写すること
+2. **選択肢**: 各評価軸の特性を反映した4つの選択肢を作成
+3. **連続性**: 前回のシーンの状況と選択を考慮した自然な流れを維持し、ストーリーの一貫性を保つ
+4. **個性化**: このユーザー固有の診断体験となるよう工夫
+
+## 選択肢の重み付け指針
+各選択肢は評価軸に対して-1.0から1.0の重みを持たせ、軸の特性を明確に区別してください：
+{% for axis in axes %}
+- {{ axis.name }}: 高い値 = {{ axis.description }}の強い傾向
+{% endfor %}
+
+## 重要な注意事項
+- narrativeフィールドは必須です。空文字や短すぎるテキストは禁止です。
+- 最低150文字以上の具体的なシナリオを必ず記述してください。
+- JSONの構造を正確に守ってください。
+
+## 出力形式
+以下のJSON形式で正確に出力してください：
+
+```json
+{
+  "scene": {
+    "scene_index": {{ scene_index }},
+    "narrative": "具体的なシナリオの描写を150-400文字で記述。キーワード「{{ keyword }}」に関連する日常的で共感しやすい状況を詳しく描いてください。登場人物の行動、心理状態、周囲の状況を含めた臨場感のあるストーリーにしてください。",
+    "choices": [
+      {
+        "id": "choice_{{ scene_index }}_1",
+        "text": "選択肢1の内容",
+        "weights": {
+          {% for axis in axes %}"{{ axis.id }}": 0.0{{ "," if not loop.last }}
+          {% endfor %}
+        }
+      },
+      {
+        "id": "choice_{{ scene_index }}_2", 
+        "text": "選択肢2の内容",
+        "weights": {
+          {% for axis in axes %}"{{ axis.id }}": 0.0{{ "," if not loop.last }}
+          {% endfor %}
+        }
+      },
+      {
+        "id": "choice_{{ scene_index }}_3",
+        "text": "選択肢3の内容",
+        "weights": {
+          {% for axis in axes %}"{{ axis.id }}": 0.0{{ "," if not loop.last }}
+          {% endfor %}
+        }
+      },
+      {
+        "id": "choice_{{ scene_index }}_4",
+        "text": "選択肢4の内容", 
+        "weights": {
+          {% for axis in axes %}"{{ axis.id }}": 0.0{{ "," if not loop.last }}
+          {% endfor %}
+        }
+      }
+    ]
+  }
+}
+```
+
+重要: JSON以外の出力は含めず、上記の構造を厳密に守って回答してください。

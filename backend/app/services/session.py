@@ -171,29 +171,51 @@ class SessionService:
                 session.fallbackFlags.append("AXES_FALLBACK")
                 logger.warning(f"[SESSION] Used static fallback axes for keyword '{keyword}'")
         
-        # Generate scenes using LLM service with dynamic axes
+        # Generate only the first scene initially to improve response time
+        # Remaining scenes will be generated on-demand when accessed
+        logger.info(f"[SESSION] Generating first scene for keyword: {keyword}")
+        scenes = []
+        
         try:
-            scenes, fallback_used = await self.llm_service.generate_scenes(
-                session.axes, keyword, session.themeId
+            # Generate only the first scene for faster initial response
+            first_scene = await self.external_llm_service.generate_scenario(
+                session=session,
+                scene_index=1,
+                previous_choices=[]
             )
+            scenes.append(first_scene)
+            logger.info(f"[SESSION] Generated first dynamic scene for keyword '{keyword}'")
+            
         except Exception as e:
-            raise SessionServiceError(f"Failed to generate scenes: {str(e)}")
+            logger.error(f"[SESSION] First scene generation failed: {type(e).__name__}: {str(e)}")
+            
+            # Fallback to static scene generation for first scene only
+            try:
+                fallback_scenes, fallback_used = await self.llm_service.generate_scenes(
+                    session.axes, keyword, session.themeId
+                )
+                if fallback_scenes and len(fallback_scenes) >= 1:
+                    scenes.append(fallback_scenes[0])
+                    session.fallbackFlags.append("SCENE_1_FALLBACK")
+                    logger.info(f"[SESSION] Used fallback first scene for keyword '{keyword}'")
+                else:
+                    raise SessionServiceError("Fallback scene generation failed for first scene")
+            except Exception as fallback_error:
+                logger.error(f"[SESSION] Fallback scene generation also failed: {type(fallback_error).__name__}: {str(fallback_error)}")
+                raise SessionServiceError(f"Failed to generate first scene: {str(e)}")
         
         # Update session
         session.state = SessionState.PLAY
         session.scenes = scenes
-        
-        if fallback_used:
-            session.fallbackFlags.append("SCENE_FALLBACK")
         
         session_store.update_session(session)
         
         # Return first scene
         return scenes[0] if scenes else None
     
-    def load_scene(self, session_id: UUID, scene_index: int) -> Scene:
+    async def load_scene(self, session_id: UUID, scene_index: int) -> Scene:
         """
-        Load scene by index.
+        Load scene by index, generating dynamically if needed.
         
         Args:
             session_id: Session identifier
@@ -213,12 +235,69 @@ class SessionService:
         if not SessionGuard.can_access_scene(session, scene_index):
             raise InvalidSessionStateError(f"Cannot access scene {scene_index}")
         
-        # Find scene
+        # Check if scene already exists
         for scene in session.scenes:
             if scene.sceneIndex == scene_index:
                 return scene
         
-        raise SessionServiceError(f"Scene {scene_index} not found")
+        # Scene doesn't exist - generate it dynamically with context
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"[SESSION] Dynamically generating scene {scene_index} for session {session_id}")
+        
+        # Collect previous scenes and choices for continuity
+        previous_choices = []
+        for choice_record in session.choices:
+            if choice_record.sceneIndex < scene_index:
+                # Find the scene and choice text from previous scenes
+                for prev_scene in session.scenes:
+                    if prev_scene.sceneIndex == choice_record.sceneIndex:
+                        for choice in prev_scene.choices:
+                            if choice.id == choice_record.choiceId:
+                                previous_choices.append({
+                                    "scene_index": choice_record.sceneIndex,
+                                    "choice_id": choice_record.choiceId,
+                                    "text": choice.text,
+                                    "scene_narrative": prev_scene.narrative
+                                })
+                                break
+                        break
+        
+        try:
+            # Generate scene using external LLM service with continuity
+            dynamic_scene = await self.external_llm_service.generate_scenario(
+                session=session,
+                scene_index=scene_index,
+                previous_choices=previous_choices
+            )
+            
+            # Add generated scene to session
+            session.scenes.append(dynamic_scene)
+            session_store.update_session(session)
+            
+            logger.info(f"[SESSION] Successfully generated dynamic scene {scene_index}")
+            return dynamic_scene
+            
+        except Exception as e:
+            logger.error(f"[SESSION] Dynamic scene {scene_index} generation failed: {type(e).__name__}: {str(e)}")
+            
+            # Fallback to static scene generation
+            try:
+                fallback_scenes, fallback_used = await self.llm_service.generate_scenes(
+                    session.axes, session.selectedKeyword, session.themeId
+                )
+                if fallback_scenes and len(fallback_scenes) >= scene_index:
+                    fallback_scene = fallback_scenes[scene_index - 1]
+                    session.scenes.append(fallback_scene)
+                    session.fallbackFlags.append(f"SCENE_{scene_index}_FALLBACK")
+                    session_store.update_session(session)
+                    logger.info(f"[SESSION] Used fallback scene {scene_index}")
+                    return fallback_scene
+                else:
+                    raise SessionServiceError(f"Fallback scene generation failed for scene {scene_index}")
+            except Exception as fallback_error:
+                logger.error(f"[SESSION] Fallback scene generation also failed: {type(fallback_error).__name__}: {str(fallback_error)}")
+                raise SessionServiceError(f"Scene {scene_index} not found and cannot be generated")
     
     def get_scene(self, session: Session, scene_index: int) -> Scene:
         """
@@ -349,10 +428,32 @@ class SessionService:
             raw_scores = await self.scoring_service.calculate_scores(session)
             normalized_scores = await self.scoring_service.normalize_scores(raw_scores)
             
-            # Generate type profiles using existing axes
-            type_profiles, fallback_used = await self.llm_service.generate_type_profiles(
-                session.axes, raw_scores, session.selectedKeyword
-            )
+            # T048: Generate type profiles using AI analysis (external LLM service)
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"[SESSION] Generating AI analysis for session {session_id}")
+            
+            try:
+                # Use external LLM service for AI-powered analysis
+                ai_profiles = await self.external_llm_service.analyze_results(session)
+                type_profiles = ai_profiles
+                fallback_used = False
+                logger.info(f"[SESSION] Successfully generated AI analysis with {len(ai_profiles)} profiles")
+            except Exception as ai_error:
+                logger.error(f"[SESSION] AI analysis failed: {type(ai_error).__name__}: {str(ai_error)}")
+                
+                # Fallback to existing LLM service
+                try:
+                    type_profiles, fallback_used = await self.llm_service.generate_type_profiles(
+                        session.axes, raw_scores, session.selectedKeyword
+                    )
+                    logger.info(f"[SESSION] Used fallback type profile generation")
+                except Exception as fallback_error:
+                    logger.error(f"[SESSION] Fallback type generation also failed: {type(fallback_error).__name__}: {str(fallback_error)}")
+                    from app.services.fallback_assets import get_fallback_type_profiles
+                    type_profiles = get_fallback_type_profiles()
+                    fallback_used = True
+                    session.fallbackFlags.append("AI_RESULT_ANALYSIS_FALLBACK")
             
             # Update session with results
             session.rawScores = raw_scores
