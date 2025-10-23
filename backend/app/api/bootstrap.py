@@ -85,6 +85,12 @@ async def start_session(request: Optional[BootstrapRequest] = None) -> dict[str,
         raise HTTPException(status_code=500, detail=f"Failed to create session: {str(e)}")
 
 
+@router.post("/bootstrap")
+async def bootstrap_session(request: Optional[BootstrapRequest] = None) -> dict[str, object]:
+    """Create a new session with bootstrap data (alternative endpoint for frontend compatibility)."""
+    return await start_session(request)
+
+
 @router.post("/llm/generate/axes")
 async def generate_axes(request: AxisGenerationRequest) -> dict[str, object]:
     """Generate evaluation axes based on selected keyword using LLM."""

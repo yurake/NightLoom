@@ -69,6 +69,17 @@ async def submit_choice(
         # Submit choice and get next scene
         next_scene = default_session_service.record_choice(session_id, scene_index, choice_id)
         
+        # If no next scene is returned but we're not at the last scene, try to load it dynamically
+        if not next_scene and scene_index < 4:
+            try:
+                next_scene = await default_session_service.load_scene(session_id, scene_index + 1)
+            except Exception as e:
+                # If scene generation fails, continue without next scene
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"[API] Failed to generate next scene {scene_index + 1}: {str(e)}")
+                next_scene = None
+        
         # Track success metrics
         observability_service.increment_counter("choice_submission_success")
         observability_service.record_latency("choice_submission", start_time)

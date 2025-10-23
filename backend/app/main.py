@@ -187,14 +187,14 @@ app.add_middleware(
 )
 
 # Routers are namespaced for clarity; actual handlers are fully implemented.
-app.include_router(bootstrap.router, prefix="/api/sessions", tags=["session"])
 app.include_router(keyword.router, prefix="/api/sessions", tags=["session"])
 app.include_router(scenes.router, prefix="/api/sessions", tags=["scenes"])
 app.include_router(choices.router, prefix="/api/sessions", tags=["choices"])
 app.include_router(results.router, prefix="/api/sessions", tags=["results"])
 
-# LLM service endpoints (from bootstrap router)
-app.include_router(bootstrap.router, prefix="/api", tags=["llm"])
+# Bootstrap endpoints (both /api/bootstrap and /api/sessions/start for compatibility)
+app.include_router(bootstrap.router, prefix="/api/sessions", tags=["session"])
+app.include_router(bootstrap.router, prefix="/api", tags=["bootstrap"])
 
 
 @app.middleware("http")
