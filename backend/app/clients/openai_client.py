@@ -18,12 +18,39 @@ except ImportError:
     openai = None
     AsyncOpenAI = None
 
+from pydantic import BaseModel, Field
 from .llm_client import (
     BaseLLMClient, LLMRequest, LLMResponse, LLMTaskType, LLMClientError,
     ValidationError, RateLimitError, ProviderUnavailableError
 )
 from ..models.llm_config import ProviderConfig, LLMProvider
 from ..services.prompt_template import get_template_manager
+
+
+# Structured Output models for OpenAI API
+class ScenarioChoice(BaseModel):
+    """Choice option within a scenario for structured outputs."""
+    model_config = {"extra": "forbid", "json_schema_extra": {"additionalProperties": False}}
+    
+    id: str
+    text: str
+    weights: Dict[str, float]
+
+
+class ScenarioSceneData(BaseModel):
+    """Scene data for structured outputs."""
+    model_config = {"extra": "forbid", "json_schema_extra": {"additionalProperties": False}}
+    
+    scene_index: int
+    narrative: str
+    choices: List[ScenarioChoice]
+
+
+class ScenarioResponse(BaseModel):
+    """Complete scenario response structure for OpenAI structured outputs."""
+    model_config = {"extra": "forbid", "json_schema_extra": {"additionalProperties": False}}
+    
+    scene: ScenarioSceneData
 
 
 class OpenAIClientError(LLMClientError):
@@ -63,7 +90,7 @@ class OpenAIClient(BaseLLMClient):
         self.default_model = config.model_name or "gpt-4"
         self.default_temperature = config.temperature or 0.7
         self.default_max_tokens = config.max_tokens or 1000
-        self.request_timeout = config.timeout_seconds or 120
+        self.request_timeout = config.timeout_seconds or 60
         
         # Rate limiting (use default value since ProviderConfig doesn't have rate_limit field)
         self.requests_per_minute = 60  # Default rate limit
@@ -414,6 +441,8 @@ class OpenAIClient(BaseLLMClient):
             # Execute OpenAI API call
             start_time = datetime.now(timezone.utc)
             
+            # Use standard JSON format - OpenAI Structured Outputs has too many constraints
+            # The prompt template will ensure correct structure
             response = await self.client.chat.completions.create(
                 model="gpt-4o-mini" if self.default_model == "gpt-4" else self.default_model,
                 messages=messages,
@@ -430,37 +459,30 @@ class OpenAIClient(BaseLLMClient):
             self.logger.info(f"[OpenAI] Scenario response received in {latency_ms:.1f}ms")
             self.logger.debug(f"[OpenAI] Full scenario response object: {response}")
             
-            # Parse response
+            # Parse standard JSON response and validate with Pydantic
             content_text = response.choices[0].message.content
             if not content_text:
                 raise OpenAIClientError("Empty response from OpenAI")
             
-            # Log response content
-            self.logger.info(f"[OpenAI] Raw scenario response content: {content_text}")
+            self.logger.info(f"[OpenAI] Standard JSON response received: {content_text}")
             
             try:
+                # Parse JSON first
                 content = json.loads(content_text)
-                self.logger.info(f"[OpenAI] Parsed scenario JSON content: {content}")
-                # Log structure details for debugging
-                if isinstance(content, dict):
-                    self.logger.info(f"[OpenAI] Content keys: {list(content.keys())}")
-                    if "scene" in content:
-                        scene = content["scene"]
-                        self.logger.info(f"[OpenAI] Scene keys: {list(scene.keys()) if isinstance(scene, dict) else 'not a dict'}")
-                        if isinstance(scene, dict):
-                            if "narrative" in scene:
-                                narrative = scene["narrative"]
-                                self.logger.info(f"[OpenAI] Narrative value: '{narrative}' (length: {len(str(narrative))}) (type: {type(narrative)})")
-                            else:
-                                self.logger.error(f"[OpenAI] No 'narrative' field in scene! Available fields: {list(scene.keys())}")
-                        else:
-                            self.logger.error(f"[OpenAI] Scene is not a dict: {type(scene)} = {scene}")
-                    else:
-                        self.logger.error(f"[OpenAI] No 'scene' field in content! Available fields: {list(content.keys())}")
-                else:
-                    self.logger.error(f"[OpenAI] Content is not a dict: {type(content)} = {content}")
+                self.logger.info(f"[OpenAI] JSON parsing successful: {content}")
+                
+                # Validate structure with Pydantic
+                try:
+                    scenario_response = ScenarioResponse.model_validate(content)
+                    self.logger.info(f"[OpenAI] ✅ Pydantic validation passed")
+                    # Use validated content
+                    content = scenario_response.model_dump()
+                except Exception as validation_error:
+                    self.logger.warning(f"[OpenAI] Pydantic validation failed: {validation_error}")
+                    self.logger.info(f"[OpenAI] Continuing with raw JSON content for compatibility")
+                
             except json.JSONDecodeError as e:
-                self.logger.error(f"[OpenAI] Scenario JSON parsing failed: {e}")
+                self.logger.error(f"[OpenAI] JSON parsing failed: {e}")
                 raise ValidationError(f"Invalid JSON response: {e}")
             
             # Validate scenario response format
@@ -514,6 +536,13 @@ class OpenAIClient(BaseLLMClient):
             self.logger.error(f"[OpenAI] Authentication error (scenario): {type(e).__name__}: {str(e)}")
             self._update_metrics("generate_scenario", error=True)
             raise OpenAIClientError(f"OpenAI authentication error: {e}")
+        except openai.BadRequestError as e:
+            # Handle Structured Outputs parsing errors
+            self.logger.error(f"[OpenAI] Bad request (scenario): {type(e).__name__}: {str(e)}")
+            if "parse" in str(e).lower():
+                self.logger.error(f"[OpenAI] Structured Outputs parsing failed, check schema compatibility")
+            self._update_metrics("generate_scenario", error=True)
+            raise OpenAIClientError(f"OpenAI bad request error: {e}")
         except ValidationError as e:
             self.logger.error(f"[OpenAI] Validation error (scenario): {type(e).__name__}: {str(e)}")
             self._update_metrics("generate_scenario", error=True)

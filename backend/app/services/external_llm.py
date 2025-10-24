@@ -496,6 +496,9 @@ class ExternalLLMService:
         }
 
         try:
+            self.logger.info(f"[LLM Service] Starting scenario generation for scene {scene_index}")
+            self.logger.debug(f"[LLM Service] Template  {template_data}")
+            
             response = await self._execute_with_fallback(
                 session=session,
                 task_type=LLMTaskType.SCENARIO_GENERATION,
@@ -504,28 +507,53 @@ class ExternalLLMService:
             )
 
             content = response.content
-            choices_data = content.get("choices", [])
+            self.logger.info(f"[LLM Service] Received scenario response: {content}")
+            
+            # Check if we have the expected scene structure
+            if "scene" not in content:
+                self.logger.error(f"[LLM Service] Missing 'scene' field in response: {content}")
+                raise ValidationError("Response missing 'scene' field")
+            
+            scene_data = content["scene"]
+            
+            # Check narrative field specifically
+            narrative = scene_data.get("narrative", "")
+            if not narrative or not isinstance(narrative, str) or not narrative.strip():
+                self.logger.error(f"[LLM Service] Invalid or empty narrative: '{narrative}'")
+                self.logger.error(f"[LLM Service] Full scene data: {scene_data}")
+                raise ValidationError("Scene narrative is empty or invalid")
+            
+            choices_data = scene_data.get("choices", [])
 
             # Validate and create choices
             if len(choices_data) != 4:
+                self.logger.error(f"[LLM Service] Expected 4 choices, got {len(choices_data)}")
                 raise ValidationError(
                     f"Expected 4 choices, got {len(choices_data)}")
 
             choices = [Choice(**choice_data) for choice_data in choices_data]
 
+            # T039: Add choice weight validation and balancing
+            validated_choices = await self._validate_and_balance_choice_weights(
+                choices, session.axes, scene_index
+            )
+
             # Create scene
             scene = Scene(
                 sceneIndex=scene_index,
                 themeId=session.themeId,
-                narrative=content.get("narrative", ""),
-                choices=choices
+                narrative=narrative.strip(),
+                choices=validated_choices
             )
-
+            
+            self.logger.info(f"[LLM Service] Successfully created scene {scene_index} with narrative length: {len(narrative)}")
             return scene
 
-        except AllProvidersFailedError:
+        except AllProvidersFailedError as e:
             # Use fallback scenario
-            fallback_scene = self.fallback_manager.get_fallback_scene(
+            self.logger.error(f"[LLM Service] All providers failed for scenario generation scene {scene_index}: {e}")
+            from ..services.fallback_assets import get_fallback_scene
+            fallback_scene = get_fallback_scene(
                 scene_index=scene_index,
                 theme_id=session.themeId
             )
@@ -533,7 +561,24 @@ class ExternalLLMService:
             # Record fallback usage
             session.fallbackFlags.append(
                 f"scenario_generation_scene_{scene_index}")
+            
+            self.logger.info(f"[LLM Service] Using fallback scenario for scene {scene_index}")
+            return fallback_scene
+        
+        except (ValidationError, ValueError) as e:
+            # Validation errors - try fallback
+            self.logger.error(f"[LLM Service] Scenario validation failed for scene {scene_index}: {e}")
+            from ..services.fallback_assets import get_fallback_scene
+            fallback_scene = get_fallback_scene(
+                scene_index=scene_index,
+                theme_id=session.themeId
+            )
 
+            # Record fallback usage with error info
+            session.fallbackFlags.append(
+                f"scenario_generation_scene_{scene_index}_validation_error")
+            
+            self.logger.info(f"[LLM Service] Using fallback scenario due to validation error for scene {scene_index}")
             return fallback_scene
 
     async def analyze_results(self, session: Session) -> List[TypeProfile]:
@@ -570,13 +615,25 @@ class ExternalLLMService:
             )
 
             profiles_data = response.content.get("type_profiles", [])
-            profiles = [TypeProfile(**profile_data)
-                        for profile_data in profiles_data]
+            
+            # T049: Add personality type validation and formatting
+            validated_profiles = []
+            for i, profile_data in enumerate(profiles_data):
+                try:
+                    # Validate and format profile data
+                    formatted_profile = await self._validate_and_format_type_profile(
+                        profile_data, i + 1, session
+                    )
+                    validated_profiles.append(formatted_profile)
+                except Exception as validation_error:
+                    self.logger.warning(f"[Type Profile Validation] Profile {i+1} validation failed: {validation_error}")
+                    # Skip invalid profiles but continue with others
+                    continue
+            
+            if not validated_profiles:
+                raise ValidationError("No valid type profiles generated after validation")
 
-            if not profiles:
-                raise ValidationError("No type profiles generated")
-
-            return profiles
+            return validated_profiles
 
         except AllProvidersFailedError:
             # Use fallback analysis
@@ -618,6 +675,282 @@ class ExternalLLMService:
                 for status in provider_status.values()
             )
         }
+
+    async def _validate_and_balance_choice_weights(
+        self,
+        choices: List[Choice],
+        axes: List[Axis],
+        scene_index: int
+    ) -> List[Choice]:
+       """
+       T039: Validate and balance choice weights for optimal distribution.
+       
+       Args:
+           choices: Generated choices with weights
+           axes: Current session axes
+           scene_index: Scene number for logging
+           
+       Returns:
+           Validated and balanced choices
+       """
+       self.logger.info(f"[Choice Validation] Validating weights for scene {scene_index}")
+       
+       # Create axis ID set for validation
+       axis_ids = {axis.id for axis in axes}
+       validated_choices = []
+       
+       for i, choice in enumerate(choices):
+           validated_choice = choice
+           needs_rebalancing = False
+           
+           # Validate weight completeness
+           missing_axes = axis_ids - set(choice.weights.keys())
+           if missing_axes:
+               self.logger.warning(f"[Choice Validation] Choice {i+1} missing weights for axes: {missing_axes}")
+               # Add missing weights with neutral value
+               for axis_id in missing_axes:
+                   validated_choice.weights[axis_id] = 0.0
+               needs_rebalancing = True
+           
+           # Validate weight ranges
+           for axis_id, weight in validated_choice.weights.items():
+               if not isinstance(weight, (int, float)):
+                   self.logger.warning(f"[Choice Validation] Choice {i+1} weight for {axis_id} is not numeric: {weight}")
+                   validated_choice.weights[axis_id] = 0.0
+                   needs_rebalancing = True
+               elif not (-1.0 <= weight <= 1.0):
+                   self.logger.warning(f"[Choice Validation] Choice {i+1} weight for {axis_id} out of range: {weight}")
+                   # Clamp to valid range
+                   validated_choice.weights[axis_id] = max(-1.0, min(1.0, float(weight)))
+                   needs_rebalancing = True
+           
+           if needs_rebalancing:
+               self.logger.info(f"[Choice Validation] Rebalanced choice {i+1}")
+           
+           validated_choices.append(validated_choice)
+       
+       # Check overall balance across all choices
+       balanced_choices = await self._balance_choice_distribution(validated_choices, axes, scene_index)
+       
+       self.logger.info(f"[Choice Validation] Completed validation for scene {scene_index}")
+       return balanced_choices
+   
+    async def _balance_choice_distribution(
+        self,
+        choices: List[Choice],
+        axes: List[Axis],
+        scene_index: int
+    ) -> List[Choice]:
+       """
+       Ensure choices provide good distribution across axis spectrum.
+       
+       Args:
+           choices: Validated choices
+           axes: Session axes
+           scene_index: Scene number for logging
+           
+       Returns:
+           Balanced choices with improved distribution
+       """
+       # Calculate current distribution
+       axis_totals = {}
+       for axis in axes:
+           axis_totals[axis.id] = sum(choice.weights.get(axis.id, 0.0) for choice in choices)
+       
+       # Check if rebalancing is needed
+       rebalance_needed = False
+       for axis_id, total in axis_totals.items():
+           # If all choices are heavily skewed in one direction, rebalance
+           if abs(total) > 3.0:  # Threshold for extreme imbalance
+               rebalance_needed = True
+               self.logger.warning(f"[Choice Balance] Scene {scene_index} axis {axis_id} heavily imbalanced: {total}")
+       
+       if not rebalance_needed:
+           return choices
+       
+       # Apply gentle rebalancing
+       balanced_choices = []
+       for i, choice in enumerate(choices):
+           balanced_choice = Choice(
+               id=choice.id,
+               text=choice.text,
+               weights=choice.weights.copy()
+           )
+           
+           # Apply mild counter-balancing for extreme cases
+           for axis_id, total in axis_totals.items():
+               if abs(total) > 3.0:
+                   current_weight = balanced_choice.weights.get(axis_id, 0.0)
+                   # Slightly reduce extreme weights to improve balance
+                   if total > 3.0 and current_weight > 0.5:
+                       balanced_choice.weights[axis_id] = current_weight * 0.8
+                   elif total < -3.0 and current_weight < -0.5:
+                       balanced_choice.weights[axis_id] = current_weight * 0.8
+           
+           balanced_choices.append(balanced_choice)
+       
+       self.logger.info(f"[Choice Balance] Applied rebalancing for scene {scene_index}")
+       return balanced_choices
+   
+    async def _validate_and_format_type_profile(
+       self,
+       profile_data: Dict[str, Any],
+       profile_index: int,
+       session: Session
+   ) -> TypeProfile:
+       """
+       T049: Validate and format type profile data.
+       
+       Args:
+           profile_ Raw profile data from LLM
+           profile_index: Profile number for error reporting
+           session: Current session for context
+           
+       Returns:
+           Validated and formatted TypeProfile
+           
+       Raises:
+           ValidationError: If profile data is invalid
+       """
+       self.logger.debug(f"[Type Profile Validation] Validating profile {profile_index}")
+       
+       # Create a copy for modification
+       formatted_data = profile_data.copy()
+       
+       # Validate required fields
+       required_fields = ["name", "description", "keywords", "dominantAxes", "polarity"]
+       for field in required_fields:
+           if field not in formatted_data:
+               raise ValidationError(f"Profile {profile_index} missing required field: {field}")
+       
+       # Validate and format name
+       name = str(formatted_data["name"]).strip()
+       if not name:
+           raise ValidationError(f"Profile {profile_index} name cannot be empty")
+       if len(name) > 14:
+           # Truncate name but keep it meaningful
+           name = name[:11] + "..."
+           self.logger.warning(f"[Type Profile Validation] Truncated profile {profile_index} name to: {name}")
+       formatted_data["name"] = name
+       
+       # Validate and format description
+       description = str(formatted_data["description"]).strip()
+       if not description:
+           raise ValidationError(f"Profile {profile_index} description cannot be empty")
+       if len(description) < 10:
+           # Enhance short descriptions
+           keyword_context = session.selectedKeyword if session.selectedKeyword else "特性"
+           description = f"{description} {keyword_context}を重視する傾向があります。"
+           self.logger.info(f"[Type Profile Validation] Enhanced short description for profile {profile_index}")
+       formatted_data["description"] = description
+       
+       # Validate and format keywords
+       keywords = formatted_data["keywords"]
+       if not isinstance(keywords, list):
+           keywords = []
+       keywords = [str(k).strip() for k in keywords if k and str(k).strip()]
+       if len(keywords) < 2:
+           # Add default keywords based on session context
+           default_keywords = self._generate_default_keywords(session)
+           keywords.extend(default_keywords[:2 - len(keywords)])
+           self.logger.info(f"[Type Profile Validation] Added default keywords for profile {profile_index}")
+       formatted_data["keywords"] = keywords[:5]  # Limit to 5 keywords
+       
+       # Validate and format dominant axes
+       dominant_axes = formatted_data["dominantAxes"]
+       if not isinstance(dominant_axes, list):
+           dominant_axes = []
+       
+       # Validate axes exist in session
+       session_axis_ids = {axis.id for axis in session.axes}
+       valid_axes = [axis_id for axis_id in dominant_axes if axis_id in session_axis_ids]
+       
+       if len(valid_axes) < 2:
+           # Auto-select dominant axes from scores
+           if session.normalizedScores:
+               sorted_axes = sorted(
+                   session.normalizedScores.items(),
+                   key=lambda x: abs(x[1] - 50.0),  # Distance from neutral
+                   reverse=True
+               )
+               auto_axes = [axis_id for axis_id, _ in sorted_axes[:2]]
+               valid_axes = auto_axes[:2]
+               self.logger.info(f"[Type Profile Validation] Auto-selected dominant axes for profile {profile_index}: {valid_axes}")
+       
+       formatted_data["dominantAxes"] = valid_axes[:2]  # Exactly 2 axes
+       
+       # Validate and format polarity
+       polarity = str(formatted_data["polarity"]).strip()
+       valid_polarities = ["Hi-Hi", "Hi-Lo", "Lo-Hi", "Lo-Lo", "Mid-Mid", "Hi-Mid", "Mid-Hi", "Lo-Mid", "Mid-Lo"]
+       if polarity not in valid_polarities:
+           # Auto-determine polarity from scores
+           if session.normalizedScores and len(valid_axes) >= 2:
+               axis1_score = session.normalizedScores.get(valid_axes[0], 50.0)
+               axis2_score = session.normalizedScores.get(valid_axes[1], 50.0)
+               
+               def score_to_level(score):
+                   if score > 70:
+                       return "Hi"
+                   elif score < 30:
+                       return "Lo"
+                   else:
+                       return "Mid"
+               
+               polarity = f"{score_to_level(axis1_score)}-{score_to_level(axis2_score)}"
+               self.logger.info(f"[Type Profile Validation] Auto-determined polarity for profile {profile_index}: {polarity}")
+           else:
+               polarity = "Mid-Mid"  # Safe default
+       
+       formatted_data["polarity"] = polarity
+       
+       # Ensure meta field exists
+       if "meta" not in formatted_data:
+           formatted_data["meta"] = {}
+       
+       # Add validation metadata
+       formatted_data["meta"]["validated"] = True
+       formatted_data["meta"]["validation_timestamp"] = datetime.now(timezone.utc).isoformat()
+       
+       # Create and return TypeProfile
+       try:
+           validated_profile = TypeProfile(**formatted_data)
+           self.logger.debug(f"[Type Profile Validation] Successfully validated profile {profile_index}")
+           return validated_profile
+       except Exception as e:
+           raise ValidationError(f"Profile {profile_index} failed TypeProfile creation: {str(e)}")
+   
+    def _generate_default_keywords(self, session: Session) -> List[str]:
+        """Generate default keywords based on session context."""
+        keyword_mappings = {
+            "愛": ["caring", "empathetic", "nurturing"],
+            "冒険": ["adventurous", "bold", "exploratory"],
+            "挑戦": ["challenging", "determined", "ambitious"],
+            "成長": ["growth-oriented", "developing", "progressive"],
+            "希望": ["optimistic", "hopeful", "positive"],
+            "協力": ["collaborative", "team-oriented", "supportive"]
+        }
+        
+        if session.selectedKeyword and session.selectedKeyword in keyword_mappings:
+            return keyword_mappings[session.selectedKeyword]
+        
+        # Generic defaults based on score patterns
+        if session.normalizedScores:
+            logic_score = session.normalizedScores.get("logic_emotion", 50.0)
+            speed_score = session.normalizedScores.get("speed_caution", 50.0)
+            
+            keywords = []
+            if logic_score > 60:
+                keywords.append("analytical")
+            if logic_score < 40:
+                keywords.append("intuitive")
+            if speed_score > 60:
+                keywords.append("decisive")
+            if speed_score < 40:
+                keywords.append("thoughtful")
+            
+            return keywords
+        
+        return ["balanced", "adaptable", "thoughtful"]
 
 
 # Global service instance

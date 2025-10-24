@@ -50,9 +50,41 @@ export class SessionAPIError extends Error {
 
 export class SessionClient {
   private baseUrl: string;
+  private defaultTimeout: number = 60000; // 60 seconds for dynamic generation
 
   constructor(baseUrl: string = '/api') {
     this.baseUrl = baseUrl.replace(/\/$/, '');
+  }
+
+  /**
+   * Create fetch with timeout and AbortController
+   */
+  private async fetchWithTimeout(
+    url: string,
+    options: RequestInit,
+    timeout: number = this.defaultTimeout
+  ): Promise<Response> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      return response;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new SessionAPIError(
+          `Request timed out after ${timeout}ms. This may be due to dynamic content generation.`,
+          408,
+          'REQUEST_TIMEOUT'
+        );
+      }
+      throw error;
+    }
   }
 
   /**
@@ -62,12 +94,12 @@ export class SessionClient {
     const startTime = performance.now();
     
     try {
-      const response = await fetch(`${this.baseUrl}/sessions/start`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/sessions/start`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-      });
+      }, 30000); // Bootstrap should be faster
 
       const metrics = performanceService.trackApiCall(
         '/sessions/start',
@@ -120,13 +152,13 @@ export class SessionClient {
     const startTime = performance.now();
     
     try {
-      const response = await fetch(`${this.baseUrl}/sessions/${sessionId}/keyword`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/sessions/${sessionId}/keyword`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ keyword, source }),
-      });
+      }, 60000); // Extended timeout for dynamic axis + scene generation
 
       performanceService.trackApiCall(
         `/sessions/${sessionId}/keyword`,
@@ -171,14 +203,15 @@ export class SessionClient {
    */
   async getScene(sessionId: string, sceneIndex: number): Promise<SceneResponse> {
     try {
-      const response = await fetch(
+      const response = await this.fetchWithTimeout(
         `${this.baseUrl}/sessions/${sessionId}/scenes/${sceneIndex}`,
         {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
           },
-        }
+        },
+        45000 // Scene generation timeout
       );
 
       if (!response.ok) {
@@ -214,7 +247,7 @@ export class SessionClient {
     choiceId: string
   ): Promise<ChoiceResponse> {
     try {
-      const response = await fetch(
+      const response = await this.fetchWithTimeout(
         `${this.baseUrl}/sessions/${sessionId}/scenes/${sceneIndex}/choice`,
         {
           method: 'POST',
@@ -222,7 +255,8 @@ export class SessionClient {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ choiceId }),
-        }
+        },
+        30000 // Choice submission should be fast
       );
 
       if (!response.ok) {
@@ -256,12 +290,12 @@ export class SessionClient {
     const startTime = performance.now();
     
     try {
-      const response = await fetch(`${this.baseUrl}/sessions/${sessionId}/result`, {
+      const response = await this.fetchWithTimeout(`${this.baseUrl}/sessions/${sessionId}/result`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-      });
+      }, 60000); // Result generation may include AI analysis
 
       const metrics = performanceService.trackApiCall(
         `/sessions/${sessionId}/result`,

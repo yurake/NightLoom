@@ -4,14 +4,206 @@ Scene retrieval API endpoints for NightLoom MVP.
 Provides endpoints for retrieving scene data during diagnosis flow.
 """
 
-from fastapi import APIRouter, HTTPException, Path
+from fastapi import APIRouter, HTTPException, Path, Body
+from pydantic import BaseModel, Field
 from uuid import UUID
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
 
 from app.services.session import default_session_service, SessionNotFoundError, InvalidSessionStateError, SessionServiceError
+from app.services.external_llm import get_llm_service, LLMServiceError, AllProvidersFailedError
 from app.services.observability import observability_service
 
 router = APIRouter(tags=["scenes"])
+
+
+class ScenarioGenerationRequest(BaseModel):
+    """Request model for LLM scenario generation."""
+    session_id: UUID = Field(..., description="Session identifier")
+    scene_index: int = Field(..., ge=1, le=4, description="Scene number (1-4)")
+    keyword: str = Field(..., description="Selected keyword for scenario context")
+    axes: List[Dict[str, Any]] = Field(..., description="Evaluation axes for choice weights")
+    previous_choices: Optional[List[Dict[str, Any]]] = Field(default=None, description="Previous user choices for continuity")
+
+
+class ScenarioGenerationResponse(BaseModel):
+    """Response model for generated scenario."""
+    session_id: UUID
+    scene: Dict[str, Any]
+    provider_used: str
+    generation_time_ms: float
+    fallback_used: bool = False
+
+
+@router.post("/llm/generate/scenario")
+async def generate_scenario(
+    request: ScenarioGenerationRequest = Body(..., description="Scenario generation request")
+) -> ScenarioGenerationResponse:
+    """
+    Generate dynamic scenario using LLM service.
+    
+    T037 [US3] Create /api/llm/generate/scenario API endpoint
+    
+    Args:
+        request: Scenario generation request with session info, keyword, and axes
+        
+    Returns:
+        Generated scenario with narrative and choices
+        
+    Raises:
+        400: Validation error or session not found
+        503: LLM service unavailable
+        500: Internal server error
+    """
+    # Start performance tracking
+    start_time = observability_service.start_timer("llm_scenario_generation")
+    
+    try:
+        # Validate session exists and is in correct state
+        session = default_session_service.session_store.get_session(request.session_id)
+        if not session:
+            observability_service.increment_counter("llm_scenario_generation_session_not_found")
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "error_code": "SESSION_NOT_FOUND",
+                    "message": "Session not found or has expired",
+                    "details": {
+                        "session_id": str(request.session_id),
+                        "timestamp": observability_service.get_current_timestamp()
+                    }
+                }
+            )
+        
+        # Validate session state
+        if session.state.value not in ["PLAY", "INIT"]:
+            observability_service.increment_counter("llm_scenario_generation_invalid_state")
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error_code": "INVALID_SESSION_STATE",
+                    "message": f"Session is in {session.state.value} state, expected PLAY or INIT",
+                    "details": {
+                        "session_id": str(request.session_id),
+                        "current_state": session.state.value,
+                        "expected_states": ["PLAY", "INIT"],
+                        "timestamp": observability_service.get_current_timestamp()
+                    }
+                }
+            )
+        
+        # Get LLM service
+        llm_service = get_llm_service()
+        
+        # Update session with request data if needed
+        if not session.selectedKeyword:
+            session.selectedKeyword = request.keyword
+        
+        # Convert axes data to Axis objects if needed
+        from app.models.session import Axis
+        if not session.axes or len(session.axes) == 0:
+            session.axes = [Axis(**axis_data) for axis_data in request.axes]
+        
+        # Generate scenario using LLM service
+        generated_scene = await llm_service.generate_scenario(
+            session=session,
+            scene_index=request.scene_index,
+            previous_choices=request.previous_choices
+        )
+        
+        # Track success metrics
+        observability_service.increment_counter("llm_scenario_generation_success")
+        generation_time = observability_service.record_latency("llm_scenario_generation", start_time)
+        
+        # Determine provider used and fallback status
+        provider_used = "external_llm"  # Default assumption
+        fallback_used = False
+        
+        # Check for fallback flags in session
+        if session.fallbackFlags:
+            fallback_flags = [flag for flag in session.fallbackFlags if f"scenario_generation_scene_{request.scene_index}" in flag]
+            if fallback_flags:
+                fallback_used = True
+                provider_used = "fallback"
+        
+        # Prepare response
+        response_data = {
+            "session_id": request.session_id,
+            "scene": {
+                "scene_index": generated_scene.sceneIndex,
+                "narrative": generated_scene.narrative,
+                "choices": [
+                    {
+                        "id": choice.id,
+                        "text": choice.text,
+                        "weights": choice.weights
+                    }
+                    for choice in generated_scene.choices
+                ]
+            },
+            "provider_used": provider_used,
+            "generation_time_ms": generation_time,
+            "fallback_used": fallback_used
+        }
+        
+        return ScenarioGenerationResponse(**response_data)
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions as is
+        raise
+        
+    except (LLMServiceError, AllProvidersFailedError) as e:
+        observability_service.increment_counter("llm_scenario_generation_service_error")
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error_code": "LLM_SERVICE_UNAVAILABLE",
+                "message": "LLM service is temporarily unavailable for scenario generation",
+                "details": {
+                    "session_id": str(request.session_id),
+                    "scene_index": request.scene_index,
+                    "error": str(e),
+                    "retry_after": 30,
+                    "timestamp": observability_service.get_current_timestamp()
+                }
+            }
+        )
+        
+    except ValueError as e:
+        observability_service.increment_counter("llm_scenario_generation_validation_error")
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error_code": "VALIDATION_ERROR",
+                "message": "Invalid request data for scenario generation",
+                "details": {
+                    "session_id": str(request.session_id),
+                    "scene_index": request.scene_index,
+                    "error": str(e),
+                    "timestamp": observability_service.get_current_timestamp()
+                }
+            }
+        )
+        
+    except Exception as e:
+        observability_service.increment_counter("llm_scenario_generation_unexpected_error")
+        observability_service.log_error("Unexpected error in LLM scenario generation", {
+            "session_id": str(request.session_id),
+            "scene_index": request.scene_index,
+            "error": str(e)
+        })
+        
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error_code": "INTERNAL_ERROR",
+                "message": "Failed to generate scenario",
+                "details": {
+                    "session_id": str(request.session_id),
+                    "scene_index": request.scene_index,
+                    "timestamp": observability_service.get_current_timestamp()
+                }
+            }
+        )
 
 
 @router.get("/{session_id}/scenes/{scene_index}")
@@ -38,8 +230,8 @@ async def get_scene(
     start_time = observability_service.start_timer("scene_retrieval")
     
     try:
-        # Load scene from session service
-        scene = default_session_service.load_scene(session_id, scene_index)
+        # Load scene from session service (now async for dynamic generation)
+        scene = await default_session_service.load_scene(session_id, scene_index)
         
         # Get session to check fallback flags
         session = default_session_service.session_store.get_session(session_id)

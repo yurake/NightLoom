@@ -35,6 +35,13 @@ const nextConfig = {
     ];
   },
   
+  // Extended timeout for dynamic LLM generation
+  experimental: {
+    serverComponentsExternalPackages: [],
+    // Increase timeout for API routes to handle dynamic axis/scene generation
+    proxyTimeout: 60000, // 60 seconds
+  },
+  
   // Headers for performance and security
   async headers() {
     return [

@@ -28,17 +28,34 @@
 - ネガティブすぎる概念
 - **最重要：読み方が指定文字「{{ initial_character }}」で始まらない単語**
 
-## 出力形式（JSON）
+## 出力形式
+以下のJSON構造に厳密に従って出力してください（Structured Outputsによる検証が適用されます）：
+
 ```json
 {
   "keywords": [
-    {"word": "表記", "reading": "よみがな"},
-    {"word": "表記", "reading": "よみがな"},
-    {"word": "表記", "reading": "よみがな"},
-    {"word": "表記", "reading": "よみがな"}
+    {
+      "word": "キーワード表記",
+      "reading": "{{ initial_character }}で始まる読み方"
+    },
+    {
+      "word": "キーワード表記",
+      "reading": "{{ initial_character }}で始まる読み方"
+    },
+    {
+      "word": "キーワード表記",
+      "reading": "{{ initial_character }}で始まる読み方"
+    },
+    {
+      "word": "キーワード表記",
+      "reading": "{{ initial_character }}で始まる読み方"
+    }
   ]
 }
 ```
 
-**最終確認：出力前に各キーワードの読み方が「{{ initial_character }}」で始まることを3回確認してください。**
-**「{{ initial_character }}」で始まらない読み方のキーワードは絶対に出力しないでください。**
+【重要事項】
+- JSON以外の出力は一切含めないでください
+- 上記の構造を1文字たりとも違えることなく厳守してください
+- すべてのreadingフィールドは必ず「{{ initial_character }}」で始まる読み方を記述してください
+- 最終確認：出力前に各キーワードの読み方が「{{ initial_character }}」で始まることを3回確認してください

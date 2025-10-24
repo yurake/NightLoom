@@ -110,19 +110,19 @@
 
 ### Tests for User Story 3 (必須: Fail First) ⚠️
 
-- [ ] T032 [P] [US3] Contract test for /api/llm/generate/scenario endpoint in backend/tests/integration/test_llm_scenarios.py
-- [ ] T033 [P] [US3] Scenario generation continuity test in backend/tests/integration/test_scenario_continuity.py
-- [ ] T034 [P] [US3] Choice weights validation test in backend/tests/unit/test_choice_weights.py
+- [x] T032 [P] [US3] Contract test for /api/llm/generate/scenario endpoint in backend/tests/integration/test_llm_scenarios.py
+- [x] T033 [P] [US3] Scenario generation continuity test in backend/tests/integration/test_scenario_continuity.py
+- [x] T034 [P] [US3] Choice weights validation test in backend/tests/unit/test_choice_weights.py
 
 ### Implementation for User Story 3
 
-- [ ] T035 [P] [US3] Create scenario generation prompt template in backend/app/templates/prompts/scenario_generation.j2
-- [ ] T036 [US3] Implement scenario generation service method in backend/app/services/session.py
-- [ ] T037 [US3] Create /api/llm/generate/scenario API endpoint in backend/app/api/scenes.py (extend existing)
-- [ ] T038 [US3] Update scene flow to use dynamic scenarios in backend/app/api/scenes.py
-- [ ] T039 [US3] Add choice weight validation and balancing
-- [ ] T040 [US3] Integrate scenario continuity tracking across scenes
-- [ ] T041 [US3] Add scenario generation performance monitoring
+- [x] T035 [P] [US3] Create scenario generation prompt template in backend/app/templates/prompts/scenario_generation.j2
+- [x] T036 [US3] Implement scenario generation service method in backend/app/services/session.py
+- [x] T037 [US3] Create /api/llm/generate/scenario API endpoint in backend/app/api/scenes.py (extend existing)
+- [x] T038 [US3] Update scene flow to use dynamic scenarios in backend/app/api/scenes.py
+- [x] T039 [US3] Add choice weight validation and balancing
+- [x] T040 [US3] Integrate scenario continuity tracking across scenes
+- [x] T041 [US3] Add scenario generation performance monitoring
 
 **Checkpoint**: All core user stories should now be independently functional
 
@@ -136,19 +136,19 @@
 
 ### Tests for User Story 4 (必須: Fail First) ⚠️
 
-- [ ] T042 [P] [US4] Contract test for /api/llm/generate/result endpoint in backend/tests/integration/test_llm_results.py
-- [ ] T043 [P] [US4] Personality analysis quality test in backend/tests/integration/test_analysis_quality.py
-- [ ] T044 [P] [US4] Result generation fallback test in backend/tests/integration/test_result_fallback.py
+- [x] T042 [P] [US4] Contract test for /api/llm/generate/result endpoint in backend/tests/integration/test_llm_results.py
+- [x] T043 [P] [US4] Personality analysis quality test in backend/tests/integration/test_analysis_quality.py
+- [x] T044 [P] [US4] Result generation fallback test in backend/tests/integration/test_result_fallback.py
 
 ### Implementation for User Story 4
 
-- [ ] T045 [P] [US4] Create result analysis prompt template in backend/app/templates/prompts/result_analysis.j2
-- [ ] T046 [US4] Implement result analysis service method in backend/app/services/session.py
-- [ ] T047 [US4] Create /api/llm/generate/result API endpoint in backend/app/api/results.py (extend existing)
-- [ ] T048 [US4] Update result generation to use AI analysis in backend/app/api/results.py
-- [ ] T049 [US4] Add personality type validation and formatting
-- [ ] T050 [US4] Integrate AI results with existing result display (frontend compatibility)
-- [ ] T051 [US4] Add result generation performance monitoring
+- [x] T045 [P] [US4] Create result analysis prompt template in backend/app/templates/prompts/result_analysis.j2
+- [x] T046 [US4] Implement result analysis service method in backend/app/services/session.py
+- [x] T047 [US4] Create /api/llm/generate/result API endpoint in backend/app/api/results.py (extend existing)
+- [x] T048 [US4] Update result generation to use AI analysis in backend/app/api/results.py
+- [x] T049 [US4] Add personality type validation and formatting
+- [x] T050 [US4] Integrate AI results with existing result display (frontend compatibility)
+- [x] T051 [US4] Add result generation performance monitoring
 
 **Checkpoint**: All user stories should now be independently functional
 

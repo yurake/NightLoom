@@ -58,9 +58,9 @@ class PromptTemplateManager:
         # Template file mappings
         self._template_files = {
             LLMTaskType.KEYWORD_GENERATION: "keyword_generation.jinja2",
-            LLMTaskType.AXIS_GENERATION: "axis_creation.jinja2", 
-            LLMTaskType.SCENARIO_GENERATION: "scenario_generation.jinja2",
-            LLMTaskType.RESULT_ANALYSIS: "result_analysis.jinja2"
+            LLMTaskType.AXIS_GENERATION: "axis_creation.jinja2",
+            LLMTaskType.SCENARIO_GENERATION: "scenario_generation.j2",
+            LLMTaskType.RESULT_ANALYSIS: "result_analysis.j2"
         }
     
     def _ensure_environment(self) -> Environment:

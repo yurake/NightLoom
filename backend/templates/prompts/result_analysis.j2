@@ -1,0 +1,108 @@
+{# T045 [P] [US4] Create result analysis prompt template #}
+{# Variables: session_id, keyword, axes, scores, choices, raw_scores #}
+
+あなたは心理診断の専門家として、ユーザーの選択パターンと評価軸スコアに基づいて、深い洞察に満ちた個別のタイプ分析とパーソナリティ洞察を生成してください。
+
+## セッション情報
+- セッションID: {{ session_id }}
+- 選択キーワード: {{ keyword }}
+
+## 評価軸とスコア
+{% for axis in axes %}
+- {{ axis.name }} ({{ axis.id }}): {{ scores[axis.id] if scores else 0.0 }} (Raw: {{ raw_scores[axis.id] if raw_scores else 0.0 }})
+  - 説明: {{ axis.description }}
+  - 方向性: {{ axis.direction }}
+{% endfor %}
+
+## ユーザーの選択履歴
+{% for choice in choices %}
+- シーン{{ choice.scene_index }}: {{ choice.text }}
+  {% if choice.choice_id %}(選択ID: {{ choice.choice_id }}){% endif %}
+{% endfor %}
+
+## 分析要求
+キーワード「{{ keyword }}」と上記の評価軸スコア・選択履歴を総合的に分析し、以下を生成してください：
+
+### 1. タイププロファイル
+ユーザーに特化した1-2個のタイププロファイルを作成し、各プロファイルには以下を含めてください：
+- **タイプID**: 英数字の一意識別子
+- **タイプ名**: キーワードと軸の特性を反映した日本語名称
+- **説明**: 100-150文字の簡潔な特徴説明
+- **主な特性**: 3-4個の具体的な行動・思考傾向
+- **強み**: 3-4個の長所・得意分野
+- **成長領域**: 2-3個の改善・発展可能分野
+
+### 2. パーソナリティ洞察
+- **支配的特性**: 最も顕著に現れた軸の特徴
+- **バランス分析**: 各軸間の関係性とバランス状態
+- **個別メッセージ**: キーワードと分析結果を組み合わせた80-120文字の励ましメッセージ
+
+### 3. スコアパターン考察
+{% for axis in axes %}
+- {{ axis.name }}スコア {{ scores[axis.id] if scores else 0.0 }}: {% if scores[axis.id] > 0.5 %}高い{% elif scores[axis.id] < -0.5 %}低い{% else %}中程度{% endif %}傾向の意味
+{% endfor %}
+
+## 出力形式
+以下のJSON構造に厳密に従って出力してください（Structured Outputsによる検証が適用されます）：
+
+```json
+{
+  "type_profiles": [
+    {
+      "typeId": "unique_type_identifier",
+      "typeName": "{{ keyword }}を体現するタイプ名",
+      "description": "このタイプの特徴的な説明文（100-150文字）",
+      "traits": [
+        "具体的な特性1",
+        "具体的な特性2",
+        "具体的な特性3",
+        "具体的な特性4"
+      ],
+      "strengths": [
+        "主要な強み1",
+        "主要な強み2",
+        "主要な強み3",
+        "主要な強み4"
+      ],
+      "growth_areas": [
+        "成長可能領域1",
+        "成長可能領域2",
+        "成長可能領域3"
+      ],
+      "compatibility": {
+        {% for axis in axes %}"{{ axis.id }}": {{ "%.1f" | format(scores[axis.id] if scores else 0.0) }}{{ "," if not loop.last }}
+        {% endfor %}
+      }
+    }
+  ],
+  "personality_insights": {
+    "dominant_traits": ["最も強い特性1", "最も強い特性2"],
+    "balance_analysis": "各軸のバランス状態の分析文",
+    "personalized_message": "「{{ keyword }}」をキーワードに、あなた個人に向けた励ましと洞察のメッセージ（80-120文字）",
+    "score_interpretation": {
+      {% for axis in axes %}"{{ axis.id }}": "{{ axis.name }}スコアの意味と影響の説明"{{ "," if not loop.last }}
+      {% endfor %}
+    }
+  },
+  "analysis_metadata": {
+    "keyword_influence": "キーワード「{{ keyword }}」が分析に与えた影響",
+    "choice_patterns": "選択パターンから読み取れる傾向",
+    "uniqueness_factors": ["この診断結果をユニークにする要素1", "この診断結果をユニークにする要素2"]
+  }
+}
+```
+
+【重要事項】
+- JSON以外の出力は一切含めないでください
+- 上記の構造を1文字たりとも違えることなく厳守してください
+- type_profilesは配列形式で、1つのプロファイルオブジェクトを含めてください
+- traitsは3-4個、strengthsは3-4個、growth_areasは2-3個の配列要素を含めてください
+- 各文字数制限（description: 100-150文字、personalized_message: 80-120文字）を厳守してください
+- compatibilityオブジェクトには全ての軸のスコアを数値形式で含めてください
+
+## 重要な指針
+1. **個別化**: 固定テンプレートではなく、このユーザー専用の分析を提供
+2. **キーワード統合**: 選択キーワードを分析の中核に据える
+3. **具体性**: 抽象的ではなく、具体的で実用的な洞察を提供
+4. **ポジティブ**: 建設的で励ましになる内容で構成
+5. **一貫性**: 軸スコアと選択履歴が論理的に整合する分析

@@ -5,8 +5,8 @@ T032 [P] [US3] Contract test for /api/llm/generate/scenario endpoint
 import pytest
 import httpx
 from uuid import uuid4
-from backend.app.models.session import Session
-from backend.app.services.session_store import SessionStore
+from app.models.session import Session
+from app.services.session_store import SessionStore
 
 
 @pytest.fixture

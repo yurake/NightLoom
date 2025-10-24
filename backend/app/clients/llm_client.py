@@ -256,10 +256,24 @@ class BaseLLMClient(ABC):
     
     async def _validate_scenario(self, content: Dict[str, Any]) -> bool:
         """Validate scenario generation response."""
-        if "narrative" not in content or not content["narrative"].strip():
+        # Handle both old format (direct narrative) and new format (scene.narrative)
+        narrative = None
+        choices = None
+        
+        if "scene" in content:
+            # New format: content.scene.narrative
+            scene = content["scene"]
+            if isinstance(scene, dict):
+                narrative = scene.get("narrative", "")
+                choices = scene.get("choices", [])
+        else:
+            # Old format: content.narrative (fallback compatibility)
+            narrative = content.get("narrative", "")
+            choices = content.get("choices", [])
+        
+        if not narrative or not isinstance(narrative, str) or not narrative.strip():
             raise ValidationError("Scenario must have non-empty narrative")
         
-        choices = content.get("choices", [])
         if not isinstance(choices, list) or len(choices) != 4:
             raise ValidationError("Must generate exactly 4 choices")
         
