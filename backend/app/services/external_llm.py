@@ -703,26 +703,57 @@ class ExternalLLMService:
            validated_choice = choice
            needs_rebalancing = False
            
-           # Validate weight completeness
-           missing_axes = axis_ids - set(choice.weights.keys())
+           # Validate weight completeness and handle axis ID mismatch
+           choice_weights_dict = choice.get_weights_dict()
+           choice_axis_ids = set(choice_weights_dict.keys())
+           missing_axes = axis_ids - choice_axis_ids
+           
            if missing_axes:
-               self.logger.warning(f"[Choice Validation] Choice {i+1} missing weights for axes: {missing_axes}")
-               # Add missing weights with neutral value
-               for axis_id in missing_axes:
-                   validated_choice.weights[axis_id] = 0.0
-               needs_rebalancing = True
+               # Check if this is an axis ID format mismatch (Japanese names vs axis_1 format)
+               axis_mapping = self._create_axis_mapping(axes, choice_axis_ids)
+               if axis_mapping:
+                   self.logger.info(f"[Choice Validation] Choice {i+1} using axis mapping: {axis_mapping}")
+                   # Remap weights using the mapping
+                   new_weights = {}
+                   for axis_id in axis_ids:
+                       if axis_id in choice_weights_dict:
+                           new_weights[axis_id] = choice_weights_dict[axis_id]
+                       elif axis_id in axis_mapping:
+                           # Map from Japanese name to axis_N format
+                           japanese_name = axis_mapping[axis_id]
+                           if japanese_name in choice_weights_dict:
+                               new_weights[axis_id] = choice_weights_dict[japanese_name]
+                               self.logger.debug(f"[Choice Validation] Mapped {japanese_name} -> {axis_id}")
+                           else:
+                               new_weights[axis_id] = 0.0
+                       else:
+                           new_weights[axis_id] = 0.0
+                   validated_choice.weights = new_weights
+                   needs_rebalancing = True
+               else:
+                   self.logger.warning(f"[Choice Validation] Choice {i+1} missing weights for axes: {missing_axes}")
+                   # Add missing weights with neutral value
+                   current_weights = validated_choice.get_weights_dict()
+                   for axis_id in missing_axes:
+                       current_weights[axis_id] = 0.0
+                   validated_choice.weights = current_weights
+                   needs_rebalancing = True
            
            # Validate weight ranges
-           for axis_id, weight in validated_choice.weights.items():
+           current_weights = validated_choice.get_weights_dict()
+           for axis_id, weight in current_weights.items():
                if not isinstance(weight, (int, float)):
                    self.logger.warning(f"[Choice Validation] Choice {i+1} weight for {axis_id} is not numeric: {weight}")
-                   validated_choice.weights[axis_id] = 0.0
+                   current_weights[axis_id] = 0.0
                    needs_rebalancing = True
                elif not (-1.0 <= weight <= 1.0):
                    self.logger.warning(f"[Choice Validation] Choice {i+1} weight for {axis_id} out of range: {weight}")
                    # Clamp to valid range
-                   validated_choice.weights[axis_id] = max(-1.0, min(1.0, float(weight)))
+                   current_weights[axis_id] = max(-1.0, min(1.0, float(weight)))
                    needs_rebalancing = True
+           
+           if needs_rebalancing:
+               validated_choice.weights = current_weights
            
            if needs_rebalancing:
                self.logger.info(f"[Choice Validation] Rebalanced choice {i+1}")
@@ -755,7 +786,7 @@ class ExternalLLMService:
        # Calculate current distribution
        axis_totals = {}
        for axis in axes:
-           axis_totals[axis.id] = sum(choice.weights.get(axis.id, 0.0) for choice in choices)
+           axis_totals[axis.id] = sum(choice.get_weights_dict().get(axis.id, 0.0) for choice in choices)
        
        # Check if rebalancing is needed
        rebalance_needed = False
@@ -778,14 +809,17 @@ class ExternalLLMService:
            )
            
            # Apply mild counter-balancing for extreme cases
+           current_weights = balanced_choice.get_weights_dict()
            for axis_id, total in axis_totals.items():
                if abs(total) > 3.0:
-                   current_weight = balanced_choice.weights.get(axis_id, 0.0)
+                   current_weight = current_weights.get(axis_id, 0.0)
                    # Slightly reduce extreme weights to improve balance
                    if total > 3.0 and current_weight > 0.5:
-                       balanced_choice.weights[axis_id] = current_weight * 0.8
+                       current_weights[axis_id] = current_weight * 0.8
                    elif total < -3.0 and current_weight < -0.5:
-                       balanced_choice.weights[axis_id] = current_weight * 0.8
+                       current_weights[axis_id] = current_weight * 0.8
+           
+           balanced_choice.weights = current_weights
            
            balanced_choices.append(balanced_choice)
        
@@ -953,6 +987,38 @@ class ExternalLLMService:
             return keywords
         
         return ["balanced", "adaptable", "thoughtful"]
+
+    def _create_axis_mapping(self, axes: List[Axis], choice_axis_ids: set) -> Dict[str, str]:
+        """
+        Create mapping from axis_N format to Japanese names when there's a mismatch.
+        
+        Args:
+            axes: Session axes with proper axis_N IDs and Japanese names
+            choice_axis_ids: Axis IDs found in choice weights (potentially Japanese names)
+            
+        Returns:
+            Mapping from axis_N to Japanese name, or empty dict if no mapping possible
+        """
+        # If choice uses axis_N format, no mapping needed
+        axis_n_pattern = {f"axis_{i+1}" for i in range(len(axes))}
+        if choice_axis_ids.issubset(axis_n_pattern):
+            return {}
+        
+        # Try to match Japanese names to axis positions
+        axis_mapping = {}
+        axis_names = {axis.name for axis in axes}
+        
+        # Check if choice_axis_ids are Japanese names that match our axis names
+        if choice_axis_ids.issubset(axis_names):
+            for i, axis in enumerate(axes):
+                axis_id = f"axis_{i+1}"
+                if axis.name in choice_axis_ids:
+                    axis_mapping[axis_id] = axis.name
+            
+            self.logger.info(f"[Axis Mapping] Created mapping for Japanese names: {axis_mapping}")
+            return axis_mapping
+        
+        return {}
 
 
 # Global service instance

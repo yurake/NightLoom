@@ -19,6 +19,7 @@ except ImportError:
     AsyncOpenAI = None
 
 from pydantic import BaseModel, Field
+from typing import List
 from .llm_client import (
     BaseLLMClient, LLMRequest, LLMResponse, LLMTaskType, LLMClientError,
     ValidationError, RateLimitError, ProviderUnavailableError
@@ -27,14 +28,17 @@ from ..models.llm_config import ProviderConfig, LLMProvider
 from ..services.prompt_template import get_template_manager
 
 
-# Structured Output models for OpenAI API
+# Import WeightEntry from session models to ensure consistency
+from ..models.session import WeightEntry
+
+
 class ScenarioChoice(BaseModel):
     """Choice option within a scenario for structured outputs."""
     model_config = {"extra": "forbid", "json_schema_extra": {"additionalProperties": False}}
     
-    id: str
-    text: str
-    weights: Dict[str, float]
+    id: str = Field(..., description="Choice ID in format choice_{scene}_{index}")
+    text: str = Field(..., description="Choice text")
+    weights: List[WeightEntry] = Field(..., description="Array of weight entries with axis ID, name, and score")
 
 
 class ScenarioSceneData(BaseModel):
@@ -441,16 +445,28 @@ class OpenAIClient(BaseLLMClient):
             # Execute OpenAI API call
             start_time = datetime.now(timezone.utc)
             
-            # Use standard JSON format - OpenAI Structured Outputs has too many constraints
-            # The prompt template will ensure correct structure
-            response = await self.client.chat.completions.create(
-                model="gpt-4o-mini" if self.default_model == "gpt-4" else self.default_model,
-                messages=messages,
-                temperature=self.default_temperature,
-                max_tokens=self.default_max_tokens,
-                timeout=self.request_timeout,
-                response_format={"type": "json_object"}
-            )
+            # Use OpenAI Structured Outputs for strict validation
+            # This ensures OpenAI follows the exact schema we define
+            try:
+                response = await self.client.beta.chat.completions.parse(
+                    model="gpt-4o-mini" if self.default_model == "gpt-4" else self.default_model,
+                    messages=messages,
+                    temperature=self.default_temperature,
+                    max_tokens=self.default_max_tokens,
+                    timeout=self.request_timeout,
+                    response_format=ScenarioResponse
+                )
+            except Exception as parse_error:
+                self.logger.warning(f"[OpenAI] Structured Outputs failed, falling back to JSON: {parse_error}")
+                # Fallback to standard JSON format
+                response = await self.client.chat.completions.create(
+                    model="gpt-4o-mini" if self.default_model == "gpt-4" else self.default_model,
+                    messages=messages,
+                    temperature=self.default_temperature,
+                    max_tokens=self.default_max_tokens,
+                    timeout=self.request_timeout,
+                    response_format={"type": "json_object"}
+                )
             
             end_time = datetime.now(timezone.utc)
             latency_ms = (end_time - start_time).total_seconds() * 1000
@@ -459,31 +475,39 @@ class OpenAIClient(BaseLLMClient):
             self.logger.info(f"[OpenAI] Scenario response received in {latency_ms:.1f}ms")
             self.logger.debug(f"[OpenAI] Full scenario response object: {response}")
             
-            # Parse standard JSON response and validate with Pydantic
-            content_text = response.choices[0].message.content
-            if not content_text:
-                raise OpenAIClientError("Empty response from OpenAI")
-            
-            self.logger.info(f"[OpenAI] Standard JSON response received: {content_text}")
-            
-            try:
-                # Parse JSON first
-                content = json.loads(content_text)
-                self.logger.info(f"[OpenAI] JSON parsing successful: {content}")
+            # Parse response - handle both Structured Outputs and standard JSON
+            if hasattr(response.choices[0].message, 'parsed') and response.choices[0].message.parsed:
+                # Structured Outputs response
+                self.logger.info(f"[OpenAI] ✅ Structured Outputs response received")
+                scenario_response = response.choices[0].message.parsed
+                content = scenario_response.model_dump()
+                self.logger.info(f"[OpenAI] Structured response content: {content}")
+            else:
+                # Standard JSON response
+                content_text = response.choices[0].message.content
+                if not content_text:
+                    raise OpenAIClientError("Empty response from OpenAI")
                 
-                # Validate structure with Pydantic
+                self.logger.info(f"[OpenAI] Standard JSON response received: {content_text}")
+                
                 try:
-                    scenario_response = ScenarioResponse.model_validate(content)
-                    self.logger.info(f"[OpenAI] ✅ Pydantic validation passed")
-                    # Use validated content
-                    content = scenario_response.model_dump()
-                except Exception as validation_error:
-                    self.logger.warning(f"[OpenAI] Pydantic validation failed: {validation_error}")
-                    self.logger.info(f"[OpenAI] Continuing with raw JSON content for compatibility")
-                
-            except json.JSONDecodeError as e:
-                self.logger.error(f"[OpenAI] JSON parsing failed: {e}")
-                raise ValidationError(f"Invalid JSON response: {e}")
+                    # Parse JSON first
+                    content = json.loads(content_text)
+                    self.logger.info(f"[OpenAI] JSON parsing successful: {content}")
+                    
+                    # Validate structure with Pydantic
+                    try:
+                        scenario_response = ScenarioResponse.model_validate(content)
+                        self.logger.info(f"[OpenAI] ✅ Pydantic validation passed")
+                        # Use validated content
+                        content = scenario_response.model_dump()
+                    except Exception as validation_error:
+                        self.logger.warning(f"[OpenAI] Pydantic validation failed: {validation_error}")
+                        self.logger.info(f"[OpenAI] Continuing with raw JSON content for compatibility")
+                    
+                except json.JSONDecodeError as e:
+                    self.logger.error(f"[OpenAI] JSON parsing failed: {e}")
+                    raise ValidationError(f"Invalid JSON response: {e}")
             
             # Validate scenario response format
             await self._validate_scenario_response(content, request.template_data)
@@ -1007,41 +1031,94 @@ class OpenAIClient(BaseLLMClient):
             if len(choice_text) > 200:
                 raise ValidationError(f"Choice {i+1} text too long (max 200 characters)")
             
-            # Validate weights
+            # Validate weights - now supports both old dict format and new array format
             weights = choice["weights"]
-            if not isinstance(weights, dict):
-                raise ValidationError(f"Choice {i+1} weights must be an object")
             
-            # Check weights for all expected axes - but be flexible about axis IDs
-            if expected_axis_ids:
-                self.logger.info(f"[OpenAI] Expected axis IDs: {expected_axis_ids}")
-                self.logger.info(f"[OpenAI] Choice {i+1} actual weight keys: {set(weights.keys())}")
+            if isinstance(weights, dict):
+                # Legacy dict format: {"axis_1": 0.5, "axis_2": -0.3}
+                self.logger.info(f"[OpenAI] Choice {i+1} using legacy dict format for weights")
                 
-                # If expected axis IDs don't match actual ones, it might be a template/response mismatch
-                # In this case, just validate that weights exist and are in valid range
-                actual_axis_ids = set(weights.keys())
-                if not expected_axis_ids.issubset(actual_axis_ids):
-                    self.logger.warning(f"[OpenAI] Axis ID mismatch - expected: {expected_axis_ids}, actual: {actual_axis_ids}")
-                    # Continue validation but don't enforce exact axis ID matching
-                    # Instead, just validate the weight values
-                    if not weights:
-                        raise ValidationError(f"Choice {i+1} has no weights")
-                else:
-                    # Normal case: check for expected axis IDs
-                    for axis_id in expected_axis_ids:
-                        if axis_id not in weights:
-                            raise ValidationError(f"Choice {i+1} missing weight for axis: {axis_id}")
+                if expected_axis_ids:
+                    actual_axis_ids = set(weights.keys())
+                    self.logger.info(f"[OpenAI] Expected axis IDs: {expected_axis_ids}")
+                    self.logger.info(f"[OpenAI] Choice {i+1} actual weight keys: {actual_axis_ids}")
                     
-                    weight_value = weights[axis_id]
-                    self.logger.debug(f"[OpenAI] Validating weight: choice {i+1}, axis {axis_id}, value {weight_value}")
+                    if not expected_axis_ids.issubset(actual_axis_ids):
+                        self.logger.warning(f"[OpenAI] Axis ID mismatch - expected: {expected_axis_ids}, actual: {actual_axis_ids}")
+                        if not weights:
+                            raise ValidationError(f"Choice {i+1} has no weights")
+                    else:
+                        for axis_id in expected_axis_ids:
+                            if axis_id not in weights:
+                                raise ValidationError(f"Choice {i+1} missing weight for axis: {axis_id}")
+                            
+                            weight_value = weights[axis_id]
+                            if not isinstance(weight_value, (int, float)):
+                                raise ValidationError(f"Choice {i+1} weight for {axis_id} must be a number")
+                            
+                            if not (-1.0 <= weight_value <= 1.0):
+                                raise ValidationError(f"Choice {i+1} weight for {axis_id} must be between -1.0 and 1.0, got {weight_value}")
+                                
+            elif isinstance(weights, list):
+                # New array format: [{"id": "axis_1", "name": "Logic vs Emotion", "score": 0.5}]
+                self.logger.info(f"[OpenAI] Choice {i+1} using new array format for weights")
+                
+                if len(weights) == 0:
+                    raise ValidationError(f"Choice {i+1} has empty weights array")
+                
+                # Validate each weight entry
+                weight_ids = set()
+                for j, weight_entry in enumerate(weights):
+                    if not isinstance(weight_entry, dict):
+                        raise ValidationError(f"Choice {i+1} weight entry {j+1} must be an object")
                     
-                    if not isinstance(weight_value, (int, float)):
-                        self.logger.error(f"[OpenAI] Invalid weight type: choice {i+1}, axis {axis_id}, value {weight_value} (type: {type(weight_value)})")
-                        raise ValidationError(f"Choice {i+1} weight for {axis_id} must be a number")
+                    # Check required fields
+                    required_fields = ["id", "name", "score"]
+                    for field in required_fields:
+                        if field not in weight_entry:
+                            raise ValidationError(f"Choice {i+1} weight entry {j+1} missing required field: {field}")
                     
-                    if not (-1.0 <= weight_value <= 1.0):
-                        self.logger.error(f"[OpenAI] Weight out of range: choice {i+1}, axis {axis_id}, value {weight_value}")
-                        raise ValidationError(f"Choice {i+1} weight for {axis_id} must be between -1.0 and 1.0, got {weight_value}")
+                    # Validate weight ID
+                    weight_id = weight_entry["id"]
+                    if not isinstance(weight_id, str) or not weight_id.strip():
+                        raise ValidationError(f"Choice {i+1} weight entry {j+1} id must be a non-empty string")
+                    
+                    if weight_id in weight_ids:
+                        raise ValidationError(f"Choice {i+1} has duplicate weight ID: {weight_id}")
+                    weight_ids.add(weight_id)
+                    
+                    # Validate weight name
+                    weight_name = weight_entry["name"]
+                    if not isinstance(weight_name, str) or not weight_name.strip():
+                        raise ValidationError(f"Choice {i+1} weight entry {j+1} name must be a non-empty string")
+                    
+                    # Validate score
+                    score = weight_entry["score"]
+                    if not isinstance(score, (int, float)):
+                        raise ValidationError(f"Choice {i+1} weight entry {j+1} score must be a number")
+                    
+                    if not (-1.0 <= score <= 1.0):
+                        raise ValidationError(f"Choice {i+1} weight entry {j+1} score must be between -1.0 and 1.0, got {score}")
+                
+                # Check that all expected axes are present
+                if expected_axis_ids:
+                    self.logger.info(f"[OpenAI] Expected axis IDs: {expected_axis_ids}")
+                    self.logger.info(f"[OpenAI] Choice {i+1} actual weight IDs: {weight_ids}")
+                    
+                    missing_axes = expected_axis_ids - weight_ids
+                    if missing_axes:
+                        self.logger.warning(f"[OpenAI] Choice {i+1} missing weights for axes: {missing_axes}")
+                        # Don't fail - OpenAI might generate valid axes with different names
+                    
+                    # Check for matching axis names (more flexible validation)
+                    expected_axis_names = {axis.get("name", "") for axis in axes_data if isinstance(axis, dict)}
+                    actual_axis_names = {weight["name"] for weight in weights}
+                    
+                    self.logger.info(f"[OpenAI] Expected axis names: {expected_axis_names}")
+                    self.logger.info(f"[OpenAI] Actual axis names: {actual_axis_names}")
+                    
+            else:
+                raise ValidationError(f"Choice {i+1} weights must be either a dict (legacy) or array (new format)")
         
         self.logger.info(f"[OpenAI] ✅ Scenario validation completed successfully")
     

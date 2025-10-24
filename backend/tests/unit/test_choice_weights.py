@@ -4,8 +4,8 @@ T034 [P] [US3] Choice weights validation test
 """
 
 import pytest
-from backend.app.services.external_llm import ExternalLLMService
-from backend.app.models.session import Session, Axis
+from app.services.external_llm import ExternalLLMService
+from app.models.session import Session, Axis, Choice, WeightEntry
 from uuid import uuid4
 
 
@@ -17,7 +17,9 @@ class TestChoiceWeightsValidation:
         self.llm_service = ExternalLLMService()
         self.session = Session(
             id=uuid4(),
-            selected_keyword="テスト",
+            initialCharacter="あ",
+            selectedKeyword="テスト",
+            themeId="serene",
             axes=[
                 Axis(id="axis_1", name="軸1", description="テスト軸1", direction="低い⟷高い"),
                 Axis(id="axis_2", name="軸2", description="テスト軸2", direction="内向⟷外向")
@@ -25,32 +27,43 @@ class TestChoiceWeightsValidation:
         )
     
     def test_validate_choice_weights_valid_format(self):
-        """有効な選択肢重みフォーマットのテスト"""
-        valid_choices = [
+        """有効な選択肢重みフォーマットのテスト - 新旧両方の形式"""
+        # Legacy dict format
+        legacy_choices = [
             {
                 "id": "choice_1",
                 "text": "選択肢1",
                 "weights": {"axis_1": 1.0, "axis_2": 0.0}
             },
             {
-                "id": "choice_2", 
+                "id": "choice_2",
                 "text": "選択肢2",
                 "weights": {"axis_1": 0.0, "axis_2": 1.0}
-            },
+            }
+        ]
+        
+        # New array format
+        new_choices = [
             {
                 "id": "choice_3",
                 "text": "選択肢3",
-                "weights": {"axis_1": -1.0, "axis_2": 0.0}
+                "weights": [
+                    {"id": "axis_1", "name": "Logic vs Emotion", "score": -1.0},
+                    {"id": "axis_2", "name": "Speed vs Caution", "score": 0.0}
+                ]
             },
             {
                 "id": "choice_4",
                 "text": "選択肢4",
-                "weights": {"axis_1": 0.0, "axis_2": -1.0}
+                "weights": [
+                    {"id": "axis_1", "name": "Logic vs Emotion", "score": 0.0},
+                    {"id": "axis_2", "name": "Speed vs Caution", "score": -1.0}
+                ]
             }
         ]
         
-        # Should not raise any exceptions
-        for choice in valid_choices:
+        # Should not raise any exceptions for both formats
+        for choice in legacy_choices + new_choices:
             self._validate_single_choice(choice)
     
     def test_validate_choice_weights_range_validation(self):
@@ -196,24 +209,59 @@ class TestChoiceWeightsValidation:
         assert not balance_result["balanced"], "Choices should be detected as unbalanced"
     
     def _validate_single_choice(self, choice):
-        """単一選択肢のバリデーション"""
+        """単一選択肢のバリデーション - 新旧両方の形式に対応"""
         if "weights" not in choice:
             raise ValueError("Choice must have weights")
         
         weights = choice["weights"]
         
-        # Check all required axes are present
-        for axis in self.session.axes:
-            if axis.id not in weights:
-                raise ValueError(f"Missing weight for axis: {axis.id}")
-        
-        # Validate weight values
-        for axis_id, weight in weights.items():
-            if not isinstance(weight, (int, float)):
-                raise TypeError(f"Weight for {axis_id} must be a number, got {type(weight)}")
+        if isinstance(weights, dict):
+            # Legacy dict format validation
+            for axis in self.session.axes:
+                if axis.id not in weights:
+                    raise ValueError(f"Missing weight for axis: {axis.id}")
             
-            if not (-1.0 <= weight <= 1.0):
-                raise ValueError(f"Weight value must be between -1.0 and 1.0, got {weight} for {axis_id}")
+            for axis_id, weight in weights.items():
+                if not isinstance(weight, (int, float)):
+                    raise TypeError(f"Weight for {axis_id} must be a number, got {type(weight)}")
+                
+                if not (-1.0 <= weight <= 1.0):
+                    raise ValueError(f"Weight value must be between -1.0 and 1.0, got {weight} for {axis_id}")
+                    
+        elif isinstance(weights, list):
+            # New array format validation
+            if len(weights) == 0:
+                raise ValueError("Weights array cannot be empty")
+                
+            weight_ids = set()
+            for weight_entry in weights:
+                if not isinstance(weight_entry, dict):
+                    raise TypeError("Weight entry must be a dict")
+                    
+                required_fields = ["id", "name", "score"]
+                for field in required_fields:
+                    if field not in weight_entry:
+                        raise ValueError(f"Weight entry missing required field: {field}")
+                
+                weight_id = weight_entry["id"]
+                if weight_id in weight_ids:
+                    raise ValueError(f"Duplicate weight ID: {weight_id}")
+                weight_ids.add(weight_id)
+                
+                score = weight_entry["score"]
+                if not isinstance(score, (int, float)):
+                    raise TypeError(f"Score must be a number, got {type(score)}")
+                    
+                if not (-1.0 <= score <= 1.0):
+                    raise ValueError(f"Score must be between -1.0 and 1.0, got {score}")
+            
+            # Check all required axes are present
+            expected_ids = {axis.id for axis in self.session.axes}
+            if not expected_ids.issubset(weight_ids):
+                missing = expected_ids - weight_ids
+                raise ValueError(f"Missing weights for axes: {missing}")
+        else:
+            raise TypeError("Weights must be either dict (legacy) or list (new format)")
     
     def _validate_choices_collection(self, choices):
         """選択肢コレクション全体のバリデーション"""
@@ -259,7 +307,9 @@ class TestChoiceWeightsIntegration:
         
         session = Session(
             id=uuid4(),
-            selected_keyword="統合テスト",
+            initialCharacter="あ",
+            selectedKeyword="統合テスト",
+            themeId="serene",
             axes=[
                 Axis(id="axis_1", name="論理性", description="論理的思考の傾向", direction="感情⟷論理"),
                 Axis(id="axis_2", name="迅速性", description="迅速な判断の傾向", direction="慎重⟷迅速")

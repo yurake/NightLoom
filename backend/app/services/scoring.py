@@ -55,7 +55,8 @@ class ScoringService:
                 raise ValueError(f"Choice {choice_record.choiceId} not found in scene {choice_record.sceneIndex}")
             
             # Add weights to scores
-            for axis_id, weight in selected_choice.weights.items():
+            choice_weights = selected_choice.get_weights_dict()
+            for axis_id, weight in choice_weights.items():
                 if axis_id not in scores:
                     scores[axis_id] = 0.0
                 scores[axis_id] += weight

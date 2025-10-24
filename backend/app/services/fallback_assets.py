@@ -6,7 +6,7 @@ All content follows the data model specifications and supports Japanese language
 """
 
 from typing import Dict, List
-from app.models.session import Axis, Scene, Choice, TypeProfile
+from app.models.session import Axis, Scene, Choice, TypeProfile, WeightEntry
 
 
 class FallbackAssets:
@@ -17,25 +17,25 @@ class FallbackAssets:
         """Return default evaluation axes for fallback scenarios."""
         return [
             Axis(
-                id="logic_emotion",
+                id="axis_1",
                 name="Logic vs Emotion",
                 description="Balance between analytical thinking and intuitive decision making",
                 direction="論理的 ⟷ 感情的"
             ),
             Axis(
-                id="speed_caution",
+                id="axis_2",
                 name="Speed vs Caution",
                 description="Preference for quick decisions versus careful deliberation",
                 direction="迅速 ⟷ 慎重"
             ),
             Axis(
-                id="individual_group",
+                id="axis_3",
                 name="Individual vs Group",
                 description="Tendency to act independently or seek group consensus",
                 direction="個人 ⟷ 集団"
             ),
             Axis(
-                id="stability_change",
+                id="axis_4",
                 name="Stability vs Change",
                 description="Preference for maintaining status quo or embracing change",
                 direction="安定 ⟷ 変化"
@@ -76,22 +76,42 @@ class FallbackAssets:
                     Choice(
                         id="choice_1_1",
                         text="データと論理を重視して分析する",
-                        weights={"logic_emotion": 1.0, "speed_caution": -0.5, "individual_group": 0.3, "stability_change": -0.2}
+                        weights=[
+                            WeightEntry(id="axis_1", name="Logic vs Emotion", score=1.0),
+                            WeightEntry(id="axis_2", name="Speed vs Caution", score=-0.5),
+                            WeightEntry(id="axis_3", name="Individual vs Group", score=0.3),
+                            WeightEntry(id="axis_4", name="Stability vs Change", score=-0.2)
+                        ]
                     ),
                     Choice(
-                        id="choice_1_2", 
+                        id="choice_1_2",
                         text="直感と感情を大切にして判断する",
-                        weights={"logic_emotion": -1.0, "speed_caution": 0.2, "individual_group": -0.3, "stability_change": 0.4}
+                        weights=[
+                            WeightEntry(id="axis_1", name="Logic vs Emotion", score=-1.0),
+                            WeightEntry(id="axis_2", name="Speed vs Caution", score=0.2),
+                            WeightEntry(id="axis_3", name="Individual vs Group", score=-0.3),
+                            WeightEntry(id="axis_4", name="Stability vs Change", score=0.4)
+                        ]
                     ),
                     Choice(
                         id="choice_1_3",
                         text="迅速に決断して行動に移す",
-                        weights={"logic_emotion": 0.2, "speed_caution": 1.0, "individual_group": 0.5, "stability_change": 0.6}
+                        weights=[
+                            WeightEntry(id="axis_1", name="Logic vs Emotion", score=0.2),
+                            WeightEntry(id="axis_2", name="Speed vs Caution", score=1.0),
+                            WeightEntry(id="axis_3", name="Individual vs Group", score=0.5),
+                            WeightEntry(id="axis_4", name="Stability vs Change", score=0.6)
+                        ]
                     ),
                     Choice(
                         id="choice_1_4",
                         text="慎重に検討して安全な選択をする",
-                        weights={"logic_emotion": 0.3, "speed_caution": -1.0, "individual_group": -0.2, "stability_change": -0.7}
+                        weights=[
+                            WeightEntry(id="axis_1", name="Logic vs Emotion", score=0.3),
+                            WeightEntry(id="axis_2", name="Speed vs Caution", score=-1.0),
+                            WeightEntry(id="axis_3", name="Individual vs Group", score=-0.2),
+                            WeightEntry(id="axis_4", name="Stability vs Change", score=-0.7)
+                        ]
                     )
                 ]
             ),
@@ -103,22 +123,42 @@ class FallbackAssets:
                     Choice(
                         id="choice_2_1",
                         text="自分の考えを貫いて独自路線で進む",
-                        weights={"logic_emotion": 0.4, "speed_caution": 0.3, "individual_group": 1.0, "stability_change": 0.5}
+                        weights=[
+                            WeightEntry(id="axis_1", name="Logic vs Emotion", score=0.4),
+                            WeightEntry(id="axis_2", name="Speed vs Caution", score=0.3),
+                            WeightEntry(id="axis_3", name="Individual vs Group", score=1.0),
+                            WeightEntry(id="axis_4", name="Stability vs Change", score=0.5)
+                        ]
                     ),
                     Choice(
                         id="choice_2_2",
                         text="チーム全体の合意を重視して調整する",
-                        weights={"logic_emotion": -0.2, "speed_caution": -0.6, "individual_group": -1.0, "stability_change": -0.3}
+                        weights=[
+                            WeightEntry(id="axis_1", name="Logic vs Emotion", score=-0.2),
+                            WeightEntry(id="axis_2", name="Speed vs Caution", score=-0.6),
+                            WeightEntry(id="axis_3", name="Individual vs Group", score=-1.0),
+                            WeightEntry(id="axis_4", name="Stability vs Change", score=-0.3)
+                        ]
                     ),
                     Choice(
                         id="choice_2_3",
                         text="リーダーシップを発揮して方向性を示す",
-                        weights={"logic_emotion": 0.6, "speed_caution": 0.7, "individual_group": 0.5, "stability_change": 0.4}
+                        weights=[
+                            WeightEntry(id="axis_1", name="Logic vs Emotion", score=0.6),
+                            WeightEntry(id="axis_2", name="Speed vs Caution", score=0.7),
+                            WeightEntry(id="axis_3", name="Individual vs Group", score=0.5),
+                            WeightEntry(id="axis_4", name="Stability vs Change", score=0.4)
+                        ]
                     ),
                     Choice(
                         id="choice_2_4",
                         text="メンバーの意見を聞いてサポートに回る",
-                        weights={"logic_emotion": -0.4, "speed_caution": -0.5, "individual_group": -0.7, "stability_change": -0.1}
+                        weights=[
+                            WeightEntry(id="axis_1", name="Logic vs Emotion", score=-0.4),
+                            WeightEntry(id="axis_2", name="Speed vs Caution", score=-0.5),
+                            WeightEntry(id="axis_3", name="Individual vs Group", score=-0.7),
+                            WeightEntry(id="axis_4", name="Stability vs Change", score=-0.1)
+                        ]
                     )
                 ]
             ),
@@ -130,22 +170,42 @@ class FallbackAssets:
                     Choice(
                         id="choice_3_1",
                         text="リスクを承知で新しい挑戦を受け入れる",
-                        weights={"logic_emotion": 0.3, "speed_caution": 0.8, "individual_group": 0.6, "stability_change": 1.0}
+                        weights=[
+                            WeightEntry(id="axis_1", name="Logic vs Emotion", score=0.3),
+                            WeightEntry(id="axis_2", name="Speed vs Caution", score=0.8),
+                            WeightEntry(id="axis_3", name="Individual vs Group", score=0.6),
+                            WeightEntry(id="axis_4", name="Stability vs Change", score=1.0)
+                        ]
                     ),
                     Choice(
                         id="choice_3_2",
                         text="現在の安定した環境を維持する",
-                        weights={"logic_emotion": 0.5, "speed_caution": -0.8, "individual_group": -0.2, "stability_change": -1.0}
+                        weights=[
+                            WeightEntry(id="axis_1", name="Logic vs Emotion", score=0.5),
+                            WeightEntry(id="axis_2", name="Speed vs Caution", score=-0.8),
+                            WeightEntry(id="axis_3", name="Individual vs Group", score=-0.2),
+                            WeightEntry(id="axis_4", name="Stability vs Change", score=-1.0)
+                        ]
                     ),
                     Choice(
                         id="choice_3_3",
                         text="段階的に変化を取り入れて適応する",
-                        weights={"logic_emotion": 0.7, "speed_caution": -0.3, "individual_group": 0.1, "stability_change": 0.2}
+                        weights=[
+                            WeightEntry(id="axis_1", name="Logic vs Emotion", score=0.7),
+                            WeightEntry(id="axis_2", name="Speed vs Caution", score=-0.3),
+                            WeightEntry(id="axis_3", name="Individual vs Group", score=0.1),
+                            WeightEntry(id="axis_4", name="Stability vs Change", score=0.2)
+                        ]
                     ),
                     Choice(
                         id="choice_3_4",
                         text="周囲の意見を参考にして判断する",
-                        weights={"logic_emotion": -0.2, "speed_caution": -0.4, "individual_group": -0.8, "stability_change": -0.3}
+                        weights=[
+                            WeightEntry(id="axis_1", name="Logic vs Emotion", score=-0.2),
+                            WeightEntry(id="axis_2", name="Speed vs Caution", score=-0.4),
+                            WeightEntry(id="axis_3", name="Individual vs Group", score=-0.8),
+                            WeightEntry(id="axis_4", name="Stability vs Change", score=-0.3)
+                        ]
                     )
                 ]
             ),
@@ -157,22 +217,42 @@ class FallbackAssets:
                     Choice(
                         id="choice_4_1",
                         text="論理的に問題を分析して解決策を見つける",
-                        weights={"logic_emotion": 1.0, "speed_caution": -0.2, "individual_group": 0.4, "stability_change": 0.1}
+                        weights=[
+                            WeightEntry(id="axis_1", name="Logic vs Emotion", score=1.0),
+                            WeightEntry(id="axis_2", name="Speed vs Caution", score=-0.2),
+                            WeightEntry(id="axis_3", name="Individual vs Group", score=0.4),
+                            WeightEntry(id="axis_4", name="Stability vs Change", score=0.1)
+                        ]
                     ),
                     Choice(
                         id="choice_4_2",
                         text="直感を信じて柔軟に対応する",
-                        weights={"logic_emotion": -0.8, "speed_caution": 0.5, "individual_group": 0.2, "stability_change": 0.7}
+                        weights=[
+                            WeightEntry(id="axis_1", name="Logic vs Emotion", score=-0.8),
+                            WeightEntry(id="axis_2", name="Speed vs Caution", score=0.5),
+                            WeightEntry(id="axis_3", name="Individual vs Group", score=0.2),
+                            WeightEntry(id="axis_4", name="Stability vs Change", score=0.7)
+                        ]
                     ),
                     Choice(
                         id="choice_4_3",
                         text="迅速に決断して行動で解決する",
-                        weights={"logic_emotion": 0.2, "speed_caution": 1.0, "individual_group": 0.7, "stability_change": 0.5}
+                        weights=[
+                            WeightEntry(id="axis_1", name="Logic vs Emotion", score=0.2),
+                            WeightEntry(id="axis_2", name="Speed vs Caution", score=1.0),
+                            WeightEntry(id="axis_3", name="Individual vs Group", score=0.7),
+                            WeightEntry(id="axis_4", name="Stability vs Change", score=0.5)
+                        ]
                     ),
                     Choice(
                         id="choice_4_4",
                         text="慎重に検討して確実な方法を選ぶ",
-                        weights={"logic_emotion": 0.6, "speed_caution": -1.0, "individual_group": -0.1, "stability_change": -0.6}
+                        weights=[
+                            WeightEntry(id="axis_1", name="Logic vs Emotion", score=0.6),
+                            WeightEntry(id="axis_2", name="Speed vs Caution", score=-1.0),
+                            WeightEntry(id="axis_3", name="Individual vs Group", score=-0.1),
+                            WeightEntry(id="axis_4", name="Stability vs Change", score=-0.6)
+                        ]
                     )
                 ]
             )
@@ -188,7 +268,7 @@ class FallbackAssets:
                 name="Logic Leader",
                 description="論理的思考と迅速な判断力を兼ね備えたリーダータイプ。データに基づいて決断し、チームを率いる能力に長けています。",
                 keywords=["systematic", "decisive", "goal-oriented", "leadership"],
-                dominantAxes=["logic_emotion", "speed_caution"],
+                dominantAxes=["axis_1", "axis_2"],
                 polarity="Hi-Hi",
                 meta={"cell": "A1", "isNeutral": False}
             ),
@@ -196,7 +276,7 @@ class FallbackAssets:
                 name="Wise Planner",
                 description="慎重な計画性と論理的アプローチを重視するタイプ。安定性を求め、リスクを最小化した確実な成果を追求します。",
                 keywords=["methodical", "careful", "reliable", "thorough"],
-                dominantAxes=["logic_emotion", "speed_caution"],
+                dominantAxes=["axis_1", "axis_2"],
                 polarity="Hi-Lo",
                 meta={"cell": "A2", "isNeutral": False}
             ),
@@ -204,7 +284,7 @@ class FallbackAssets:
                 name="Creative Spark",
                 description="感情と直感を大切にし、変化を恐れず新しい可能性に挑戦するタイプ。創造性と適応力が特徴です。",
                 keywords=["creative", "adaptable", "innovative", "empathetic"],
-                dominantAxes=["logic_emotion", "stability_change"],
+                dominantAxes=["axis_1", "axis_4"],
                 polarity="Lo-Hi",
                 meta={"cell": "B1", "isNeutral": False}
             ),
@@ -212,7 +292,7 @@ class FallbackAssets:
                 name="Team Supporter",
                 description="感情を重視し、安定した環境で他者をサポートすることを得意とするタイプ。協調性と共感力に優れています。",
                 keywords=["supportive", "empathetic", "collaborative", "stable"],
-                dominantAxes=["logic_emotion", "individual_group"],
+                dominantAxes=["axis_1", "axis_3"],
                 polarity="Lo-Lo",
                 meta={"cell": "B2", "isNeutral": False}
             ),
@@ -220,7 +300,7 @@ class FallbackAssets:
                 name="Fast Innovator",
                 description="迅速な行動力と変化への適応力を持つタイプ。新しいアイデアを素早く実現し、チームを活性化させます。",
                 keywords=["dynamic", "innovative", "energetic", "flexible"],
-                dominantAxes=["speed_caution", "stability_change"],
+                dominantAxes=["axis_2", "axis_4"],
                 polarity="Hi-Hi",
                 meta={"cell": "C1", "isNeutral": False}
             ),
@@ -228,7 +308,7 @@ class FallbackAssets:
                 name="Wise Mediator",
                 description="バランス感覚に優れ、様々な観点を統合して最適解を見つけるタイプ。中庸を保ちながら調和を図ります。",
                 keywords=["balanced", "diplomatic", "versatile", "integrative"],
-                dominantAxes=["individual_group", "stability_change"],
+                dominantAxes=["axis_3", "axis_4"],
                 polarity="Neutral-Neutral",
                 meta={"cell": "Center", "isNeutral": True}
             )
@@ -277,22 +357,42 @@ def get_fallback_scene(scene_index: int, theme_id: str) -> Scene:
             Choice(
                 id=f"choice_{scene_index}_1",
                 text="論理的に分析して決める",
-                weights={"logic_emotion": 1.0, "speed_caution": -0.3, "individual_group": 0.2, "stability_change": 0.1}
+                weights=[
+                    WeightEntry(id="axis_1", name="Logic vs Emotion", score=1.0),
+                    WeightEntry(id="axis_2", name="Speed vs Caution", score=-0.3),
+                    WeightEntry(id="axis_3", name="Individual vs Group", score=0.2),
+                    WeightEntry(id="axis_4", name="Stability vs Change", score=0.1)
+                ]
             ),
             Choice(
                 id=f"choice_{scene_index}_2",
                 text="直感を信じて決める",
-                weights={"logic_emotion": -1.0, "speed_caution": 0.4, "individual_group": -0.1, "stability_change": 0.3}
+                weights=[
+                    WeightEntry(id="axis_1", name="Logic vs Emotion", score=-1.0),
+                    WeightEntry(id="axis_2", name="Speed vs Caution", score=0.4),
+                    WeightEntry(id="axis_3", name="Individual vs Group", score=-0.1),
+                    WeightEntry(id="axis_4", name="Stability vs Change", score=0.3)
+                ]
             ),
             Choice(
                 id=f"choice_{scene_index}_3",
                 text="迅速に行動する",
-                weights={"logic_emotion": 0.2, "speed_caution": 1.0, "individual_group": 0.5, "stability_change": 0.6}
+                weights=[
+                    WeightEntry(id="axis_1", name="Logic vs Emotion", score=0.2),
+                    WeightEntry(id="axis_2", name="Speed vs Caution", score=1.0),
+                    WeightEntry(id="axis_3", name="Individual vs Group", score=0.5),
+                    WeightEntry(id="axis_4", name="Stability vs Change", score=0.6)
+                ]
             ),
             Choice(
                 id=f"choice_{scene_index}_4",
                 text="慎重に検討する",
-                weights={"logic_emotion": 0.3, "speed_caution": -1.0, "individual_group": -0.3, "stability_change": -0.5}
+                weights=[
+                    WeightEntry(id="axis_1", name="Logic vs Emotion", score=0.3),
+                    WeightEntry(id="axis_2", name="Speed vs Caution", score=-1.0),
+                    WeightEntry(id="axis_3", name="Individual vs Group", score=-0.3),
+                    WeightEntry(id="axis_4", name="Stability vs Change", score=-0.5)
+                ]
             )
         ]
     )

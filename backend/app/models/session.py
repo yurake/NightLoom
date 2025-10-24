@@ -7,7 +7,7 @@ All models follow the ephemeral session design with state transitions: INIT -> P
 
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Union
 from uuid import UUID
 
 from pydantic import BaseModel, Field, ConfigDict
@@ -20,25 +20,56 @@ class SessionState(str, Enum):
     RESULT = "RESULT"
 
 
+class WeightEntry(BaseModel):
+    """Single weight entry with axis ID, name and score."""
+    id: str = Field(..., min_length=1, description="Axis ID like axis_1, axis_2")
+    name: str = Field(..., min_length=1, description="Human-readable axis name")
+    score: float = Field(..., ge=-1.0, le=1.0, description="Weight score")
+
+
 class Choice(BaseModel):
     """Individual choice option within a scene."""
     id: str = Field(..., description="Choice ID in format choice_{scene}_{index}")
     text: str = Field(..., max_length=80, description="Display text for the choice")
-    weights: Dict[str, float] = Field(
-        ..., 
-        description="Evaluation axis weights, range -1.0 to 1.0"
+    weights: Union[Dict[str, float], List[WeightEntry]] = Field(
+        ...,
+        description="Evaluation axis weights - dict format (legacy) or array format (preferred)"
     )
 
     model_config = ConfigDict(json_schema_extra={
         "example": {
             "id": "choice_1_1",
             "text": "慎重に検討して決める",
-            "weights": {
-                "logic_emotion": 0.3,
-                "speed_caution": -0.5
-            }
+            "weights": [
+                {"id": "axis_1", "name": "Logic vs Emotion", "score": 0.3},
+                {"id": "axis_2", "name": "Speed vs Caution", "score": -0.5},
+                {"id": "axis_3", "name": "Individual vs Group", "score": 0.1},
+                {"id": "axis_4", "name": "Stability vs Change", "score": 0.0}
+            ]
         }
     })
+    
+    def get_weights_dict(self) -> Dict[str, float]:
+        """Convert weights to dict format for backward compatibility."""
+        if isinstance(self.weights, dict):
+            return self.weights
+        elif isinstance(self.weights, list):
+            return {entry.id: entry.score for entry in self.weights}
+        else:
+            return {}
+    
+    def get_weights_array(self) -> List[WeightEntry]:
+        """Convert weights to array format."""
+        if isinstance(self.weights, list):
+            return self.weights
+        elif isinstance(self.weights, dict):
+            # Convert dict to array format - need axis names from context
+            return [
+                WeightEntry(id=axis_id, name=axis_id.replace('_', ' ').title(), score=score)
+                for axis_id, score in self.weights.items()
+            ]
+        else:
+            return []
 
 
 class Scene(BaseModel):

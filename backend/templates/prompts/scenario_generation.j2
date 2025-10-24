@@ -56,34 +56,50 @@
       {
         "id": "choice_{{ scene_index }}_1",
         "text": "選択肢1の内容",
-        "weights": {
-          {% for axis in axes %}"{{ axis.id }}": 0.0{{ "," if not loop.last }}
+        "weights": [
+          {% for axis in axes %}{
+            "id": "{{ axis.id }}",
+            "name": "{{ axis.name }}",
+            "score": 0.0
+          }{{ "," if not loop.last }}
           {% endfor %}
-        }
+        ]
       },
       {
-        "id": "choice_{{ scene_index }}_2", 
+        "id": "choice_{{ scene_index }}_2",
         "text": "選択肢2の内容",
-        "weights": {
-          {% for axis in axes %}"{{ axis.id }}": 0.0{{ "," if not loop.last }}
+        "weights": [
+          {% for axis in axes %}{
+            "id": "{{ axis.id }}",
+            "name": "{{ axis.name }}",
+            "score": 0.0
+          }{{ "," if not loop.last }}
           {% endfor %}
-        }
+        ]
       },
       {
         "id": "choice_{{ scene_index }}_3",
         "text": "選択肢3の内容",
-        "weights": {
-          {% for axis in axes %}"{{ axis.id }}": 0.0{{ "," if not loop.last }}
+        "weights": [
+          {% for axis in axes %}{
+            "id": "{{ axis.id }}",
+            "name": "{{ axis.name }}",
+            "score": 0.0
+          }{{ "," if not loop.last }}
           {% endfor %}
-        }
+        ]
       },
       {
         "id": "choice_{{ scene_index }}_4",
-        "text": "選択肢4の内容", 
-        "weights": {
-          {% for axis in axes %}"{{ axis.id }}": 0.0{{ "," if not loop.last }}
+        "text": "選択肢4の内容",
+        "weights": [
+          {% for axis in axes %}{
+            "id": "{{ axis.id }}",
+            "name": "{{ axis.name }}",
+            "score": 0.0
+          }{{ "," if not loop.last }}
           {% endfor %}
-        }
+        ]
       }
     ]
   }

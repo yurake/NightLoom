@@ -277,6 +277,154 @@ class TestOpenAIClient:
                 await client._validate_keyword_response(invalid_content, template_data)
 
     @pytest.mark.asyncio
+    async def test_validate_keyword_response_constraint_violation_warning(self, openai_config):
+        """Test that constraint violation generates warning but continues processing (Bug 1 reproduction)."""
+        with patch('app.clients.openai_client.AsyncOpenAI'):
+            client = OpenAIClient(openai_config)
+            
+            # Bug reproduction: keyword reading doesn't start with initial_character
+            invalid_content = {
+                "keywords": [
+                    {"word": "促進", "reading": "そくしん"},  # Should start with "ぞ" but starts with "そ"
+                    {"word": "造花", "reading": "ぞうか"},
+                    {"word": "増強", "reading": "ぞうきょう"},
+                    {"word": "雑貨", "reading": "ざっか"}  # Should start with "ぞ" but starts with "ざ"
+                ]
+            }
+            
+            template_data = {"initial_character": "ぞ", "count": 4}
+            
+            # Should log warning but not raise exception (current behavior)
+            with patch.object(client.logger, 'warning') as mock_warning:
+                await client._validate_keyword_response(invalid_content, template_data)
+                
+                # Verify warnings were logged for constraint violations
+                assert mock_warning.call_count == 2
+                mock_warning.assert_any_call(
+                    "[OpenAI] Keyword 1 '促進' (reading: 'そくしん') does not start with 'ぞ' - continuing anyway"
+                )
+                mock_warning.assert_any_call(
+                    "[OpenAI] Keyword 4 '雑貨' (reading: 'ざっか') does not start with 'ぞ' - continuing anyway"
+                )
+
+    @pytest.mark.asyncio
+    async def test_validate_scenario_response_axis_id_mismatch_warning(self, openai_config):
+        """Test that axis ID mismatch generates warning but continues processing (Bug 2 reproduction)."""
+        with patch('app.clients.openai_client.AsyncOpenAI'):
+            client = OpenAIClient(openai_config)
+            
+            # Bug reproduction: choice weights use Japanese axis names instead of axis_1, axis_2 format
+            scenario_content = {
+                "scene": {
+                    "scene_index": 1,
+                    "narrative": "テストシナリオの説明文です。このシナリオでは、ユーザーの選択によって性格の軸スコアが変化します。各選択肢には重み付けが設定されており、それによって最終的な診断結果が決まります。",
+                    "choices": [
+                        {
+                            "id": "choice_1_1",
+                            "text": "積極的にチャレンジする",
+                            "weights": {
+                                "成長志向": 0.9,  # Should be "axis_1"
+                                "協調性": 0.2,    # Should be "axis_2"
+                                "学習意欲": 0.8,  # Should be "axis_3"
+                                "積極性": 0.7     # Should be "axis_4"
+                            }
+                        },
+                        {
+                            "id": "choice_1_2",
+                            "text": "慎重に検討する",
+                            "weights": {
+                                "成長志向": 0.3,
+                                "協調性": 0.8,
+                                "学習意欲": 0.6,
+                                "積極性": 0.2
+                            }
+                        },
+                        {
+                            "id": "choice_1_3",
+                            "text": "チームで相談する",
+                            "weights": {
+                                "成長志向": 0.5,
+                                "協調性": 0.9,
+                                "学習意欲": 0.7,
+                                "積極性": 0.6
+                            }
+                        },
+                        {
+                            "id": "choice_1_4",
+                            "text": "じっくり学習する",
+                            "weights": {
+                                "成長志向": 0.6,
+                                "協調性": 0.4,
+                                "学習意欲": 0.9,
+                                "積極性": 0.3
+                            }
+                        }
+                    ]
+                }
+            }
+            
+            template_data = {
+                "axes": [
+                    {"id": "axis_1", "name": "成長志向"},
+                    {"id": "axis_2", "name": "協調性"},
+                    {"id": "axis_3", "name": "学習意欲"},
+                    {"id": "axis_4", "name": "積極性"}
+                ],
+                "scene_index": 1
+            }
+            
+            # Should log warning but not raise exception (current behavior)
+            with patch.object(client.logger, 'warning') as mock_warning:
+                await client._validate_scenario_response(scenario_content, template_data)
+                
+                # Verify warning was logged for axis ID mismatch (check if warning was called)
+                mock_warning.assert_called()
+                # Check that the warning message contains the expected pattern
+                warning_call = mock_warning.call_args[0][0]
+                assert "[OpenAI] Axis ID mismatch - expected:" in warning_call
+                assert "actual:" in warning_call
+                assert "成長志向" in warning_call
+                assert "axis_1" in warning_call
+
+    @pytest.mark.asyncio
+    async def test_axis_mapping_functionality(self):
+        """Test axis mapping helper method for Bug 2 fix."""
+        from app.services.external_llm import ExternalLLMService
+        from app.models.session import Axis
+        
+        service = ExternalLLMService()
+        
+        # Test axes with proper axis_N IDs and Japanese names
+        axes = [
+            Axis(id="axis_1", name="成長志向", description="成長への意欲", direction="高い ⟷ 低い"),
+            Axis(id="axis_2", name="協調性", description="チームワーク重視", direction="重視 ⟷ 独立"),
+            Axis(id="axis_3", name="学習意欲", description="学習への積極性", direction="積極的 ⟷ 消極的"),
+            Axis(id="axis_4", name="積極性", description="行動への積極性", direction="積極的 ⟷ 慎重")
+        ]
+        
+        # Test case 1: Choice uses Japanese names (should create mapping)
+        choice_axis_ids = {"成長志向", "協調性", "学習意欲", "積極性"}
+        mapping = service._create_axis_mapping(axes, choice_axis_ids)
+        
+        expected_mapping = {
+            "axis_1": "成長志向",
+            "axis_2": "協調性",
+            "axis_3": "学習意欲",
+            "axis_4": "積極性"
+        }
+        assert mapping == expected_mapping
+        
+        # Test case 2: Choice uses axis_N format (should return empty mapping)
+        choice_axis_ids_proper = {"axis_1", "axis_2", "axis_3", "axis_4"}
+        mapping_proper = service._create_axis_mapping(axes, choice_axis_ids_proper)
+        assert mapping_proper == {}
+        
+        # Test case 3: Mixed or unknown IDs (should return empty mapping)
+        choice_axis_ids_mixed = {"axis_1", "協調性", "unknown_axis"}
+        mapping_mixed = service._create_axis_mapping(axes, choice_axis_ids_mixed)
+        assert mapping_mixed == {}
+
+    @pytest.mark.asyncio
     async def test_health_check_success(self, openai_config):
         """Test successful health check."""
         with patch('app.clients.openai_client.AsyncOpenAI') as mock_openai:
