@@ -554,8 +554,150 @@ class OpenAIClient(BaseLLMClient):
             raise OpenAIClientError(f"OpenAI API error: {e}")
     
     async def analyze_results(self, request: LLMRequest) -> LLMResponse:
-        """Analyze results (placeholder - will be implemented in Phase 6)."""
-        raise NotImplementedError("Result analysis will be implemented in Phase 6 (US4)")
+        """
+        Analyze user choices and generate personality insights using OpenAI GPT.
+        
+        Args:
+            request: LLM request with template data containing session results
+            
+        Returns:
+            LLMResponse with personality analysis
+            
+        Raises:
+            ValidationError: If request validation fails
+            RateLimitError: If rate limit exceeded
+            OpenAIClientError: If OpenAI API call fails
+        """
+        await self._check_rate_limit()
+        
+        try:
+            # API呼び出し前の検証
+            if not self.client:
+                raise OpenAIClientError("OpenAI client not initialized")
+            
+            # Log request start
+            session_id = request.session_id
+            keyword = request.template_data.get("keyword", "unknown")
+            self.logger.info(f"[OpenAI] Starting result analysis for session: {session_id}, keyword: {keyword}")
+            
+            # Render prompt template
+            prompt = await self.template_manager.render_template(
+                task_type=LLMTaskType.RESULT_ANALYSIS,
+                template_data=request.template_data
+            )
+            
+            # Log prompt content
+            self.logger.debug(f"[OpenAI] Result analysis prompt content: {prompt}")
+            
+            # Prepare OpenAI request
+            messages = [
+                {
+                    "role": "system",
+                    "content": "あなたは心理診断の専門家です。ユーザーの選択パターンと評価軸スコアに基づいて、深い洞察に満ちた個別のタイプ分析とパーソナリティ洞察を生成してください。出力は必ずJSON形式で行ってください。"
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
+            
+            # Log API call preparation
+            self.logger.info(f"[OpenAI] Sending result analysis request to model: {self.default_model}")
+            
+            # Execute OpenAI API call
+            start_time = datetime.now(timezone.utc)
+            
+            response = await self.client.chat.completions.create(
+                model="gpt-4o-mini" if self.default_model == "gpt-4" else self.default_model,
+                messages=messages,
+                temperature=self.default_temperature,
+                max_tokens=self.default_max_tokens,
+                timeout=self.request_timeout,
+                response_format={"type": "json_object"}
+            )
+            
+            end_time = datetime.now(timezone.utc)
+            latency_ms = (end_time - start_time).total_seconds() * 1000
+            
+            # Log response received
+            self.logger.info(f"[OpenAI] Result analysis response received in {latency_ms:.1f}ms")
+            self.logger.debug(f"[OpenAI] Full result analysis response object: {response}")
+            
+            # Parse response
+            content_text = response.choices[0].message.content
+            if not content_text:
+                raise OpenAIClientError("Empty response from OpenAI")
+            
+            # Log response content
+            self.logger.info(f"[OpenAI] Raw result analysis response content: {content_text}")
+            
+            try:
+                content = json.loads(content_text)
+                self.logger.info(f"[OpenAI] Parsed result analysis JSON content: {content}")
+            except json.JSONDecodeError as e:
+                self.logger.error(f"[OpenAI] Result analysis JSON parsing failed: {e}")
+                raise ValidationError(f"Invalid JSON response: {e}")
+            
+            # Validate result analysis response format
+            await self._validate_result_analysis_response(content, request.template_data)
+            
+            # Calculate cost estimate (rough GPT-4 pricing)
+            prompt_tokens = response.usage.prompt_tokens if response.usage else 0
+            completion_tokens = response.usage.completion_tokens if response.usage else 0
+            total_tokens = prompt_tokens + completion_tokens
+            cost_estimate = (prompt_tokens * 0.03 + completion_tokens * 0.06) / 1000  # USD per 1K tokens
+            
+            # Log usage information
+            self.logger.info(f"[OpenAI] Result analysis token usage - Prompt: {prompt_tokens}, Completion: {completion_tokens}, Total: {total_tokens}")
+            self.logger.info(f"[OpenAI] Result analysis estimated cost: ${cost_estimate:.4f}")
+            
+            # Create response object
+            llm_response = LLMResponse(
+                task_type=request.task_type,
+                session_id=request.session_id,
+                content=content,
+                provider=LLMProvider.OPENAI,
+                model_name=response.model,
+                tokens_used=total_tokens,
+                latency_ms=latency_ms,
+                cost_estimate=cost_estimate,
+                timestamp=end_time
+            )
+            
+            # Validate response (general validation)
+            await self._validate_response(llm_response)
+            
+            # Update metrics
+            self._update_metrics("analyze_results", latency_ms=latency_ms, tokens_used=total_tokens)
+            
+            self.logger.info(f"[OpenAI] Result analysis completed successfully")
+            return llm_response
+            
+        except openai.RateLimitError as e:
+            self.logger.error(f"[OpenAI] Rate limit exceeded (result analysis): {type(e).__name__}: {str(e)}")
+            self._update_metrics("analyze_results", error=True)
+            raise RateLimitError(f"OpenAI rate limit exceeded: {e}")
+        except openai.APITimeoutError as e:
+            self.logger.error(f"[OpenAI] API timeout (result analysis): {type(e).__name__}: {str(e)}")
+            self._update_metrics("analyze_results", error=True)
+            raise ProviderUnavailableError(f"OpenAI timeout: {e}")
+        except openai.APIConnectionError as e:
+            self.logger.error(f"[OpenAI] Connection error (result analysis): {type(e).__name__}: {str(e)}")
+            self._update_metrics("analyze_results", error=True)
+            raise ProviderUnavailableError(f"OpenAI connection error: {e}")
+        except openai.AuthenticationError as e:
+            self.logger.error(f"[OpenAI] Authentication error (result analysis): {type(e).__name__}: {str(e)}")
+            self._update_metrics("analyze_results", error=True)
+            raise OpenAIClientError(f"OpenAI authentication error: {e}")
+        except ValidationError as e:
+            self.logger.error(f"[OpenAI] Validation error (result analysis): {type(e).__name__}: {str(e)}")
+            self._update_metrics("analyze_results", error=True)
+            raise e  # Re-raise validation errors as-is
+        except Exception as e:
+            self.logger.error(f"[OpenAI] Unexpected error (result analysis): {type(e).__name__}: {str(e)}")
+            self.logger.debug(f"[OpenAI] Full exception details:", exc_info=True)
+            self._update_metrics("analyze_results", error=True)
+            raise OpenAIClientError(f"OpenAI API error: {e}")
     
     async def health_check(self) -> bool:
         """
@@ -902,3 +1044,172 @@ class OpenAIClient(BaseLLMClient):
                         raise ValidationError(f"Choice {i+1} weight for {axis_id} must be between -1.0 and 1.0, got {weight_value}")
         
         self.logger.info(f"[OpenAI] ✅ Scenario validation completed successfully")
+    
+    async def _validate_result_analysis_response(self, content: Dict[str, Any], template_data: Dict[str, Any]) -> None:
+        """
+        Validate result analysis response format and content.
+        
+        Args:
+            content: Parsed JSON response from OpenAI
+            template_ Original template data used for request
+            
+        Raises:
+            ValidationError: If response format is invalid
+        """
+        if not isinstance(content, dict):
+            raise ValidationError("Response must be a JSON object")
+        
+        # Check required top-level fields
+        required_fields = ["type_profiles", "personality_insights", "analysis_metadata"]
+        for field in required_fields:
+            if field not in content:
+                raise ValidationError(f"Response must contain '{field}' field")
+        
+        # Validate type_profiles
+        type_profiles = content["type_profiles"]
+        if not isinstance(type_profiles, list):
+            raise ValidationError("'type_profiles' must be an array")
+        
+        if len(type_profiles) == 0:
+            raise ValidationError("At least one type profile is required")
+        
+        if len(type_profiles) > 3:
+            raise ValidationError("Maximum 3 type profiles allowed")
+        
+        # Validate each type profile
+        for i, profile in enumerate(type_profiles):
+            if not isinstance(profile, dict):
+                raise ValidationError(f"Type profile {i+1} must be an object")
+            
+            # Check required profile fields
+            profile_required_fields = ["typeId", "typeName", "description", "traits", "strengths", "growth_areas", "compatibility"]
+            for field in profile_required_fields:
+                if field not in profile:
+                    raise ValidationError(f"Type profile {i+1} missing required field: {field}")
+            
+            # Validate profile fields
+            type_id = profile["typeId"]
+            if not isinstance(type_id, str) or not type_id.strip():
+                raise ValidationError(f"Type profile {i+1} typeId must be a non-empty string")
+            
+            type_name = profile["typeName"]
+            if not isinstance(type_name, str) or not type_name.strip():
+                raise ValidationError(f"Type profile {i+1} typeName must be a non-empty string")
+            
+            description = profile["description"]
+            if not isinstance(description, str) or not description.strip():
+                raise ValidationError(f"Type profile {i+1} description must be a non-empty string")
+            
+            if len(description) < 100 or len(description) > 150:
+                self.logger.warning(f"[OpenAI] Type profile {i+1} description length ({len(description)}) not in optimal range (100-150)")
+            
+            # Validate traits array
+            traits = profile["traits"]
+            if not isinstance(traits, list):
+                raise ValidationError(f"Type profile {i+1} traits must be an array")
+            
+            if len(traits) < 3 or len(traits) > 4:
+                raise ValidationError(f"Type profile {i+1} traits must contain 3-4 items, got {len(traits)}")
+            
+            for j, trait in enumerate(traits):
+                if not isinstance(trait, str) or not trait.strip():
+                    raise ValidationError(f"Type profile {i+1} trait {j+1} must be a non-empty string")
+            
+            # Validate strengths array
+            strengths = profile["strengths"]
+            if not isinstance(strengths, list):
+                raise ValidationError(f"Type profile {i+1} strengths must be an array")
+            
+            if len(strengths) < 3 or len(strengths) > 4:
+                raise ValidationError(f"Type profile {i+1} strengths must contain 3-4 items, got {len(strengths)}")
+            
+            for j, strength in enumerate(strengths):
+                if not isinstance(strength, str) or not strength.strip():
+                    raise ValidationError(f"Type profile {i+1} strength {j+1} must be a non-empty string")
+            
+            # Validate growth_areas array
+            growth_areas = profile["growth_areas"]
+            if not isinstance(growth_areas, list):
+                raise ValidationError(f"Type profile {i+1} growth_areas must be an array")
+            
+            if len(growth_areas) < 2 or len(growth_areas) > 3:
+                raise ValidationError(f"Type profile {i+1} growth_areas must contain 2-3 items, got {len(growth_areas)}")
+            
+            for j, growth_area in enumerate(growth_areas):
+                if not isinstance(growth_area, str) or not growth_area.strip():
+                    raise ValidationError(f"Type profile {i+1} growth_area {j+1} must be a non-empty string")
+            
+            # Validate compatibility object
+            compatibility = profile["compatibility"]
+            if not isinstance(compatibility, dict):
+                raise ValidationError(f"Type profile {i+1} compatibility must be an object")
+            
+            # Check axes from template data
+            axes_data = template_data.get("axes", [])
+            expected_axis_ids = {axis.get("id") for axis in axes_data if isinstance(axis, dict) and "id" in axis}
+            
+            if expected_axis_ids:
+                for axis_id in expected_axis_ids:
+                    if axis_id not in compatibility:
+                        self.logger.warning(f"[OpenAI] Type profile {i+1} missing compatibility score for axis: {axis_id}")
+                    else:
+                        score = compatibility[axis_id]
+                        if not isinstance(score, (int, float)):
+                            raise ValidationError(f"Type profile {i+1} compatibility score for {axis_id} must be a number")
+        
+        # Validate personality_insights
+        personality_insights = content["personality_insights"]
+        if not isinstance(personality_insights, dict):
+            raise ValidationError("'personality_insights' must be an object")
+        
+        insights_required_fields = ["dominant_traits", "balance_analysis", "personalized_message", "score_interpretation"]
+        for field in insights_required_fields:
+            if field not in personality_insights:
+                raise ValidationError(f"personality_insights missing required field: {field}")
+        
+        # Validate dominant_traits
+        dominant_traits = personality_insights["dominant_traits"]
+        if not isinstance(dominant_traits, list):
+            raise ValidationError("dominant_traits must be an array")
+        
+        if len(dominant_traits) < 1 or len(dominant_traits) > 3:
+            raise ValidationError(f"dominant_traits must contain 1-3 items, got {len(dominant_traits)}")
+        
+        # Validate personalized_message
+        personalized_message = personality_insights["personalized_message"]
+        if not isinstance(personalized_message, str) or not personalized_message.strip():
+            raise ValidationError("personalized_message must be a non-empty string")
+        
+        message_length = len(personalized_message)
+        if message_length < 80 or message_length > 120:
+            self.logger.warning(f"[OpenAI] Personalized message length ({message_length}) not in optimal range (80-120)")
+        
+        # Validate balance_analysis
+        balance_analysis = personality_insights["balance_analysis"]
+        if not isinstance(balance_analysis, str) or not balance_analysis.strip():
+            raise ValidationError("balance_analysis must be a non-empty string")
+        
+        # Validate score_interpretation
+        score_interpretation = personality_insights["score_interpretation"]
+        if not isinstance(score_interpretation, dict):
+            raise ValidationError("score_interpretation must be an object")
+        
+        # Validate analysis_metadata
+        analysis_metadata = content["analysis_metadata"]
+        if not isinstance(analysis_metadata, dict):
+            raise ValidationError("'analysis_metadata' must be an object")
+        
+        metadata_required_fields = ["keyword_influence", "choice_patterns", "uniqueness_factors"]
+        for field in metadata_required_fields:
+            if field not in analysis_metadata:
+                raise ValidationError(f"analysis_metadata missing required field: {field}")
+        
+        # Validate uniqueness_factors
+        uniqueness_factors = analysis_metadata["uniqueness_factors"]
+        if not isinstance(uniqueness_factors, list):
+            raise ValidationError("uniqueness_factors must be an array")
+        
+        if len(uniqueness_factors) < 1 or len(uniqueness_factors) > 3:
+            raise ValidationError(f"uniqueness_factors must contain 1-3 items, got {len(uniqueness_factors)}")
+        
+        self.logger.info(f"[OpenAI] ✅ Result analysis validation completed successfully")

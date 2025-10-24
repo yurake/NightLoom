@@ -817,14 +817,14 @@ class ExternalLLMService:
        # Create a copy for modification
        formatted_data = profile_data.copy()
        
-       # Validate required fields
-       required_fields = ["name", "description", "keywords", "dominantAxes", "polarity"]
+       # Validate required fields (keywords is optional and will be auto-generated if missing)
+       required_fields = ["typeName", "description", "dominantAxes", "polarity"]
        for field in required_fields:
            if field not in formatted_data:
                raise ValidationError(f"Profile {profile_index} missing required field: {field}")
        
        # Validate and format name
-       name = str(formatted_data["name"]).strip()
+       name = str(formatted_data["typeName"]).strip()
        if not name:
            raise ValidationError(f"Profile {profile_index} name cannot be empty")
        if len(name) > 14:
@@ -832,6 +832,8 @@ class ExternalLLMService:
            name = name[:11] + "..."
            self.logger.warning(f"[Type Profile Validation] Truncated profile {profile_index} name to: {name}")
        formatted_data["name"] = name
+       # Also keep typeName for compatibility
+       formatted_data["typeName"] = name
        
        # Validate and format description
        description = str(formatted_data["description"]).strip()
@@ -844,8 +846,8 @@ class ExternalLLMService:
            self.logger.info(f"[Type Profile Validation] Enhanced short description for profile {profile_index}")
        formatted_data["description"] = description
        
-       # Validate and format keywords
-       keywords = formatted_data["keywords"]
+       # Validate and format keywords - handle missing keywords field
+       keywords = formatted_data.get("keywords", [])
        if not isinstance(keywords, list):
            keywords = []
        keywords = [str(k).strip() for k in keywords if k and str(k).strip()]

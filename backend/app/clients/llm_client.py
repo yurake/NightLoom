@@ -291,7 +291,7 @@ class BaseLLMClient(ABC):
             raise ValidationError("Must generate at least one type profile")
         
         for profile in type_profiles:
-            required_fields = ["name", "description"]
+            required_fields = ["typeName", "description"]
             if not all(field in profile for field in required_fields):
                 raise ValidationError(f"Type profile missing required fields: {required_fields}")
         

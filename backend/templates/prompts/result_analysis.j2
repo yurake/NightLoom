@@ -9,7 +9,7 @@
 
 ## 評価軸とスコア
 {% for axis in axes %}
-- {{ axis.name }} ({{ axis.id }}): {{ scores[axis.id] if scores else 0.0 }} (Raw: {{ raw_scores[axis.id] if raw_scores else 0.0 }})
+- {{ axis.name }} ({{ axis.id }}): {{ scores.get(axis.id, 0.0) if scores else 0.0 }} (Raw: {{ raw_scores.get(axis.id, 0.0) if raw_scores else 0.0 }})
   - 説明: {{ axis.description }}
   - 方向性: {{ axis.direction }}
 {% endfor %}
@@ -39,7 +39,7 @@
 
 ### 3. スコアパターン考察
 {% for axis in axes %}
-- {{ axis.name }}スコア {{ scores[axis.id] if scores else 0.0 }}: {% if scores[axis.id] > 0.5 %}高い{% elif scores[axis.id] < -0.5 %}低い{% else %}中程度{% endif %}傾向の意味
+- {{ axis.name }}スコア {{ scores.get(axis.id, 0.0) if scores else 0.0 }}: {% if scores and scores.get(axis.id, 0.0) > 0.5 %}高い{% elif scores and scores.get(axis.id, 0.0) < -0.5 %}低い{% else %}中程度{% endif %}傾向の意味
 {% endfor %}
 
 ## 出力形式
@@ -70,7 +70,7 @@
         "成長可能領域3"
       ],
       "compatibility": {
-        {% for axis in axes %}"{{ axis.id }}": {{ "%.1f" | format(scores[axis.id] if scores else 0.0) }}{{ "," if not loop.last }}
+        {% for axis in axes %}"{{ axis.id }}": {{ "%.1f" | format(scores.get(axis.id, 0.0) if scores else 0.0) }}{{ "," if not loop.last }}
         {% endfor %}
       }
     }
