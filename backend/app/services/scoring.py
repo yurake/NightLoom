@@ -26,14 +26,31 @@ class ScoringService:
         Returns:
             Dictionary mapping axis_id -> raw_score (-5.0 to 5.0)
         """
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        logger.info(f"[Scoring] Starting score calculation for session {session.id}")
+        logger.info(f"[Scoring] Session has {len(session.choices)} choices")
+        logger.info(f"[Scoring] Session has {len(session.scenes)} scenes")
+        logger.info(f"[Scoring] Session has {len(session.axes)} axes")
+        
         if len(session.choices) != 4:
             raise ValueError(f"Expected 4 choices, got {len(session.choices)}")
         
-        # Initialize score accumulator
+        # Initialize score accumulator with all axis IDs from session.axes
         scores: Dict[str, float] = {}
+        expected_axis_ids = set()
+        for axis in session.axes:
+            scores[axis.id] = 0.0
+            expected_axis_ids.add(axis.id)
+            logger.info(f"[Scoring] Initialized axis {axis.id} with score 0.0")
+        
+        logger.info(f"[Scoring] Expected axis IDs: {expected_axis_ids}")
         
         # Process each choice
-        for choice_record in session.choices:
+        for i, choice_record in enumerate(session.choices):
+            logger.info(f"[Scoring] Processing choice {i+1}: scene {choice_record.sceneIndex}, choice {choice_record.choiceId}")
+            
             # Find the scene and choice
             scene = None
             for s in session.scenes:
@@ -42,6 +59,7 @@ class ScoringService:
                     break
             
             if not scene:
+                logger.error(f"[Scoring] Scene {choice_record.sceneIndex} not found")
                 raise ValueError(f"Scene {choice_record.sceneIndex} not found")
             
             # Find the selected choice
@@ -52,22 +70,55 @@ class ScoringService:
                     break
             
             if not selected_choice:
+                logger.error(f"[Scoring] Choice {choice_record.choiceId} not found in scene {choice_record.sceneIndex}")
                 raise ValueError(f"Choice {choice_record.choiceId} not found in scene {choice_record.sceneIndex}")
             
-            # Add weights to scores
+            # Debug: Log choice text and weights
+            logger.info(f"[Scoring] Selected choice text: '{selected_choice.text}'")
             choice_weights = selected_choice.get_weights_dict()
+            logger.info(f"[Scoring] Choice weights: {choice_weights}")
+            logger.info(f"[Scoring] Choice weights type: {type(selected_choice.weights)}")
+            
+            # Add weights to scores
+            choice_axis_ids = set(choice_weights.keys())
+            logger.info(f"[Scoring] Choice {i+1} axis IDs: {choice_axis_ids}")
+            
+            # Check for axis ID mismatches
+            unknown_axes = choice_axis_ids - expected_axis_ids
+            missing_axes = expected_axis_ids - choice_axis_ids
+            
+            if unknown_axes:
+                logger.warning(f"[Scoring] Choice {i+1} contains unknown axis IDs: {unknown_axes}")
+            if missing_axes:
+                logger.warning(f"[Scoring] Choice {i+1} missing weights for expected axes: {missing_axes}")
+                # Add missing weights as 0.0
+                for missing_axis in missing_axes:
+                    choice_weights[missing_axis] = 0.0
+                    logger.info(f"[Scoring] Added missing weight {missing_axis}: 0.0")
+            
             for axis_id, weight in choice_weights.items():
                 if axis_id not in scores:
+                    logger.warning(f"[Scoring] Found unknown axis ID in choice weights: {axis_id}, adding to scores")
                     scores[axis_id] = 0.0
+                
+                old_score = scores[axis_id]
                 scores[axis_id] += weight
+                logger.info(f"[Scoring] Updated axis {axis_id}: {old_score} + {weight} = {scores[axis_id]}")
+        
+        # Log final scores before clamping
+        logger.info(f"[Scoring] Raw scores before clamping: {scores}")
         
         # Clamp scores to valid range
         for axis_id in scores:
+            old_score = scores[axis_id]
             scores[axis_id] = max(
-                self.raw_score_range[0], 
+                self.raw_score_range[0],
                 min(self.raw_score_range[1], scores[axis_id])
             )
+            if old_score != scores[axis_id]:
+                logger.info(f"[Scoring] Clamped axis {axis_id}: {old_score} -> {scores[axis_id]}")
         
+        logger.info(f"[Scoring] Final raw scores: {scores}")
         return scores
     
     async def normalize_scores(self, raw_scores: Dict[str, float]) -> Dict[str, float]:
@@ -80,6 +131,10 @@ class ScoringService:
         Returns:
             Dictionary mapping axis_id -> normalized_score (0-100)
         """
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        logger.info(f"[Scoring] Normalizing scores: input={raw_scores}")
         normalized = {}
         
         for axis_id, raw_score in raw_scores.items():
@@ -92,7 +147,9 @@ class ScoringService:
             
             # Round to 1 decimal place for display
             normalized[axis_id] = round(normalized_score, 1)
+            logger.info(f"[Scoring] Normalized {axis_id}: {raw_score} -> {normalized[axis_id]}")
         
+        logger.info(f"[Scoring] Final normalized scores: {normalized}")
         return normalized
     
     def get_score_interpretation(self, axis_id: str, normalized_score: float) -> str:

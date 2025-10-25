@@ -586,7 +586,7 @@ class ExternalLLMService:
         Analyze user choices and generate personality insights.
 
         Args:
-            session: Completed session with all choices
+            session: Completed session with calculated scores
 
         Returns:
             List of type profiles
@@ -598,13 +598,48 @@ class ExternalLLMService:
             raise LLMServiceError(
                 "Session must be in PLAY state with 4 choices completed")
 
+        # 修正: セッション既存スコアの存在を検証
+        if not session.rawScores or not session.normalizedScores:
+            raise LLMServiceError(
+                "Session scores must be calculated before result analysis. "
+                "rawScores and normalizedScores are required."
+            )
+
+        # Debug: Log template data components using existing session scores
+        self.logger.info(f"[Result Analysis] Session ID: {session.id}")
+        self.logger.info(f"[Result Analysis] Session keyword: {session.selectedKeyword}")
+        self.logger.info(f"[Result Analysis] Session axes count: {len(session.axes) if session.axes else 0}")
+        self.logger.info(f"[Result Analysis] Using existing session normalized scores: {session.normalizedScores}")
+        self.logger.info(f"[Result Analysis] Using existing session raw scores: {session.rawScores}")
+        self.logger.info(f"[Result Analysis] Session choices count: {len(session.choices) if session.choices else 0}")
+        
+        # Debug: Log actual choices data structure
+        self.logger.info(f"[Result Analysis] Raw session.choices data:")
+        for i, choice in enumerate(session.choices):
+            self.logger.info(f"[Result Analysis] Choice {i+1}: {choice.model_dump()}")
+        
+        # Debug: Log scenes data to check choice text availability
+        self.logger.info(f"[Result Analysis] Session scenes count: {len(session.scenes) if session.scenes else 0}")
+        for scene in (session.scenes or []):
+            self.logger.info(f"[Result Analysis] Scene {scene.sceneIndex} choices:")
+            for choice in scene.choices:
+                self.logger.info(f"[Result Analysis] - {choice.id}: {choice.text}")
+
+        # Build enhanced choices data with text for template
+        enhanced_choices = self._build_enhanced_choices_data(session)
+        
+        # 修正: 既存のセッションスコアを直接使用（重複計算を除去）
         template_data = {
+            "session_id": str(session.id),
             "keyword": session.selectedKeyword,
-            "axes": [axis.dict() for axis in session.axes],
-            "scores": session.normalizedScores,
-            "choices": [choice.dict() for choice in session.choices],
-            "raw_scores": session.rawScores
+            "axes": [axis.model_dump() for axis in session.axes] if session.axes else [],
+            "scores": session.normalizedScores,  # セッション既存スコアを使用
+            "choices": enhanced_choices,
+            "raw_scores": session.rawScores  # セッション既存スコアを使用
         }
+
+        # Debug: Log final template_data
+        self.logger.info(f"[Result Analysis] Template data prepared using existing session scores: {template_data}")
 
         try:
             response = await self._execute_with_fallback(
@@ -708,6 +743,12 @@ class ExternalLLMService:
            choice_axis_ids = set(choice_weights_dict.keys())
            missing_axes = axis_ids - choice_axis_ids
            
+           self.logger.info(f"[Choice Validation] Choice {i+1} weight analysis:")
+           self.logger.info(f"[Choice Validation] - Expected axis IDs: {axis_ids}")
+           self.logger.info(f"[Choice Validation] - Choice axis IDs: {choice_axis_ids}")
+           self.logger.info(f"[Choice Validation] - Missing axes: {missing_axes}")
+           self.logger.info(f"[Choice Validation] - Current weights: {choice_weights_dict}")
+           
            if missing_axes:
                # Check if this is an axis ID format mismatch (Japanese names vs axis_1 format)
                axis_mapping = self._create_axis_mapping(axes, choice_axis_ids)
@@ -718,26 +759,34 @@ class ExternalLLMService:
                    for axis_id in axis_ids:
                        if axis_id in choice_weights_dict:
                            new_weights[axis_id] = choice_weights_dict[axis_id]
+                           self.logger.debug(f"[Choice Validation] Direct mapping {axis_id}: {choice_weights_dict[axis_id]}")
                        elif axis_id in axis_mapping:
                            # Map from Japanese name to axis_N format
                            japanese_name = axis_mapping[axis_id]
                            if japanese_name in choice_weights_dict:
                                new_weights[axis_id] = choice_weights_dict[japanese_name]
-                               self.logger.debug(f"[Choice Validation] Mapped {japanese_name} -> {axis_id}")
+                               self.logger.info(f"[Choice Validation] Mapped {japanese_name} -> {axis_id}: {choice_weights_dict[japanese_name]}")
                            else:
                                new_weights[axis_id] = 0.0
+                               self.logger.warning(f"[Choice Validation] Missing mapped weight for {axis_id} ({japanese_name}), using 0.0")
                        else:
                            new_weights[axis_id] = 0.0
+                           self.logger.warning(f"[Choice Validation] No mapping found for {axis_id}, using 0.0")
+                   
+                   self.logger.info(f"[Choice Validation] New weights after mapping: {new_weights}")
                    validated_choice.weights = new_weights
                    needs_rebalancing = True
                else:
-                   self.logger.warning(f"[Choice Validation] Choice {i+1} missing weights for axes: {missing_axes}")
+                   self.logger.warning(f"[Choice Validation] Choice {i+1} missing weights for axes: {missing_axes}, no axis mapping possible")
                    # Add missing weights with neutral value
                    current_weights = validated_choice.get_weights_dict()
                    for axis_id in missing_axes:
                        current_weights[axis_id] = 0.0
+                       self.logger.info(f"[Choice Validation] Added missing weight {axis_id}: 0.0")
                    validated_choice.weights = current_weights
                    needs_rebalancing = True
+           else:
+               self.logger.info(f"[Choice Validation] Choice {i+1} has all required axis weights")
            
            # Validate weight ranges
            current_weights = validated_choice.get_weights_dict()
@@ -1019,6 +1068,54 @@ class ExternalLLMService:
             return axis_mapping
         
         return {}
+
+    def _build_enhanced_choices_data(self, session: Session) -> List[Dict[str, Any]]:
+        """
+        Build enhanced choices data with text for template consumption.
+        
+        Converts ChoiceRecord to template-expected format:
+        - sceneIndex -> scene_index
+        - choiceId -> choice_id
+        - Adds text field by looking up choice in scenes
+        
+        Args:
+            session: Session with choices and scenes data
+            
+        Returns:
+            List of enhanced choice dictionaries for template
+        """
+        enhanced_choices = []
+        
+        for choice_record in session.choices:
+            # Find the choice text from scenes
+            choice_text = ""
+            choice_id = choice_record.choiceId
+            scene_index = choice_record.sceneIndex
+            
+            # Look up choice text in scenes
+            for scene in session.scenes:
+                if scene.sceneIndex == scene_index:
+                    for choice in scene.choices:
+                        if choice.id == choice_id:
+                            choice_text = choice.text
+                            break
+                    break
+            
+            # Build enhanced choice data with template-expected field names
+            enhanced_choice = {
+                "scene_index": scene_index,
+                "choice_id": choice_id,
+                "text": choice_text,
+                "timestamp": choice_record.timestamp.isoformat() if choice_record.timestamp else None
+            }
+            
+            enhanced_choices.append(enhanced_choice)
+            
+            # Debug log the enhanced choice
+            self.logger.debug(f"[Enhanced Choices] Scene {scene_index}: '{choice_text}' (ID: {choice_id})")
+        
+        self.logger.info(f"[Enhanced Choices] Built {len(enhanced_choices)} enhanced choice records")
+        return enhanced_choices
 
 
 # Global service instance

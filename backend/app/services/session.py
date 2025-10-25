@@ -6,6 +6,7 @@ integrating with LLM services and maintaining session state.
 """
 
 import uuid
+import asyncio
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple, Any
 from uuid import UUID
@@ -47,6 +48,9 @@ class SessionService:
         self.external_llm_service = external_llm_service or get_llm_service()
         self.scoring_service = scoring_service or ScoringService()
         self.typing_service = typing_service or TypingService()
+        
+        # Race Condition修正: セッション単位の結果生成ロック
+        self._result_generation_locks: Dict[UUID, asyncio.Lock] = {}
     
     async def start_session(self, initial_character: Optional[str] = None) -> Session:
         """
@@ -405,70 +409,28 @@ class SessionService:
     async def generate_result(self, session_id: UUID) -> Dict:
         """
         Generate final result for completed session.
-        
+
+        Race Condition修正: セッション単位のロックでLLM分析の多重実行を防止
+
         Args:
             session_id: Session identifier
-            
+
         Returns:
             Result data with scores and type profiles
         """
-        # Load and validate session
-        session = session_store.get_session(session_id)
-        if not session:
-            raise SessionNotFoundError(f"Session {session_id} not found")
-        
-        # Check session state first before checking completion
-        if session.state == SessionState.INIT:
-            raise InvalidSessionStateError("Session is in INIT state, keyword must be selected first")
-        
-        SessionGuard.require_all_scenes_completed(session)
-        
-        try:
-            # Calculate scores
-            raw_scores = await self.scoring_service.calculate_scores(session)
-            normalized_scores = await self.scoring_service.normalize_scores(raw_scores)
-            
-            # T048: Generate type profiles using AI analysis (external LLM service)
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.info(f"[SESSION] Generating AI analysis for session {session_id}")
-            
-            try:
-                # Use external LLM service for AI-powered analysis
-                ai_profiles = await self.external_llm_service.analyze_results(session)
-                type_profiles = ai_profiles
-                fallback_used = False
-                logger.info(f"[SESSION] Successfully generated AI analysis with {len(ai_profiles)} profiles")
-            except Exception as ai_error:
-                logger.error(f"[SESSION] AI analysis failed: {type(ai_error).__name__}: {str(ai_error)}")
-                
-                # Fallback to existing LLM service
-                try:
-                    type_profiles, fallback_used = await self.llm_service.generate_type_profiles(
-                        session.axes, raw_scores, session.selectedKeyword
-                    )
-                    logger.info(f"[SESSION] Used fallback type profile generation")
-                except Exception as fallback_error:
-                    logger.error(f"[SESSION] Fallback type generation also failed: {type(fallback_error).__name__}: {str(fallback_error)}")
-                    from app.services.fallback_assets import get_fallback_type_profiles
-                    type_profiles = get_fallback_type_profiles()
-                    fallback_used = True
-                    session.fallbackFlags.append("AI_RESULT_ANALYSIS_FALLBACK")
-            
-            # Update session with results
-            session.rawScores = raw_scores
-            session.normalizedScores = normalized_scores
-            session.typeProfiles = type_profiles
-            session.state = SessionState.RESULT
-            session.completedAt = datetime.now(timezone.utc)
-            
-            if fallback_used:
-                session.fallbackFlags.append("TYPE_FALLBACK")
-            
-            session_store.update_session(session)
-            
-            # Prepare result response
-            result = {
+        import logging
+        logger = logging.getLogger(__name__)
+
+        lock = self._result_generation_locks.setdefault(session_id, asyncio.Lock())
+
+        def build_result_payload(
+            session: Session,
+            normalized_scores: Dict[str, float],
+            raw_scores: Dict[str, float],
+            type_profiles: List[TypeProfile],
+            fallback_used: bool
+        ) -> Dict[str, Any]:
+            return {
                 "sessionId": str(session.id),
                 "keyword": session.selectedKeyword,
                 "axes": [
@@ -481,17 +443,176 @@ class SessionService:
                 ],
                 "type": {
                     "dominantAxes": self.typing_service.get_dominant_axes(normalized_scores),
-                    "profiles": [profile.dict() for profile in type_profiles],
+                    "profiles": [profile.model_dump() for profile in type_profiles],
                     "fallbackUsed": fallback_used
                 },
-                "completedAt": session.completedAt.isoformat(),
+                "completedAt": (session.completedAt or datetime.now(timezone.utc)).isoformat(),
                 "fallbackFlags": session.fallbackFlags
             }
-            
-            return result
-            
+
+        try:
+            async with lock:
+                session = session_store.get_session(session_id)
+                if not session:
+                    raise SessionNotFoundError(f"Session {session_id} not found")
+
+                if session.state == SessionState.RESULT and session.typeProfiles and session.rawScores and session.normalizedScores:
+                    logger.info(f"[SESSION] Result already generated for session {session_id}, returning cached result (lock-protected)")
+                    cached_fallback_used = any(
+                        "TYPE_FALLBACK" in flag or "AI_RESULT_ANALYSIS_FALLBACK" in flag
+                        for flag in session.fallbackFlags
+                    )
+                    return build_result_payload(
+                        session,
+                        session.normalizedScores,
+                        session.rawScores,
+                        session.typeProfiles,
+                        cached_fallback_used
+                    )
+
+                if session.state == SessionState.INIT:
+                    raise InvalidSessionStateError("Session is in INIT state, keyword must be selected first")
+
+                SessionGuard.require_all_scenes_completed(session)
+                self._validate_result_data_completeness(session)
+
+                logger.info(f"[SESSION] Starting fresh result generation for session {session_id}")
+                logger.info(f"[SESSION] Pre-scoring session state:")
+                logger.info(f"[SESSION] - Selected keyword: {session.selectedKeyword}")
+                logger.info(f"[SESSION] - Axes count: {len(session.axes) if session.axes else 0}")
+                logger.info(f"[SESSION] - Choices count: {len(session.choices) if session.choices else 0}")
+                logger.info(f"[SESSION] - Scenes count: {len(session.scenes) if session.scenes else 0}")
+
+                for i, axis in enumerate(session.axes):
+                    logger.info(f"[SESSION] Axis {i+1}: id='{axis.id}', name='{axis.name}'")
+
+                for i, choice in enumerate(session.choices):
+                    logger.info(f"[SESSION] Choice {i+1}: scene={choice.sceneIndex}, choiceId='{choice.choiceId}'")
+
+                if session.rawScores and session.normalizedScores:
+                    logger.info(f"[SESSION] Scores already calculated for session {session_id}, reusing existing scores")
+                    raw_scores = session.rawScores
+                    normalized_scores = session.normalizedScores
+                else:
+                    logger.info(f"[SESSION] Computing fresh scores for session {session_id}")
+                    raw_scores = await self.scoring_service.calculate_scores(session)
+                    logger.info(f"[SESSION] Raw scores calculated: {raw_scores}")
+
+                    normalized_scores = await self.scoring_service.normalize_scores(raw_scores)
+                    logger.info(f"[SESSION] Normalized scores calculated: {normalized_scores}")
+
+                    self._validate_score_completeness(raw_scores, normalized_scores)
+                    logger.info(f"[SESSION] Score validation passed")
+
+                session.rawScores = raw_scores
+                session.normalizedScores = normalized_scores
+                logger.info(f"[SESSION] Updated session with scores - rawScores: {session.rawScores}, normalizedScores: {session.normalizedScores}")
+
+                if session.typeProfiles and len(session.typeProfiles) > 0:
+                    logger.info(f"[SESSION] Type profiles already exist for session {session_id}, reusing existing profiles")
+                    type_profiles = session.typeProfiles
+                    fallback_used = any(
+                        "TYPE_FALLBACK" in flag or "AI_RESULT_ANALYSIS_FALLBACK" in flag
+                        for flag in session.fallbackFlags
+                    )
+                else:
+                    logger.info(f"[SESSION] Computing fresh AI analysis for session {session_id}")
+                    try:
+                        ai_profiles = await self.external_llm_service.analyze_results(session)
+                        type_profiles = ai_profiles
+                        fallback_used = False
+                        logger.info(f"[SESSION] Successfully generated AI analysis with {len(ai_profiles)} profiles")
+                    except Exception as ai_error:
+                        logger.error(f"[SESSION] AI analysis failed: {type(ai_error).__name__}: {str(ai_error)}")
+
+                        try:
+                            type_profiles, fallback_used = await self.llm_service.generate_type_profiles(
+                                session.axes, raw_scores, session.selectedKeyword
+                            )
+                            logger.info(f"[SESSION] Used fallback type profile generation")
+                        except Exception as fallback_error:
+                            logger.error(f"[SESSION] Fallback type generation also failed: {type(fallback_error).__name__}: {str(fallback_error)}")
+                            from app.services.fallback_assets import get_fallback_type_profiles
+                            type_profiles = get_fallback_type_profiles()
+                            fallback_used = True
+                            if "AI_RESULT_ANALYSIS_FALLBACK" not in session.fallbackFlags:
+                                session.fallbackFlags.append("AI_RESULT_ANALYSIS_FALLBACK")
+
+                session.typeProfiles = type_profiles
+                session.state = SessionState.RESULT
+                session.completedAt = datetime.now(timezone.utc)
+
+                if fallback_used and "TYPE_FALLBACK" not in session.fallbackFlags:
+                    session.fallbackFlags.append("TYPE_FALLBACK")
+
+                session_store.update_session(session)
+
+                return build_result_payload(session, normalized_scores, raw_scores, type_profiles, fallback_used)
+
+        except (SessionNotFoundError, InvalidSessionStateError, SessionServiceError):
+            raise
         except Exception as e:
-            raise SessionServiceError(f"Failed to generate result: {str(e)}")
+            raise SessionServiceError(f"Failed to generate result: {str(e)}") from e
+        finally:
+            lock_entry = self._result_generation_locks.get(session_id)
+            if lock_entry and not lock_entry.locked():
+                try:
+                    del self._result_generation_locks[session_id]
+                    logger.debug(f"[SESSION] Cleaned up result generation lock for session {session_id}")
+                except KeyError:
+                    pass
+
+
+    def _validate_result_data_completeness(self, session: Session) -> None:
+        """
+        結果分析前の必須データ検証を強化
+        
+        Args:
+            session: 検証対象のセッション
+            
+        Raises:
+            SessionServiceError: 必須データが不足または不正な場合
+            InvalidSessionStateError: セッション状態が不正な場合
+        """
+        # 選択履歴の検証
+        if not session.choices or len(session.choices) == 0:
+            raise SessionServiceError("結果分析に必要な選択履歴が空です")
+        
+        # selectedKeywordの検証
+        if not session.selectedKeyword or session.selectedKeyword.strip() == "":
+            raise SessionServiceError("結果分析に必要なキーワードが設定されていません")
+        
+        # 評価軸の検証
+        if not session.axes or len(session.axes) == 0:
+            raise SessionServiceError("結果分析に必要な評価軸が設定されていません")
+        
+        # シーン情報の検証
+        if not session.scenes or len(session.scenes) < 4:
+            raise SessionServiceError("結果分析に必要なシーン情報が不完全です")
+        
+        # 各シーンのnarrativeが空でないことを確認
+        for scene in session.scenes:
+            if not scene.narrative or scene.narrative.strip() == "":
+                raise SessionServiceError(f"シーン{scene.sceneIndex}の物語情報が空です")
+    
+    def _validate_score_completeness(self, raw_scores: Dict[str, float], normalized_scores: Dict[str, float]) -> None:
+        """
+        評価軸スコアの完全性を検証
+        
+        Args:
+            raw_scores: 生スコア
+            normalized_scores: 正規化スコア
+            
+        Raises:
+            SessionServiceError: スコアが不正な場合
+        """
+        # 全スコアが0.0の場合をチェック
+        if all(score == 0.0 for score in raw_scores.values()):
+            raise SessionServiceError("評価軸スコアが全て0.0です。選択履歴に基づく適切なスコア計算ができませんでした")
+        
+        # 正規化スコアの整合性チェック
+        if len(raw_scores) != len(normalized_scores):
+            raise SessionServiceError("生スコアと正規化スコアの軸数が一致しません")
     
     def cleanup_session(self, session_id: UUID) -> bool:
         """

@@ -107,12 +107,62 @@ class PromptTemplateManager:
             template_name_used = template_name or self._template_files.get(task_type, "unknown")
             self.logger.debug(f"[PromptTemplate] Starting template rendering for {task_type} using {template_name_used}")
             
+            # Debug: Log template data for result analysis
+            if task_type == LLMTaskType.RESULT_ANALYSIS:
+                self.logger.info(f"[PromptTemplate] Template data keys: {list(template_data.keys())}")
+                self.logger.info(f"[PromptTemplate] Session ID: {template_data.get('session_id', 'MISSING')}")
+                self.logger.info(f"[PromptTemplate] Keyword: {template_data.get('keyword', 'MISSING')}")
+                
+                axes = template_data.get('axes', [])
+                self.logger.info(f"[PromptTemplate] Axes count: {len(axes)}")
+                for i, axis in enumerate(axes):
+                    if isinstance(axis, dict):
+                        self.logger.info(f"[PromptTemplate] Axis {i+1}: id='{axis.get('id', 'MISSING')}', name='{axis.get('name', 'MISSING')}'")
+                    else:
+                        self.logger.info(f"[PromptTemplate] Axis {i+1}: {axis}")
+                
+                scores = template_data.get('scores', {})
+                raw_scores = template_data.get('raw_scores', {})
+                self.logger.info(f"[PromptTemplate] Normalized scores: {scores}")
+                self.logger.info(f"[PromptTemplate] Raw scores: {raw_scores}")
+                
+                # Check axis ID and score key matching
+                axis_ids = [axis.get('id') for axis in axes if isinstance(axis, dict)]
+                score_keys = list(scores.keys())
+                raw_score_keys = list(raw_scores.keys())
+                
+                self.logger.info(f"[PromptTemplate] Axis IDs: {axis_ids}")
+                self.logger.info(f"[PromptTemplate] Score keys: {score_keys}")
+                self.logger.info(f"[PromptTemplate] Raw score keys: {raw_score_keys}")
+                
+                # Check for mismatches
+                missing_in_scores = [aid for aid in axis_ids if aid not in score_keys]
+                missing_in_raw_scores = [aid for aid in axis_ids if aid not in raw_score_keys]
+                extra_score_keys = [key for key in score_keys if key not in axis_ids]
+                
+                if missing_in_scores:
+                    self.logger.warning(f"[PromptTemplate] Axis IDs missing from normalized scores: {missing_in_scores}")
+                if missing_in_raw_scores:
+                    self.logger.warning(f"[PromptTemplate] Axis IDs missing from raw scores: {missing_in_raw_scores}")
+                if extra_score_keys:
+                    self.logger.warning(f"[PromptTemplate] Extra keys in scores not matching axes: {extra_score_keys}")
+                
+                choices = template_data.get('choices', [])
+                self.logger.info(f"[PromptTemplate] Choices count: {len(choices)}")
+                for i, choice in enumerate(choices):
+                    if isinstance(choice, dict):
+                        self.logger.info(f"[PromptTemplate] Choice {i+1}: scene={choice.get('scene_index')}, id='{choice.get('choice_id')}', text='{choice.get('text', '')[:50]}...'")
+            
             template = await self._get_template(task_type, template_name)
             rendered = template.render(**template_data)
             rendered_stripped = rendered.strip()
             
-            # Log rendered result
-            self.logger.debug(f"[PromptTemplate] Rendered {template_name_used}: {rendered_stripped}")
+            # Log rendered result (truncated for result analysis to avoid spam)
+            if task_type == LLMTaskType.RESULT_ANALYSIS:
+                preview = rendered_stripped[:500] + "..." if len(rendered_stripped) > 500 else rendered_stripped
+                self.logger.info(f"[PromptTemplate] Rendered {template_name_used} preview: {preview}")
+            else:
+                self.logger.debug(f"[PromptTemplate] Rendered {template_name_used}: {rendered_stripped}")
             
             return rendered_stripped
             

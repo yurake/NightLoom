@@ -51,11 +51,18 @@ class Choice(BaseModel):
     
     def get_weights_dict(self) -> Dict[str, float]:
         """Convert weights to dict format for backward compatibility."""
+        import logging
+        logger = logging.getLogger(__name__)
+        
         if isinstance(self.weights, dict):
+            logger.debug(f"[Choice.get_weights_dict] Using dict format: {self.weights}")
             return self.weights
         elif isinstance(self.weights, list):
-            return {entry.id: entry.score for entry in self.weights}
+            weights_dict = {entry.id: entry.score for entry in self.weights}
+            logger.debug(f"[Choice.get_weights_dict] Converted from list to dict: {weights_dict}")
+            return weights_dict
         else:
+            logger.warning(f"[Choice.get_weights_dict] Unexpected weights type: {type(self.weights)}, returning empty dict")
             return {}
     
     def get_weights_array(self) -> List[WeightEntry]:

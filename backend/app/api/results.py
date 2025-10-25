@@ -253,6 +253,51 @@ async def generate_result(
     start_time = observability_service.start_timer("result_generation")
     
     try:
+        # 事前検証：セッションの基本状態確認
+        session = default_session_service.session_store.get_session(session_id)
+        if not session:
+            observability_service.increment_counter("result_generation_session_not_found")
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "error_code": "SESSION_NOT_FOUND",
+                    "message": "Session not found or has expired",
+                    "details": {
+                        "session_id": str(session_id),
+                        "timestamp": observability_service.get_current_timestamp()
+                    }
+                }
+            )
+        
+        # 修正2: 結果分析前の事前検証を追加
+        if not session.selectedKeyword or session.selectedKeyword.strip() == "":
+            observability_service.increment_counter("result_generation_missing_keyword")
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error_code": "MISSING_KEYWORD",
+                    "message": "Session keyword is required for result generation",
+                    "details": {
+                        "session_id": str(session_id),
+                        "timestamp": observability_service.get_current_timestamp()
+                    }
+                }
+            )
+        
+        if not session.choices or len(session.choices) == 0:
+            observability_service.increment_counter("result_generation_empty_choices")
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error_code": "EMPTY_CHOICES",
+                    "message": "Session has no choice history for result analysis",
+                    "details": {
+                        "session_id": str(session_id),
+                        "timestamp": observability_service.get_current_timestamp()
+                    }
+                }
+            )
+        
         # Generate result through session service
         result = await default_session_service.generate_result(session_id)
         

@@ -4,11 +4,17 @@
 あなたは心理診断の専門家として、ユーザーの選択パターンと評価軸スコアに基づいて、深い洞察に満ちた個別のタイプ分析とパーソナリティ洞察を生成してください。
 
 ## セッション情報
-- セッションID: {{ session_id }}
 - 選択キーワード: {{ keyword }}
 
 ## 評価軸とスコア
+{# Debug: テンプレート内でのスコアアクセス確認 #}
+{# Available variables: axes={{ axes | length if axes else 0 }} items, scores={{ scores | length if scores else 0 }} keys, raw_scores={{ raw_scores | length if raw_scores else 0 }} keys #}
+{# Scores keys: {{ scores.keys() | list if scores else [] }} #}
+{# Raw scores keys: {{ raw_scores.keys() | list if raw_scores else [] }} #}
 {% for axis in axes %}
+{# Axis {{ loop.index }}: id='{{ axis.id }}', name='{{ axis.name }}' #}
+{# Score lookup: scores.get('{{ axis.id }}', 0.0) = {{ scores.get(axis.id, 0.0) if scores else 0.0 }} #}
+{# Raw score lookup: raw_scores.get('{{ axis.id }}', 0.0) = {{ raw_scores.get(axis.id, 0.0) if raw_scores else 0.0 }} #}
 - {{ axis.name }} ({{ axis.id }}): {{ scores.get(axis.id, 0.0) if scores else 0.0 }} (Raw: {{ raw_scores.get(axis.id, 0.0) if raw_scores else 0.0 }})
   - 説明: {{ axis.description }}
   - 方向性: {{ axis.direction }}
@@ -28,6 +34,8 @@
 - **タイプID**: 英数字の一意識別子
 - **タイプ名**: キーワードと軸の特性を反映した日本語名称
 - **説明**: 100-150文字の簡潔な特徴説明
+- **支配的軸**: このタイプを特徴づける主要な評価軸（2つまで）
+- **極性**: 軸スコアの組み合わせ（Hi-Hi、Hi-Lo、Lo-Hi、Lo-Lo、Mid-Mid等）
 - **主な特性**: 3-4個の具体的な行動・思考傾向
 - **強み**: 3-4個の長所・得意分野
 - **成長領域**: 2-3個の改善・発展可能分野
@@ -52,6 +60,11 @@
       "typeId": "unique_type_identifier",
       "typeName": "{{ keyword }}を体現するタイプ名",
       "description": "このタイプの特徴的な説明文（100-150文字）",
+      "dominantAxes": [
+        {% for axis in axes %}"{{ axis.id }}"{{ "," if not loop.last }}
+        {% endfor %}
+      ],
+      "polarity": "Hi-Hi",
       "traits": [
         "具体的な特性1",
         "具体的な特性2",
@@ -96,6 +109,8 @@
 - JSON以外の出力は一切含めないでください
 - 上記の構造を1文字たりとも違えることなく厳守してください
 - type_profilesは配列形式で、1つのプロファイルオブジェクトを含めてください
+- **dominantAxes**: 必須フィールド。最も特徴的な軸を2つまで配列で指定してください
+- **polarity**: 必須フィールド。Hi-Hi、Hi-Lo、Lo-Hi、Lo-Lo、Mid-Mid等の組み合わせを指定してください
 - traitsは3-4個、strengthsは3-4個、growth_areasは2-3個の配列要素を含めてください
 - 各文字数制限（description: 100-150文字、personalized_message: 80-120文字）を厳守してください
 - compatibilityオブジェクトには全ての軸のスコアを数値形式で含めてください
